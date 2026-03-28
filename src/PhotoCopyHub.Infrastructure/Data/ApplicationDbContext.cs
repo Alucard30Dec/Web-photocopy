@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhotoCopyHub.Domain.Common;
 using PhotoCopyHub.Domain.Entities;
 
@@ -29,6 +30,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
         ConfigureIdentityKeyLengths(builder);
+        ConfigureMySqlGuidStorage(builder);
 
         builder.Entity<ApplicationUser>(entity =>
         {
@@ -247,6 +249,39 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(x => x.CreatedAt);
             entity.HasIndex(x => x.RecordHash).IsUnique();
         });
+    }
+
+    private void ConfigureMySqlGuidStorage(ModelBuilder builder)
+    {
+        if (!Database.IsMySql())
+        {
+            return;
+        }
+
+        var guidToBytesConverter = new ValueConverter<Guid, byte[]>(
+            guid => guid.ToByteArray(),
+            bytes => new Guid(bytes));
+
+        var nullableGuidToBytesConverter = new ValueConverter<Guid?, byte[]?>(
+            guid => guid.HasValue ? guid.Value.ToByteArray() : null,
+            bytes => bytes is null ? null : new Guid(bytes));
+
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(Guid))
+                {
+                    property.SetValueConverter(guidToBytesConverter);
+                    property.SetColumnType("binary(16)");
+                }
+                else if (property.ClrType == typeof(Guid?))
+                {
+                    property.SetValueConverter(nullableGuidToBytesConverter);
+                    property.SetColumnType("binary(16)");
+                }
+            }
+        }
     }
 
     private static void ConfigureIdentityKeyLengths(ModelBuilder builder)
