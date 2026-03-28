@@ -1,0 +1,44 @@
+@model CounterTopUpViewModel
+@{
+    ViewData["Title"] = "Nạp tiền tại quầy";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Nạp tiền trực tiếp tại quầy</h3>
+    <p class="mb-0">Giao dịch cộng ví ngay lập tức, có lịch sử giao dịch và audit trail.</p>
+</section>
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="CounterTopUp" method="post">
+            <input asp-for="IdempotencyKey" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="TargetUserId" class="form-label"></label>
+                <select asp-for="TargetUserId" asp-items="Model.CustomerOptions" class="form-select">
+                    <option value="">-- Chọn khách hàng --</option>
+                </select>
+                <span asp-validation-for="TargetUserId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Amount" class="form-label"></label>
+                <input asp-for="Amount" class="form-control" />
+                <span asp-validation-for="Amount" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Note" class="form-label"></label>
+                <textarea asp-for="Note" class="form-control"></textarea>
+                <span asp-validation-for="Note" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Xác nhận nạp tại quầy</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

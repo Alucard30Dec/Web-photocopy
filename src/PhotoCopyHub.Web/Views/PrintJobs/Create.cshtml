@@ -1,0 +1,174 @@
+@model CreatePrintJobViewModel
+@{
+    ViewData["Title"] = "Tạo đơn in";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Tạo đơn in theo đúng yêu cầu khách</h3>
+    <p class="mb-3">
+        Sử dụng preset nhanh cho nhu cầu phổ biến của học sinh, sinh viên và thêm ghi chú chi tiết cho các yêu cầu đặc biệt.
+    </p>
+    <div class="info-chip-group">
+        <span class="info-chip">Ưu tiên PDF để hạn chế lỗi font</span>
+        <span class="info-chip">Có thể đặt in trước, lấy bài sau</span>
+        <span class="info-chip">Thông số in được ghi rõ để thợ in dễ xử lý</span>
+    </div>
+</section>
+
+<div class="print-workspace">
+    <div class="print-form-shell">
+        <form asp-action="Create" method="post" enctype="multipart/form-data" id="printJobForm">
+            <input asp-for="IdempotencyKey" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+            <section class="form-step">
+                <div class="step-label"><span class="step-dot">1</span>Chọn tài liệu in</div>
+                <p class="step-description">Bạn có thể chọn file đã upload hoặc gửi file mới ngay bây giờ.</p>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label asp-for="ExistingFileId" class="form-label"></label>
+                        <select asp-for="ExistingFileId" class="form-select">
+                            <option value="">-- Chọn file đã upload --</option>
+                            @foreach (var file in Model.ExistingFiles)
+                            {
+                                <option value="@file.Id">@file.OriginalFileName (@(file.Size / 1024) KB)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="UploadFile" class="form-label"></label>
+                        <input asp-for="UploadFile" class="form-control" />
+                        <small class="form-hint">Nếu upload PDF, hệ thống sẽ cố gắng tự nhận diện số trang.</small>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-step">
+                <div class="step-label"><span class="step-dot">2</span>Cấu hình in</div>
+                <p class="step-description">Chọn preset mẫu để thao tác nhanh, sau đó điều chỉnh theo yêu cầu cụ thể.</p>
+
+                <div class="quick-preset-grid mb-3" id="printPresetGrid">
+                    <button type="button" class="quick-preset" data-preset="study-notes" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.TwoSide)" data-color-mode="@((int)ColorMode.BlackWhite)" data-is-photo="false">
+                        <span class="preset-title">Tài liệu học tập</span>
+                        <span class="preset-meta">A4 • 2 mặt • Trắng đen</span>
+                    </button>
+                    <button type="button" class="quick-preset" data-preset="report" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.BlackWhite)" data-is-photo="false">
+                        <span class="preset-title">Báo cáo nhóm</span>
+                        <span class="preset-meta">A4 • 1 mặt • Trắng đen</span>
+                    </button>
+                    <button type="button" class="quick-preset" data-preset="slides" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.Color)" data-is-photo="false">
+                        <span class="preset-title">Slide thuyết trình</span>
+                        <span class="preset-meta">A4 • 1 mặt • Màu</span>
+                    </button>
+                    <button type="button" class="quick-preset" data-preset="poster" data-paper-size="@((int)PaperSize.A3)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.Color)" data-is-photo="true">
+                        <span class="preset-title">Poster / tờ rơi</span>
+                        <span class="preset-meta">A3 • 1 mặt • Màu ảnh</span>
+                    </button>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label asp-for="PaperSize" class="form-label"></label>
+                        <select asp-for="PaperSize" class="form-select" asp-items="Html.GetEnumSelectList<PaperSize>()"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="PrintSide" class="form-label"></label>
+                        <select asp-for="PrintSide" class="form-select" asp-items="Html.GetEnumSelectList<PrintSide>()"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="ColorMode" class="form-label"></label>
+                        <select asp-for="ColorMode" class="form-select" asp-items="Html.GetEnumSelectList<ColorMode>()"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Copies" class="form-label"></label>
+                        <input asp-for="Copies" class="form-control" />
+                        <span asp-validation-for="Copies" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="TotalPages" class="form-label"></label>
+                        <input asp-for="TotalPages" class="form-control" />
+                        <span asp-validation-for="TotalPages" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check mt-3 mt-md-0">
+                            <input asp-for="IsPhoto" class="form-check-input" />
+                            <label asp-for="IsPhoto" class="form-check-label"></label>
+                            <small class="form-hint">Dùng cho ảnh chất lượng cao, giấy ảnh hoặc yêu cầu màu chuẩn.</small>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-step">
+                <div class="step-label"><span class="step-dot">3</span>Nhận hàng</div>
+                <p class="step-description">Chọn nhận tại tiệm hoặc giao hàng. Nếu giao hàng hãy điền địa chỉ chi tiết.</p>
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label asp-for="DeliveryMethod" class="form-label"></label>
+                        <select asp-for="DeliveryMethod" class="form-select" asp-items="Html.GetEnumSelectList<DeliveryMethod>()"></select>
+                    </div>
+                    <div class="col-md-7 delivery-address-wrap" id="deliveryAddressWrap">
+                        <label asp-for="DeliveryAddress" class="form-label"></label>
+                        <input asp-for="DeliveryAddress" class="form-control" placeholder="Ví dụ: KTX khu B, phòng B2-305, ĐHQG TP.HCM" />
+                        <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-step">
+                <div class="step-label"><span class="step-dot">4</span>Ghi chú cho thợ in</div>
+                <p class="step-description">Ghi rõ các yêu cầu đặc biệt như trang in màu, đóng gáy hoặc thứ tự đóng tập.</p>
+                <label asp-for="Notes" class="form-label"></label>
+                <textarea asp-for="Notes" class="form-control" rows="4" placeholder="Ví dụ: Trang bìa in màu, từ trang 10-15 in 1 mặt, đóng gáy xoắn sau khi in."></textarea>
+            </section>
+
+            <div class="mt-3 d-flex flex-wrap gap-2">
+                <button class="btn btn-primary px-4" type="submit">Xác nhận gửi đơn in</button>
+                <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách đơn in</a>
+            </div>
+        </form>
+    </div>
+
+    <aside class="print-summary-card">
+        <h5 class="print-summary-title">Tóm tắt đơn in</h5>
+        <p class="print-summary-subtitle">Hệ thống cập nhật tự động khi bạn thay đổi thông số.</p>
+
+        <div class="summary-line">
+            <span>Khổ giấy</span>
+            <span class="summary-value" id="summaryPaperSize">-</span>
+        </div>
+        <div class="summary-line">
+            <span>Kiểu in</span>
+            <span class="summary-value" id="summaryPrintSide">-</span>
+        </div>
+        <div class="summary-line">
+            <span>Màu sắc</span>
+            <span class="summary-value" id="summaryColorMode">-</span>
+        </div>
+        <div class="summary-line">
+            <span>Số bản</span>
+            <span class="summary-value" id="summaryCopies">0</span>
+        </div>
+        <div class="summary-line">
+            <span>Số trang/tài liệu</span>
+            <span class="summary-value" id="summaryPages">0</span>
+        </div>
+        <div class="summary-line">
+            <span>Tổng trang cần in</span>
+            <span class="summary-value" id="summaryVolume">0</span>
+        </div>
+        <div class="summary-line">
+            <span>Nhận hàng</span>
+            <span class="summary-value" id="summaryDelivery">-</span>
+        </div>
+
+        <div class="summary-note">
+            <strong>Gợi ý:</strong> Nếu tài liệu có trang cần in màu riêng, hãy ghi rõ trong ghi chú để thợ in xử lý chính xác theo yêu cầu khách.
+        </div>
+    </aside>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/printjob-create.js" asp-append-version="true"></script>
+}

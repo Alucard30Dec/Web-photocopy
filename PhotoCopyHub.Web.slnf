@@ -1,0 +1,11 @@
+{
+  "solution": {
+    "path": "PhotoCopyHub.sln",
+    "projects": [
+      "src\\PhotoCopyHub.Domain\\PhotoCopyHub.Domain.csproj",
+      "src\\PhotoCopyHub.Application\\PhotoCopyHub.Application.csproj",
+      "src\\PhotoCopyHub.Infrastructure\\PhotoCopyHub.Infrastructure.csproj",
+      "src\\PhotoCopyHub.Web\\PhotoCopyHub.Web.csproj"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "Lỗi";
+}
+
+<div class="alert alert-danger">
+    <h4>Có lỗi xảy ra</h4>
+    <p>Hệ thống gặp lỗi không mong muốn. Vui lòng thử lại.</p>
+    @if (Model.ShowRequestId)
+    {
+        <p class="mb-0"><strong>RequestId:</strong> @Model.RequestId</p>
+    }
+</div>

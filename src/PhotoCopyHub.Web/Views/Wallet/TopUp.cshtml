@@ -1,0 +1,62 @@
+@model TopUpPageViewModel
+@{
+    ViewData["Title"] = "Nạp tiền";
+}
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <h5>Hướng dẫn chuyển khoản</h5>
+                <ul class="mb-0">
+                    <li>Ngân hàng: <strong>@Model.BankName</strong></li>
+                    <li>Số tài khoản: <strong>@Model.AccountNumber</strong></li>
+                    <li>Chủ tài khoản: <strong>@Model.AccountName</strong></li>
+                    <li>Nội dung gợi ý: <strong>@Model.TransferContentPrefix-@User.Identity?.Name</strong></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <h5>Tạo yêu cầu nạp tiền</h5>
+                <form asp-action="TopUp" method="post" enctype="multipart/form-data">
+                    <input asp-for="Form.IdempotencyKey" type="hidden" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Amount" class="form-label"></label>
+                        <input asp-for="Form.Amount" class="form-control" />
+                        <span asp-validation-for="Form.Amount" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.TransferContent" class="form-label"></label>
+                        <input asp-for="Form.TransferContent" class="form-control" />
+                        <span asp-validation-for="Form.TransferContent" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.TransactionReferenceCode" class="form-label"></label>
+                        <input asp-for="Form.TransactionReferenceCode" class="form-control" />
+                        <span asp-validation-for="Form.TransactionReferenceCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.ProofFile" class="form-label"></label>
+                        <input asp-for="Form.ProofFile" class="form-control" />
+                        <span asp-validation-for="Form.ProofFile" class="text-danger"></span>
+                    </div>
+
+                    <button class="btn btn-primary" type="submit">Gửi yêu cầu</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

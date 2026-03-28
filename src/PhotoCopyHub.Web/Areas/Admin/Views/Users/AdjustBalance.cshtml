@@ -1,0 +1,39 @@
+@model ManualAdjustBalanceViewModel
+@{
+    ViewData["Title"] = "Điều chỉnh số dư";
+    var target = ViewBag.TargetUser as ApplicationUser;
+}
+
+<div class="card">
+    <div class="card-body">
+        <h4>Điều chỉnh số dư ví</h4>
+        @if (target is not null)
+        {
+            <p>User: <strong>@target.Email</strong> | Số dư hiện tại: <strong>@target.CurrentBalance.ToString("N0") đ</strong></p>
+        }
+
+        <form asp-action="AdjustBalance" method="post">
+            <input asp-for="UserId" type="hidden" />
+            <input asp-for="IdempotencyKey" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Amount" class="form-label"></label>
+                <input asp-for="Amount" class="form-control" />
+                <span asp-validation-for="Amount" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Note" class="form-label"></label>
+                <textarea asp-for="Note" class="form-control"></textarea>
+                <span asp-validation-for="Note" class="text-danger"></span>
+            </div>
+
+            <button class="btn btn-primary" type="submit">Xác nhận</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="~/Views/Shared/_ValidationScriptsPartial.cshtml" />
+}

@@ -1,0 +1,36 @@
+@model List<TopUpRequest>
+@{
+    ViewData["Title"] = "Lịch sử yêu cầu nạp tiền";
+}
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Số tiền</th>
+                    <th>Nội dung</th>
+                    <th>Mã GD</th>
+                    <th>Trạng thái</th>
+                    <th>Ghi chú admin</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>@item.Amount.ToString("N0")</td>
+                    <td>@item.TransferContent</td>
+                    <td>@item.TransactionReferenceCode</td>
+                    <td>
+                        <span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span>
+                    </td>
+                    <td>@item.ReviewNote</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,45 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCopyHub.Domain", "src\PhotoCopyHub.Domain\PhotoCopyHub.Domain.csproj", "{4D9F7064-8F30-4F44-9F22-C02CF61A5B44}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCopyHub.Application", "src\PhotoCopyHub.Application\PhotoCopyHub.Application.csproj", "{970D4FF4-E24A-48D0-B056-6D8C7F8F7D17}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCopyHub.Infrastructure", "src\PhotoCopyHub.Infrastructure\PhotoCopyHub.Infrastructure.csproj", "{5D1A4875-2E5D-44A4-A238-B3FAAB17A9B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCopyHub.Web", "src\PhotoCopyHub.Web\PhotoCopyHub.Web.csproj", "{68CA1372-39AE-4467-9108-87C29B4EA6EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCopyHub.Tests", "tests\PhotoCopyHub.Tests\PhotoCopyHub.Tests.csproj", "{C5740303-989D-462E-A32A-CB29744FA075}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4D9F7064-8F30-4F44-9F22-C02CF61A5B44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D9F7064-8F30-4F44-9F22-C02CF61A5B44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D9F7064-8F30-4F44-9F22-C02CF61A5B44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D9F7064-8F30-4F44-9F22-C02CF61A5B44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{970D4FF4-E24A-48D0-B056-6D8C7F8F7D17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{970D4FF4-E24A-48D0-B056-6D8C7F8F7D17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{970D4FF4-E24A-48D0-B056-6D8C7F8F7D17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{970D4FF4-E24A-48D0-B056-6D8C7F8F7D17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D1A4875-2E5D-44A4-A238-B3FAAB17A9B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D1A4875-2E5D-44A4-A238-B3FAAB17A9B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D1A4875-2E5D-44A4-A238-B3FAAB17A9B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D1A4875-2E5D-44A4-A238-B3FAAB17A9B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68CA1372-39AE-4467-9108-87C29B4EA6EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68CA1372-39AE-4467-9108-87C29B4EA6EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68CA1372-39AE-4467-9108-87C29B4EA6EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68CA1372-39AE-4467-9108-87C29B4EA6EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5740303-989D-462E-A32A-CB29744FA075}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5740303-989D-462E-A32A-CB29744FA075}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5740303-989D-462E-A32A-CB29744FA075}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5740303-989D-462E-A32A-CB29744FA075}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

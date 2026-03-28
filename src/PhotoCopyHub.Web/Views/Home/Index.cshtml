@@ -1,0 +1,133 @@
+@{
+    ViewData["Title"] = "Trang chủ";
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+}
+
+<section class="page-hero home-hero mb-4">
+    <div class="row g-4 align-items-center">
+        <div class="col-xl-8">
+            <h1 class="home-title fw-bold">Đặt in đúng ý khách, vận hành tiệm mượt trong giờ cao điểm</h1>
+            <p class="home-lead mb-4">
+                PhotoCopyHub giúp học sinh, sinh viên gửi tài liệu nhanh, chọn đúng thông số in, còn chủ tiệm kiểm soát hàng chờ rõ ràng để giảm sai sót và trả bài đúng hẹn.
+            </p>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @if (isAuthenticated)
+                {
+                    <a class="btn btn-primary px-4" asp-controller="PrintJobs" asp-action="Create">Tạo đơn in ngay</a>
+                    <a class="btn btn-outline-secondary px-4" asp-controller="Dashboard" asp-action="Index">Xem tổng quan</a>
+                }
+                else
+                {
+                    <a class="btn btn-primary px-4" asp-controller="Account" asp-action="Register">Tạo tài khoản miễn phí</a>
+                    <a class="btn btn-outline-secondary px-4" asp-controller="Account" asp-action="Login">Đăng nhập</a>
+                }
+                <a class="btn btn-outline-secondary px-4" asp-controller="Home" asp-action="Pricing">Xem bảng giá</a>
+            </div>
+
+            <div class="info-chip-group">
+                <span class="info-chip">Hỗ trợ PDF, DOCX, PPT</span>
+                <span class="info-chip">Theo dõi trạng thái theo thời gian thực</span>
+                <span class="info-chip">Phù hợp tiệm gần trường học</span>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="home-kpi-grid">
+                <div class="home-kpi">
+                    <div class="home-kpi-value">30s</div>
+                    <div class="home-kpi-label">Tạo đơn in với preset có sẵn</div>
+                </div>
+                <div class="home-kpi">
+                    <div class="home-kpi-value">24/7</div>
+                    <div class="home-kpi-label">Khách gửi file bất kỳ lúc nào</div>
+                </div>
+                <div class="home-kpi">
+                    <div class="home-kpi-value">1 nơi</div>
+                    <div class="home-kpi-label">Theo dõi ví, in ấn, dịch vụ hỗ trợ</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="mb-4">
+    <h4 class="section-title">Quy trình đặt in nhanh cho học sinh, sinh viên</h4>
+    <p class="section-subtitle">Thiết kế theo thói quen phổ biến tại các tiệm photocopy quanh trường học.</p>
+
+    <div class="row g-3">
+        <div class="col-md-6 col-xl-3">
+            <article class="home-process-card">
+                <span class="process-number">1</span>
+                <h6>Tải hoặc chọn tài liệu</h6>
+                <p class="text-muted mb-0">Dùng file đã upload trước đó hoặc gửi file mới ngay trong form.</p>
+            </article>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <article class="home-process-card">
+                <span class="process-number">2</span>
+                <h6>Chọn preset in</h6>
+                <p class="text-muted mb-0">Có cấu hình mẫu cho tài liệu học, báo cáo nhóm, luận văn và poster.</p>
+            </article>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <article class="home-process-card">
+                <span class="process-number">3</span>
+                <h6>Thêm ghi chú chi tiết</h6>
+                <p class="text-muted mb-0">Nêu rõ trang cần in màu, khổ giấy đặc biệt hoặc đóng gáy theo yêu cầu.</p>
+            </article>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <article class="home-process-card">
+                <span class="process-number">4</span>
+                <h6>Theo dõi trạng thái</h6>
+                <p class="text-muted mb-0">Chủ tiệm xác nhận file, cập nhật tiến độ để khách chủ động thời gian lấy bài.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <article class="audience-card">
+            <h5>Dành cho khách hàng học sinh/sinh viên</h5>
+            <p class="text-muted mb-0">Đặt in trước khi đến tiệm, hạn chế xếp hàng. Dễ ghi chú đúng yêu cầu để giảm in sai và tiết kiệm chi phí.</p>
+        </article>
+    </div>
+    <div class="col-lg-6">
+        <article class="audience-card">
+            <h5>Dành cho chủ tiệm và nhân viên</h5>
+            <p class="text-muted mb-0">Quản lý hàng chờ in tập trung, chuẩn hóa trạng thái đơn, giảm nhầm lẫn khi xử lý nhiều đơn cùng lúc.</p>
+        </article>
+    </div>
+</section>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card feature-card">
+            <div class="card-body">
+                <span class="feature-icon">IN</span>
+                <h5>In ấn / Photocopy</h5>
+                <p class="text-muted mb-0">Tối ưu cho tài liệu học tập: in 1 mặt, 2 mặt, trắng đen hoặc màu theo từng nhu cầu.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card feature-card">
+            <div class="card-body">
+                <span class="feature-icon">VPP</span>
+                <h5>Văn phòng phẩm</h5>
+                <p class="text-muted mb-0">Mua nhanh giấy, bút, bìa hồ sơ kèm đơn in mà không cần thao tác lại nhiều lần.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card feature-card">
+            <div class="card-body">
+                <span class="feature-icon">DV</span>
+                <h5>Dịch vụ hỗ trợ</h5>
+                <p class="text-muted mb-0">Đóng gáy, scan, ép plastic giúp hoàn thiện bài nộp đúng chuẩn yêu cầu môn học.</p>
+            </div>
+        </div>
+    </div>
+</div>

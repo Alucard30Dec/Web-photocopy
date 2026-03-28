@@ -1,0 +1,75 @@
+@model WalletBalanceReconciliationResultDto
+@{
+    ViewData["Title"] = "Đối soát ví";
+    var includeMatched = (bool?)ViewBag.IncludeMatched ?? false;
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Đối soát số dư ví</h3>
+    <p class="mb-0">So sánh số dư hiện tại trên tài khoản với tổng ledger WalletTransaction.</p>
+</section>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Tổng tài khoản</label>
+                <div class="fw-bold">@Model.TotalUsers</div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Khớp</label>
+                <div class="fw-bold text-success">@Model.MatchedUsers</div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Lệch</label>
+                <div class="fw-bold text-danger">@Model.MismatchUsers</div>
+            </div>
+            <div class="col-md-3 text-md-end">
+                @if (includeMatched)
+                {
+                    <a class="btn btn-outline-secondary btn-sm" asp-action="Index" asp-route-includeMatched="false">Chỉ xem lệch</a>
+                }
+                else
+                {
+                    <a class="btn btn-outline-primary btn-sm" asp-action="Index" asp-route-includeMatched="true">Xem tất cả</a>
+                }
+            </div>
+        </div>
+        <div class="small text-muted mt-2">Thời điểm tạo báo cáo (UTC): @Model.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white align-middle">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>UserId</th>
+                <th>CurrentBalance</th>
+                <th>LedgerBalance</th>
+                <th>Difference</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Items.Count == 0)
+        {
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">Không có dữ liệu cần hiển thị.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.Email</td>
+                    <td>@item.UserId</td>
+                    <td>@item.CurrentBalance.ToString("N0")</td>
+                    <td>@item.LedgerBalance.ToString("N0")</td>
+                    <td class="@(item.Difference == 0 ? "text-success" : "text-danger")">@item.Difference.ToString("N0")</td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>

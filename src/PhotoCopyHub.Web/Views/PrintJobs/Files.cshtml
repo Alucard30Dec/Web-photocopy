@@ -1,0 +1,46 @@
+@model List<UploadedFileMetadata>
+@{
+    ViewData["Title"] = "File đã upload";
+}
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Tên file</th>
+                    <th>Dung lượng</th>
+                    <th>Loại</th>
+                    <th>Ngày upload</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">Bạn chưa upload file nào.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.OriginalFileName</td>
+                        <td>@(item.Size / 1024) KB</td>
+                        <td>@item.ContentType</td>
+                        <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end flex-wrap gap-2">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="PreviewFile" asp-route-id="@item.Id" target="_blank" rel="noopener">Xem trước</a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="DownloadFile" asp-route-id="@item.Id">Tải xuống</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

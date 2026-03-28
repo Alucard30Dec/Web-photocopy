@@ -1,0 +1,32 @@
+@model List<SupportServiceOrder>
+@{
+    ViewData["Title"] = "Lịch sử dịch vụ hỗ trợ";
+}
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white">
+        <thead>
+            <tr>
+                <th>Mã đơn</th>
+                <th>Dịch vụ</th>
+                <th>Số lượng</th>
+                <th>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Id</td>
+                <td>@item.SupportService?.Name</td>
+                <td>@item.Quantity</td>
+                <td>@item.TotalAmount.ToString("N0")</td>
+                <td><span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span></td>
+                <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoCopyHub.Domain\PhotoCopyHub.Domain.csproj" />
+  </ItemGroup>
+</Project>

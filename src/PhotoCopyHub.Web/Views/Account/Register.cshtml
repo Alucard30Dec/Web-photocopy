@@ -1,0 +1,73 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Đăng ký";
+}
+
+<div class="row justify-content-center g-3 align-items-stretch">
+    <div class="col-lg-5">
+        <section class="page-hero h-100">
+            <h4 class="mb-2">Bắt đầu dùng PhotoCopyHub</h4>
+            <p class="mb-3">Tạo tài khoản để đặt in online, nạp ví và theo dõi đơn hàng trong một quy trình rõ ràng.</p>
+            <div class="info-chip-group">
+                <span class="info-chip">Đặt in mọi lúc</span>
+                <span class="info-chip">Ghi chú yêu cầu chi tiết</span>
+                <span class="info-chip">Phù hợp học sinh/sinh viên</span>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-md-7 col-lg-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h4 class="mb-2">Tạo tài khoản khách hàng</h4>
+                <p class="text-muted small mb-3">Đăng ký để nạp ví, đặt đơn in và theo dõi trạng thái trực tuyến.</p>
+                <form asp-action="Register" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label"></label>
+                        <input asp-for="FullName" class="form-control" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" type="email" class="form-control" placeholder="email@domain.com" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="PhoneNumber" class="form-label"></label>
+                        <input asp-for="PhoneNumber" class="form-control" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Address" class="form-label"></label>
+                        <textarea asp-for="Address" class="form-control"></textarea>
+                        <span asp-validation-for="Address" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label"></label>
+                        <input asp-for="Password" type="password" class="form-control" />
+                        <small class="text-muted">Mật khẩu tối thiểu 8 ký tự, có chữ hoa, chữ thường và số.</small>
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ConfirmPassword" class="form-label"></label>
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                    </div>
+
+                    <button class="btn btn-primary w-100" type="submit">Đăng ký</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

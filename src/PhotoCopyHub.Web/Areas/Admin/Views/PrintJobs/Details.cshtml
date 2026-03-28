@@ -1,0 +1,81 @@
+@model PrintJob
+@{
+    ViewData["Title"] = "Chi tiết đơn in";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Chi tiết đơn in @Model.Id</h3>
+    <p class="mb-0">Khách hàng: <strong>@Model.User?.Email</strong></p>
+</section>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Trạng thái</dt>
+                    <dd class="col-sm-8"><span class="badge @Model.Status.ToBadgeClass()">@Model.Status.GetDisplayName()</span></dd>
+
+                    <dt class="col-sm-4">Thông số in</dt>
+                    <dd class="col-sm-8">@Model.PaperSize.GetDisplayName() · @Model.PrintSide.GetDisplayName() · @Model.ColorMode.GetDisplayName()</dd>
+
+                    <dt class="col-sm-4">Khối lượng</dt>
+                    <dd class="col-sm-8">@Model.Copies bản x @Model.TotalPages trang = @(Model.Copies * Model.TotalPages) trang in</dd>
+
+                    <dt class="col-sm-4">Tổng tiền</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.TotalAmount.ToString("N0") đ</dd>
+
+                    <dt class="col-sm-4">Nhận hàng</dt>
+                    <dd class="col-sm-8">@Model.DeliveryMethod.GetDisplayName()</dd>
+
+                    <dt class="col-sm-4">Ghi chú khách</dt>
+                    <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.Notes) ? "Không có ghi chú." : Model.Notes)</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p class="text-muted small mb-3">Bản xem trước hiển thị tự động để kiểm tra file ngay khi mở đơn.</p>
+                <iframe
+                    src="@Url.Action("PreviewFile", new { id = Model.Id })"
+                    title="Xem trước file @Model.Id"
+                    class="w-100 border rounded bg-light mb-3"
+                    style="height: 420px;"
+                    loading="lazy">
+                </iframe>
+                <div class="d-flex gap-2 mb-3">
+                    <a class="btn btn-outline-primary flex-grow-1" asp-action="DownloadFile" asp-route-id="@Model.Id">Tải file in</a>
+                </div>
+                <form asp-action="UpdateStatus" method="post" class="row g-2">
+                    <input type="hidden" name="PrintJobId" value="@Model.Id" />
+                    <div class="col-12">
+                        <select name="Status" class="form-select" asp-items="Html.GetEnumSelectList<PrintJobStatus>()"></select>
+                    </div>
+                    <div class="col-12">
+                        <input name="Note" class="form-control" placeholder="Ghi chú xử lý" />
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary w-100" type="submit">Cập nhật trạng thái</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Refund" method="post" class="row g-2">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="col-12">
+                        <input name="reason" class="form-control" placeholder="Lý do hoàn tiền" required />
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-warning w-100" type="submit">Hoàn tiền</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

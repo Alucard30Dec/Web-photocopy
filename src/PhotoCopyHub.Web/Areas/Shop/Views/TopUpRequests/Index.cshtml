@@ -1,0 +1,69 @@
+@model List<TopUpRequest>
+@{
+    ViewData["Title"] = "Duyệt nạp tiền";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Hàng chờ duyệt nạp tiền</h3>
+    <p class="mb-0">ShopOperator kiểm tra chứng từ, hệ thống tự tách bước duyệt Admin nếu vượt ngưỡng cấu hình.</p>
+</section>
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+        <tr>
+            <th>Khách hàng</th>
+            <th>Kênh</th>
+            <th>Số tiền</th>
+            <th>Mã GD</th>
+            <th>Trạng thái</th>
+            <th>Duyệt bước 1</th>
+            <th>Duyệt bước 2</th>
+            <th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        @if (Model.Count == 0)
+        {
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">Chưa có yêu cầu nào.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.User?.Email</td>
+                    <td>@item.Channel.GetDisplayName()</td>
+                    <td>@item.Amount.ToString("N0")</td>
+                    <td>@item.TransactionReferenceCode</td>
+                    <td>
+                        <span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span>
+                    </td>
+                    <td>
+                        <div>@item.ReviewedByAdminId</div>
+                        <small class="text-muted">@item.ReviewedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                    </td>
+                    <td>
+                        <div>@item.SecondReviewedByAdminId</div>
+                        <small class="text-muted">@item.SecondReviewedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                    </td>
+                    <td>
+                        @if (item.Status == TopUpStatus.Pending || (item.Status == TopUpStatus.PendingAdminApproval && User.IsInRole("Admin")))
+                        {
+                            <form asp-action="Review" method="post" class="d-flex flex-wrap gap-1">
+                                <input type="hidden" name="TopUpRequestId" value="@item.Id" />
+                                <input type="hidden" name="IdempotencyKey" value="@System.Guid.NewGuid().ToString("N")" />
+                                <input type="text" name="Note" class="form-control form-control-sm" placeholder="Ghi chú" />
+                                <button class="btn btn-sm btn-success" type="submit" name="IsApprove" value="true">Duyệt</button>
+                                <button class="btn btn-sm btn-danger" type="submit" name="IsApprove" value="false">Từ chối</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>

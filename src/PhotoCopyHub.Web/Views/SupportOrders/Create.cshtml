@@ -1,0 +1,46 @@
+@model CreateSupportOrderViewModel
+@{
+    ViewData["Title"] = "Dịch vụ hỗ trợ";
+}
+
+<div class="card">
+    <div class="card-body">
+        <h4 class="mb-3">Tạo đơn dịch vụ hỗ trợ</h4>
+        <form asp-action="Create" method="post">
+            <input asp-for="IdempotencyKey" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="SupportServiceId" class="form-label"></label>
+                <select asp-for="SupportServiceId" class="form-select">
+                    <option value="">-- Chọn dịch vụ --</option>
+                    @foreach (var item in Model.AvailableServices)
+                    {
+                        <option value="@item.Id">@item.Name - @item.UnitPrice.ToString("N0") đ (@item.FeeType)</option>
+                    }
+                </select>
+                <span asp-validation-for="SupportServiceId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Quantity" class="form-label"></label>
+                <input asp-for="Quantity" class="form-control" />
+                <span asp-validation-for="Quantity" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Notes" class="form-label"></label>
+                <textarea asp-for="Notes" class="form-control"></textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Thanh toán bằng ví</button>
+                <a class="btn btn-outline-secondary" asp-action="History">Lịch sử đơn dịch vụ</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

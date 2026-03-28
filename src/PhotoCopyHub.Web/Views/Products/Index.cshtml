@@ -1,0 +1,72 @@
+@model ProductCatalogViewModel
+@{
+    ViewData["Title"] = "Văn phòng phẩm";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Đặt mua văn phòng phẩm</h3>
+    <p class="mb-0">Chọn số lượng theo nhu cầu, hệ thống kiểm tra tồn kho và thanh toán trực tiếp bằng ví nội bộ.</p>
+</section>
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Index" method="post">
+            <input asp-for="IdempotencyKey" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="table-responsive mb-3">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th>Giá</th>
+                            <th>Tồn kho</th>
+                            <th>Số lượng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @for (var i = 0; i < Model.Items.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                @Model.Items[i].Name
+                                <input asp-for="Items[i].ProductId" type="hidden" />
+                                <input asp-for="Items[i].Name" type="hidden" />
+                                <input asp-for="Items[i].Price" type="hidden" />
+                                <input asp-for="Items[i].StockQuantity" type="hidden" />
+                            </td>
+                            <td>@Model.Items[i].Price.ToString("N0")</td>
+                            <td>@Model.Items[i].StockQuantity</td>
+                            <td><input asp-for="Items[i].Quantity" class="form-control" /></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label asp-for="DeliveryMethod" class="form-label"></label>
+                    <select asp-for="DeliveryMethod" class="form-select" asp-items="Html.GetEnumSelectList<DeliveryMethod>()"></select>
+                </div>
+                <div class="col-md-8">
+                    <label asp-for="DeliveryAddress" class="form-label"></label>
+                    <input asp-for="DeliveryAddress" class="form-control" />
+                </div>
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <textarea asp-for="Notes" class="form-control"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Thanh toán bằng ví</button>
+                <a class="btn btn-outline-secondary" asp-action="Orders">Lịch sử đơn hàng</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

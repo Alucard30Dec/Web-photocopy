@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: photocopyhub-demo
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /Account/Login
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DatabaseProvider
+        value: MySql
+      - key: Database__UseSqliteFallbackWhenPrimaryUnavailable
+        value: "false"
+      - key: SeedSampleData__Enabled
+        value: "true"
+      - key: ConnectionStrings__DefaultConnection
+        sync: false

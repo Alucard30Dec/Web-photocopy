@@ -1,0 +1,87 @@
+@model ShopInventoryViewModel
+@{
+    ViewData["Title"] = "Quản lý tồn kho";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Quản lý tồn kho văn phòng phẩm</h3>
+    <p class="mb-0">Điều chỉnh nhập/xuất tồn kho thủ công có lưu lịch sử biến động để đối soát.</p>
+</section>
+
+<div class="card mb-3">
+    <div class="card-header">Danh sách sản phẩm và điều chỉnh kho</div>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th>Sản phẩm</th>
+                <th>Tồn hiện tại</th>
+                <th>Giá</th>
+                <th>Điều chỉnh</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Products)
+            {
+                <tr>
+                    <td>@item.Name</td>
+                    <td>@item.StockQuantity</td>
+                    <td>@item.Price.ToString("N0")</td>
+                    <td>
+                        <form asp-action="AdjustStock" method="post" class="d-flex flex-wrap gap-1">
+                            <input type="hidden" name="ProductId" value="@item.Id" />
+                            <input type="number" name="QuantityDelta" class="form-control form-control-sm" placeholder="+/-" />
+                            <input type="text" name="Note" class="form-control form-control-sm" placeholder="Lý do" />
+                            <button class="btn btn-sm btn-primary" type="submit">Lưu</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Lịch sử biến động kho gần đây</div>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th>Thời gian</th>
+                <th>Sản phẩm</th>
+                <th>Loại</th>
+                <th>Thay đổi</th>
+                <th>Tồn trước</th>
+                <th>Tồn sau</th>
+                <th>Người thao tác</th>
+                <th>Ghi chú</th>
+            </tr>
+            </thead>
+            <tbody>
+            @if (Model.RecentMovements.Count == 0)
+            {
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">Chưa có biến động kho.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model.RecentMovements)
+                {
+                    <tr>
+                        <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@item.Product?.Name</td>
+                        <td>@item.MovementType</td>
+                        <td class="@(item.QuantityChanged >= 0 ? "text-success" : "text-danger")">@item.QuantityChanged</td>
+                        <td>@item.StockBefore</td>
+                        <td>@item.StockAfter</td>
+                        <td>@(item.ActorUser?.Email ?? item.ActorUserId)</td>
+                        <td>@item.Note</td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

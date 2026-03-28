@@ -1,0 +1,36 @@
+@model ProductOrder
+@{
+    ViewData["Title"] = "Chi tiết đơn văn phòng phẩm";
+}
+
+<div class="card">
+    <div class="card-body">
+        <h4>Đơn hàng @Model.Id</h4>
+        <p>Trạng thái: <span class="badge @Model.Status.ToBadgeClass()">@Model.Status.GetDisplayName()</span></p>
+        <p>Tổng tiền: <strong>@Model.TotalAmount.ToString("N0") đ</strong></p>
+
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Đơn giá</th>
+                    <th>Số lượng</th>
+                    <th>Thành tiền</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var line in Model.Items)
+                {
+                    <tr>
+                        <td>@line.Product?.Name</td>
+                        <td>@line.UnitPrice.ToString("N0")</td>
+                        <td>@line.Quantity</td>
+                        <td>@line.LineTotal.ToString("N0")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

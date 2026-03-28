@@ -1,0 +1,39 @@
+@model List<AuditLog>
+@{
+    ViewData["Title"] = "Audit logs";
+}
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white">
+        <thead>
+            <tr>
+                <th>Thời gian</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>EntityId</th>
+                <th>Details</th>
+                <th>IP</th>
+                <th>Hash</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var log in Model)
+        {
+            <tr>
+                <td>@log.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td>@log.ActorUserId</td>
+                <td>@log.Action</td>
+                <td>@log.EntityName</td>
+                <td>@log.EntityId</td>
+                <td>@log.Details</td>
+                <td>@log.IpAddress</td>
+                <td class="small font-monospace">@(
+                    string.IsNullOrWhiteSpace(log.RecordHash)
+                        ? "-"
+                        : (log.RecordHash!.Length > 12 ? log.RecordHash[..12] : log.RecordHash))</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

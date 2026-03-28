@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin - PhotoCopyHub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+@{
+    var adminController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+}
+<nav class="navbar navbar-expand-lg navbar-dark admin-topbar">
+    <div class="container-fluid">
+        <a class="navbar-brand admin-title" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">PhotoCopyHub Admin</a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-light btn-sm rounded-pill px-3" asp-area="" asp-controller="Home" asp-action="Index">Về trang chính</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid admin-shell">
+    <div class="row">
+        <aside class="col-lg-2 mb-3 admin-sidebar">
+            <div class="list-group admin-menu">
+                <a class="list-group-item list-group-item-action @(adminController == "Dashboard" ? "active" : string.Empty)" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                <a class="list-group-item list-group-item-action @(adminController == "Users" ? "active" : string.Empty)" asp-area="Admin" asp-controller="Users" asp-action="Index">Users</a>
+                <a class="list-group-item list-group-item-action @(adminController == "TopUpRequests" ? "active" : string.Empty)" asp-area="Admin" asp-controller="TopUpRequests" asp-action="Index">Duyệt nạp tiền</a>
+                <a class="list-group-item list-group-item-action @(adminController == "PrintJobs" ? "active" : string.Empty)" asp-area="Admin" asp-controller="PrintJobs" asp-action="Index">Đơn in</a>
+                <a class="list-group-item list-group-item-action @(adminController == "Products" ? "active" : string.Empty)" asp-area="Admin" asp-controller="Products" asp-action="Index">Văn phòng phẩm</a>
+                <a class="list-group-item list-group-item-action @(adminController == "SupportServices" ? "active" : string.Empty)" asp-area="Admin" asp-controller="SupportServices" asp-action="Index">Dịch vụ hỗ trợ</a>
+                <a class="list-group-item list-group-item-action @(adminController == "PricingRules" ? "active" : string.Empty)" asp-area="Admin" asp-controller="PricingRules" asp-action="Index">Bảng giá</a>
+                <a class="list-group-item list-group-item-action @(adminController == "WalletTransactions" ? "active" : string.Empty)" asp-area="Admin" asp-controller="WalletTransactions" asp-action="Index">Giao dịch ví</a>
+                <a class="list-group-item list-group-item-action @(adminController == "Reconciliation" ? "active" : string.Empty)" asp-area="Admin" asp-controller="Reconciliation" asp-action="Index">Đối soát ví</a>
+                <a class="list-group-item list-group-item-action @(adminController == "AuditLogs" ? "active" : string.Empty)" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">Audit logs</a>
+            </div>
+        </aside>
+
+        <main class="col-lg-10">
+            <partial name="~/Views/Shared/_Alert.cshtml" />
+            @RenderBody()
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

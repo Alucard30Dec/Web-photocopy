@@ -1,0 +1,57 @@
+@model WalletIndexViewModel
+@{
+    ViewData["Title"] = "Ví của tôi";
+}
+
+<section class="page-hero mb-3">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <h3 class="mb-1">Ví của tôi</h3>
+            <p class="mb-0">Số dư hiện tại: <strong class="text-success">@Model.CurrentBalance.ToString("N0") đ</strong></p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary" asp-action="TopUp">Tạo yêu cầu nạp tiền</a>
+            <a class="btn btn-outline-secondary" asp-action="TopUpHistory">Lịch sử nạp tiền</a>
+        </div>
+    </div>
+</section>
+
+<div class="card">
+    <div class="card-header">Lịch sử giao dịch ví</div>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Thời gian</th>
+                <th>Loại</th>
+                <th>Số tiền</th>
+                <th>Số dư trước</th>
+                <th>Số dư sau</th>
+                <th>Ghi chú</th>
+            </tr>
+            </thead>
+            <tbody>
+            @if (Model.Transactions.Count == 0)
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">Chưa có giao dịch nào.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var tx in Model.Transactions)
+                {
+                    <tr>
+                        <td>@tx.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@tx.TransactionType.GetDisplayName()</td>
+                        <td class="@(tx.Amount >= 0 ? "text-success" : "text-danger")">@tx.Amount.ToString("N0")</td>
+                        <td>@tx.BalanceBefore.ToString("N0")</td>
+                        <td>@tx.BalanceAfter.ToString("N0")</td>
+                        <td>@tx.Note</td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

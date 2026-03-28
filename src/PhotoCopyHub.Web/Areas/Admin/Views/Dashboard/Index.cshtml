@@ -1,0 +1,47 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Dashboard quản trị</h3>
+    <p class="mb-0">Theo dõi nhanh tình hình vận hành cửa hàng và các đầu việc cần xử lý ngay.</p>
+</section>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Tổng users</div>
+            <div class="stat-value">@ViewBag.TotalUsers</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Top-up chờ duyệt</div>
+            <div class="stat-value">@ViewBag.PendingTopUps</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Đơn in chờ xử lý</div>
+            <div class="stat-value">@ViewBag.PrintJobsPending</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Tổng giao dịch ví</div>
+            <div class="stat-value">@ViewBag.TotalWalletTransactions</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Sản phẩm active</div>
+            <div class="stat-value">@ViewBag.ActiveProducts</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Dịch vụ hỗ trợ active</div>
+            <div class="stat-value">@ViewBag.ActiveSupportServices</div>
+        </div>
+    </div>
+</div>
