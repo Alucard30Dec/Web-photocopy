@@ -264,7 +264,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         var nullableGuidToBytesConverter = new ValueConverter<Guid?, byte[]?>(
             guid => guid.HasValue ? guid.Value.ToByteArray() : null,
-            bytes => bytes is null ? null : new Guid(bytes));
+            bytes => bytes == null ? (Guid?)null : new Guid(bytes));
 
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
