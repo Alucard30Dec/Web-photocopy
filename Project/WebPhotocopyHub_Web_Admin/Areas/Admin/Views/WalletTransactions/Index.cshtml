@@ -1,0 +1,40 @@
+@model List<WalletTransaction>
+@{
+    ViewData["Title"] = "Giao dịch ví toàn hệ thống";
+}
+
+<div class="mb-3 d-flex justify-content-end">
+    <a class="btn btn-outline-primary btn-sm" asp-action="ExportCsv">Export CSV</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white">
+        <thead>
+            <tr>
+                <th>Thời gian</th>
+                <th>UserId</th>
+                <th>Loại GD</th>
+                <th>Số tiền</th>
+                <th>Số dư trước</th>
+                <th>Số dư sau</th>
+                <th>Tham chiếu</th>
+                <th>Ghi chú</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td>@item.UserId</td>
+                <td>@item.TransactionType.GetDisplayName()</td>
+                <td class="@(item.Amount >= 0 ? "text-success" : "text-danger")">@item.Amount.ToString("N0")</td>
+                <td>@item.BalanceBefore.ToString("N0")</td>
+                <td>@item.BalanceAfter.ToString("N0")</td>
+                <td>@item.ReferenceType / @item.ReferenceId</td>
+                <td>@item.Note</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

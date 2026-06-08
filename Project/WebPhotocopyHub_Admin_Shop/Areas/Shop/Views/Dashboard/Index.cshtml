@@ -1,0 +1,139 @@
+@model List<Product>
+@{
+    ViewData["Title"] = "Dashboard vận hành";
+    var branchSlug = ViewContext.RouteData.Values["branchSlug"]?.ToString();
+}
+
+<section class="page-hero mb-3">
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
+        <div>
+            <span class="dashboard-kicker">Shop workspace</span>
+            <h3 class="mb-2 mt-2">Dashboard vận hành tiệm photocopy</h3>
+            <p class="mb-0">Theo dõi nhanh các hàng chờ xử lý để vận hành tiệm mượt và đúng SLA.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary" asp-area="Shop" asp-controller="PrintJobs" asp-action="Index" asp-route-branchSlug="@branchSlug">Xử lý đơn in</a>
+            <a class="btn btn-outline-secondary" asp-area="Shop" asp-controller="TopUpRequests" asp-action="CounterTopUp" asp-route-branchSlug="@branchSlug">Nạp tại quầy</a>
+        </div>
+    </div>
+</section>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Top-up chờ kiểm tra</div>
+            <div class="stat-value">@ViewBag.PendingTopUp</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Top-up chờ Admin bước 2</div>
+            <div class="stat-value">@ViewBag.PendingAdminTopUp</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Hàng chờ in</div>
+            <div class="stat-value">@ViewBag.PrintQueue</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Đơn văn phòng phẩm chờ xử lý</div>
+            <div class="stat-value">@ViewBag.ProductOrdersWaiting</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Đơn dịch vụ hỗ trợ chờ xử lý</div>
+            <div class="stat-value">@ViewBag.SupportOrdersWaiting</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-label">Sản phẩm sắp hết (<=10)</div>
+            <div class="stat-value">@ViewBag.LowStockProducts</div>
+        </div>
+    </div>
+</div>
+
+<div class="workspace-grid">
+    <section class="workspace-panel">
+        <div class="workspace-panel-header">
+            <div>
+                <span class="panel-eyebrow">Hàng chờ hôm nay</span>
+                <h4>Luồng việc tại quầy</h4>
+            </div>
+        </div>
+
+        <div class="queue-board">
+            <a class="queue-lane" asp-area="Shop" asp-controller="TopUpRequests" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                <span>Duyệt nạp bước 1</span>
+                <strong>@ViewBag.PendingTopUp</strong>
+                <small>Kiểm tra chứng từ khách gửi</small>
+            </a>
+            <a class="queue-lane queue-lane-hot" asp-area="Shop" asp-controller="PrintJobs" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                <span>Hàng chờ in</span>
+                <strong>@ViewBag.PrintQueue</strong>
+                <small>Nhận file và cập nhật trạng thái</small>
+            </a>
+            <a class="queue-lane" asp-area="Shop" asp-controller="ProductOrders" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                <span>Văn phòng phẩm</span>
+                <strong>@ViewBag.ProductOrdersWaiting</strong>
+                <small>Soạn hàng kèm đơn in</small>
+            </a>
+            <a class="queue-lane" asp-area="Shop" asp-controller="SupportOrders" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                <span>Dịch vụ hỗ trợ</span>
+                <strong>@ViewBag.SupportOrdersWaiting</strong>
+                <small>Scan, ép plastic, đóng gáy</small>
+            </a>
+        </div>
+    </section>
+
+    <aside class="workspace-panel">
+        <span class="panel-eyebrow">Thao tác quầy</span>
+        <h4>Ưu tiên ca hiện tại</h4>
+        <div class="quick-action-stack">
+            <a asp-area="Shop" asp-controller="TopUpRequests" asp-action="CounterTopUp" asp-route-branchSlug="@branchSlug">Nạp tiền tại quầy</a>
+            <a asp-area="Shop" asp-controller="Inventory" asp-action="Index" asp-route-branchSlug="@branchSlug">Kiểm tra tồn kho</a>
+            <a asp-area="Shop" asp-controller="TopUpRequests" asp-action="Index" asp-route-branchSlug="@branchSlug">Duyệt top-up online</a>
+        </div>
+    </aside>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Danh sách cảnh báo tồn kho</span>
+        <a class="btn btn-sm btn-outline-secondary" asp-area="Shop" asp-controller="Inventory" asp-action="Index" asp-route-branchSlug="@branchSlug">Mở tồn kho</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Sản phẩm</th>
+                <th>Tồn kho</th>
+                <th>Giá</th>
+            </tr>
+            </thead>
+            <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr>
+                    <td colspan="3" class="text-center text-muted py-4">Không có sản phẩm nào sắp hết.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td>@item.StockQuantity</td>
+                        <td>@item.Price.ToString("N0")</td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

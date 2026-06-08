@@ -1,0 +1,40 @@
+@model List<PricingRule>
+@{
+    ViewData["Title"] = "Bảng giá";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Bảng giá in cơ bản</h3>
+    <p class="mb-3">Đơn giá áp dụng cho nhu cầu in phổ biến của học sinh, sinh viên. Chi phí thực tế được hệ thống tính tự động theo số trang và số bản in.</p>
+    <div class="info-chip-group">
+        <span class="info-chip">Có preset gợi ý khi tạo đơn in</span>
+        <span class="info-chip">Giá chưa gồm giao hàng</span>
+        <span class="info-chip">Trang in màu nên ghi chú rõ trong đơn</span>
+    </div>
+</section>
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white align-middle">
+        <thead>
+            <tr>
+                <th>Khổ giấy</th>
+                <th>Kiểu in</th>
+                <th>Màu</th>
+                <th>In ảnh</th>
+                <th>Đơn giá (VND)</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.PaperSize.GetDisplayName()</td>
+                <td>@item.PrintSide.GetDisplayName()</td>
+                <td>@item.ColorMode.GetDisplayName()</td>
+                <td>@(item.IsPhoto ? "Có" : "Không")</td>
+                <td>@item.UnitPrice.ToString("N0")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

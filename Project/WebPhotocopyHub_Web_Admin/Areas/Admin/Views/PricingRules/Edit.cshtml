@@ -1,0 +1,30 @@
+@model EditPricingRuleViewModel
+@{
+    ViewData["Title"] = "Bảng giá";
+}
+
+<div class="card">
+    <div class="card-body">
+        <h4>@(Model.Id.HasValue ? "Cập nhật" : "Thêm") rule giá</h4>
+        <form asp-action="Edit" method="post">
+            <input asp-for="Id" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-3"><label asp-for="PaperSize" class="form-label"></label><select asp-for="PaperSize" class="form-select" asp-items="Html.GetEnumSelectList<PaperSize>()"></select></div>
+                <div class="col-md-3"><label asp-for="PrintSide" class="form-label"></label><select asp-for="PrintSide" class="form-select" asp-items="Html.GetEnumSelectList<PrintSide>()"></select></div>
+                <div class="col-md-3"><label asp-for="ColorMode" class="form-label"></label><select asp-for="ColorMode" class="form-select" asp-items="Html.GetEnumSelectList<ColorMode>()"></select></div>
+                <div class="col-md-3"><label asp-for="UnitPrice" class="form-label"></label><input asp-for="UnitPrice" class="form-control" /></div>
+            </div>
+
+            <div class="form-check mb-2"><input asp-for="IsPhoto" class="form-check-input" /><label asp-for="IsPhoto" class="form-check-label"></label></div>
+            <div class="form-check mb-3"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label"></label></div>
+
+            <button class="btn btn-primary" type="submit">Lưu</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="~/Views/Shared/_ValidationScriptsPartial.cshtml" />
+}

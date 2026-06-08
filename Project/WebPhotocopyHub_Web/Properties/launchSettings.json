@@ -1,0 +1,73 @@
+{
+    "$schema":  "https://json.schemastore.org/launchsettings.json",
+    "profiles":  {
+                     "Start":  {
+                                   "commandName":  "Project",
+                                   "dotnetRunMessages":  true,
+                                   "launchBrowser":  false,
+                                   "launchUrl":  "dev/open",
+                                   "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                   "environmentVariables":  {
+                                                                "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                "BrowserLaunch__Enabled":  "true",
+                                                                "DatabaseProvider":  "PostgreSql",
+                                                                "BrowserLaunch__BaseUrl":  "https://localhost:7250",
+                                                                "BrowserLaunch__DelayMs":  "1200",
+                                                                "BrowserLaunch__Urls__0":  "/swagger",
+                                                                "BrowserLaunch__Urls__1":  "/Home",
+                                                                "BrowserLaunch__Urls__2":  "/Shops"
+                                                            }
+                               },
+                     "PhotoCopyHub.Web - Debug HTTPS":  {
+                                                            "commandName":  "Project",
+                                                            "dotnetRunMessages":  true,
+                                                            "launchBrowser":  false,
+                                                            "launchUrl":  "dev/open",
+                                                            "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                            "environmentVariables":  {
+                                                                                         "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                         "DatabaseProvider":  "PostgreSql",
+                                                                                         "BrowserLaunch__Enabled":  "true",
+                                                                                         "BrowserLaunch__BaseUrl":  "https://localhost:7250",
+                                                                                         "BrowserLaunch__DelayMs":  "1200",
+                                                                                         "BrowserLaunch__Urls__0":  "/swagger",
+                                                                                         "BrowserLaunch__Urls__1":  "/Home",
+                                                                                         "BrowserLaunch__Urls__2":  "/Shops"
+                                                                                     }
+                                                        },
+                     "PhotoCopyHub.Web - Web":  {
+                                                    "commandName":  "Project",
+                                                    "dotnetRunMessages":  true,
+                                                    "launchBrowser":  false,
+                                                    "launchUrl":  "dev/open",
+                                                    "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                    "environmentVariables":  {
+                                                                                 "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                 "DatabaseProvider":  "PostgreSql",
+                                                                                 "BrowserLaunch__Enabled":  "true",
+                                                                                 "BrowserLaunch__BaseUrl":  "https://localhost:7250",
+                                                                                 "BrowserLaunch__DelayMs":  "1200",
+                                                                                 "BrowserLaunch__Urls__0":  "/swagger",
+                                                                                 "BrowserLaunch__Urls__1":  "/Home",
+                                                                                 "BrowserLaunch__Urls__2":  "/Shops"
+                                                                             }
+                                                },
+                     "PhotoCopyHub.Web - Swagger":  {
+                                                        "commandName":  "Project",
+                                                        "dotnetRunMessages":  true,
+                                                        "launchBrowser":  false,
+                                                        "launchUrl":  "dev/open",
+                                                        "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                        "environmentVariables":  {
+                                                                                     "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                     "DatabaseProvider":  "PostgreSql",
+                                                                                     "BrowserLaunch__Enabled":  "true",
+                                                                                     "BrowserLaunch__BaseUrl":  "https://localhost:7250",
+                                                                                     "BrowserLaunch__DelayMs":  "1200",
+                                                                                     "BrowserLaunch__Urls__0":  "/swagger",
+                                                                                     "BrowserLaunch__Urls__1":  "/Home",
+                                                                                     "BrowserLaunch__Urls__2":  "/Shops"
+                                                                                 }
+                                                    }
+                 }
+}

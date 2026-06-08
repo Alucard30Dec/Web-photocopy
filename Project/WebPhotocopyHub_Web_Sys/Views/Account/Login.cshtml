@@ -1,0 +1,77 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+    var selectedBranch = Context.Request.Query["branch"].ToString();
+    var customerReturnUrl = Url.Action("Index", "Dashboard") ?? "/Dashboard";
+    var shopReturnUrl = Url.Action("Index", "Dashboard", new { area = "Shop" }) ?? "/Shop/Dashboard";
+    var adminReturnUrl = Url.Action("Index", "Dashboard", new { area = "Admin" }) ?? "/Admin/Dashboard";
+}
+
+<div class="row justify-content-center g-3 align-items-stretch">
+    <div class="col-lg-5">
+        <section class="page-hero h-100">
+            <h4 class="mb-2">Chào mừng quay lại PhotoCopyHub</h4>
+            @if (!string.IsNullOrWhiteSpace(selectedBranch))
+            {
+                <p class="login-branch mb-3">Cơ sở đã chọn: <strong>@selectedBranch</strong></p>
+            }
+            <p class="mb-3">Đăng nhập để tiếp tục theo dõi đơn in, ví điện tử và lịch sử xử lý tại tiệm.</p>
+            <div class="info-chip-group">
+                <span class="info-chip">Theo dõi trạng thái đơn in</span>
+                <span class="info-chip">Quản lý ví minh bạch</span>
+                <span class="info-chip">Đặt in nhanh cho tài liệu học tập</span>
+            </div>
+
+            <div class="login-route-grid mt-4">
+                <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@customerReturnUrl" asp-route-branch="@selectedBranch">
+                    <span>Khách hàng</span>
+                    <strong>Đơn in và ví</strong>
+                </a>
+                <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@shopReturnUrl" asp-route-branch="@selectedBranch">
+                    <span>Tiệm photocopy</span>
+                    <strong>Hàng chờ xử lý</strong>
+                </a>
+                <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@adminReturnUrl">
+                    <span>Admin</span>
+                    <strong>Quản trị hệ thống</strong>
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-md-7 col-lg-5">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <h4 class="mb-2">Đăng nhập</h4>
+                <p class="text-muted small mb-3">Truy cập dashboard để quản lý ví, đơn in và dịch vụ của bạn.</p>
+                <form asp-action="Login" method="post">
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" type="email" class="form-control" placeholder="email@domain.com" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label"></label>
+                        <input asp-for="Password" type="password" class="form-control" placeholder="Nhập mật khẩu" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label"></label>
+                    </div>
+
+                    <button class="btn btn-primary w-100" type="submit">Đăng nhập</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

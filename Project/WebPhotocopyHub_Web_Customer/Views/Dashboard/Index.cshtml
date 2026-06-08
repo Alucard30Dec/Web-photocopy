@@ -1,0 +1,162 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Tổng quan";
+
+    var displayName = User.Identity?.Name;
+    if (string.IsNullOrWhiteSpace(displayName))
+    {
+        displayName = "khách hàng";
+    }
+
+    var totalServiceOrders = Model.ProductOrdersCount + Model.SupportOrdersCount;
+    var branchSlug = ViewContext.RouteData.Values["branchSlug"]?.ToString() ?? "";
+    var branch = ShopBranchCatalog.Find(branchSlug);
+    var branchName = branch?.Name ?? "cơ sở đang chọn";
+    var branchAddress = branch?.Address ?? "Đang cập nhật địa chỉ";
+    var branchOpenHours = branch?.OpenHours ?? "Đang cập nhật giờ mở cửa";
+}
+
+<section class="cu-page">
+    <section class="cu-hero cu-hero--dashboard">
+        <div>
+            <span class="cu-kicker">Customer workspace</span>
+            <h1>Xin chào, @displayName 👋</h1>
+            <p>Bạn đang ở khu vực khách hàng của @branchName. Tạo đơn in, gửi file, mua văn phòng phẩm, đặt dịch vụ hỗ trợ và theo dõi trạng thái xử lý tại cùng một nơi.</p>
+
+            <div class="cu-meta">
+                <span>@branchAddress</span>
+                <span>@branchOpenHours</span>
+                <span>Thanh toán minh bạch theo từng đơn</span>
+            </div>
+
+            <div class="cu-actions">
+                <a class="btn btn-primary" asp-controller="PrintJobs" asp-action="Create">Tạo đơn in mới</a>
+                <a class="btn btn-outline-secondary" asp-controller="PrintJobs" asp-action="Index">Theo dõi đơn</a>
+            </div>
+        </div>
+
+        <aside class="cu-hero-card">
+            <span class="cu-card-label">Số dư ví</span>
+            <strong>@Model.CurrentBalance.ToString("N0") đ</strong>
+            <small>Ví dùng cho đơn đã xác nhận, nạp tiền và đối soát giao dịch.</small>
+        </aside>
+    </section>
+
+    <section class="cu-stat-grid">
+        <a class="cu-stat-card" asp-controller="PrintJobs" asp-action="Index">
+            <span>Đơn in</span>
+            <strong>@Model.PrintJobsCount</strong>
+            <small>Xem trạng thái tiếp nhận, in, nhận hàng.</small>
+        </a>
+        <a class="cu-stat-card" asp-controller="Products" asp-action="Orders">
+            <span>Sản phẩm</span>
+            <strong>@Model.ProductOrdersCount</strong>
+            <small>Giấy, bút, bìa và vật tư đã đặt.</small>
+        </a>
+        <a class="cu-stat-card" asp-controller="SupportOrders" asp-action="History">
+            <span>Dịch vụ</span>
+            <strong>@Model.SupportOrdersCount</strong>
+            <small>Scan, đóng gáy, ép plastic, hỗ trợ file.</small>
+        </a>
+        <a class="cu-stat-card" asp-controller="Wallet" asp-action="TopUpHistory">
+            <span>Nạp tiền chờ duyệt</span>
+            <strong>@Model.PendingTopUpCount</strong>
+            <small>Yêu cầu đang chờ shop/admin xử lý.</small>
+        </a>
+    </section>
+
+    <section class="cu-grid cu-grid--main">
+        <div class="cu-card">
+            <div class="cu-section-head">
+                <div>
+                    <span class="cu-kicker">Thao tác nhanh</span>
+                    <h2>Dùng thường xuyên</h2>
+                </div>
+            </div>
+
+            <div class="cu-action-grid">
+                <a class="cu-action-card is-blue" asp-controller="PrintJobs" asp-action="Create">
+                    <span>01</span>
+                    <strong>Tạo đơn in</strong>
+                    <small>Upload file, chọn khổ giấy, số bản, màu in.</small>
+                </a>
+                <a class="cu-action-card is-green" asp-controller="PrintJobs" asp-action="Index">
+                    <span>02</span>
+                    <strong>Đơn của tôi</strong>
+                    <small>Theo dõi trạng thái và mở chi tiết đơn.</small>
+                </a>
+                <a class="cu-action-card is-amber" asp-controller="Products" asp-action="Index">
+                    <span>03</span>
+                    <strong>Mua sản phẩm</strong>
+                    <small>Đặt văn phòng phẩm và nhận tại cơ sở.</small>
+                </a>
+                <a class="cu-action-card is-rose" asp-controller="SupportOrders" asp-action="Create">
+                    <span>04</span>
+                    <strong>Dịch vụ hỗ trợ</strong>
+                    <small>Scan, đóng gáy, ép plastic, đánh máy.</small>
+                </a>
+                <a class="cu-action-card is-purple" asp-controller="Wallet" asp-action="Index">
+                    <span>05</span>
+                    <strong>Ví & giao dịch</strong>
+                    <small>Xem số dư và lịch sử thanh toán.</small>
+                </a>
+                <a class="cu-action-card is-sky" asp-controller="Profile" asp-action="Index">
+                    <span>06</span>
+                    <strong>Hồ sơ</strong>
+                    <small>Cập nhật số điện thoại và địa chỉ nhận.</small>
+                </a>
+            </div>
+        </div>
+
+        <aside class="cu-card">
+            <div class="cu-section-head">
+                <div>
+                    <span class="cu-kicker">Quy trình</span>
+                    <h2>Đặt in chuẩn</h2>
+                </div>
+            </div>
+
+            <div class="cu-timeline">
+                <article><span>1</span><div><strong>Gửi file</strong><small>Upload PDF/Word/ảnh hoặc chọn file đã upload.</small></div></article>
+                <article><span>2</span><div><strong>Chọn cấu hình</strong><small>A4/A3, 1 mặt/2 mặt, màu/đen trắng, số bản.</small></div></article>
+                <article><span>3</span><div><strong>Shop xác nhận</strong><small>Cơ sở kiểm tra file và xác nhận giá.</small></div></article>
+                <article><span>4</span><div><strong>Nhận tài liệu</strong><small>Theo dõi trạng thái và nhận tại tiệm/giao hàng.</small></div></article>
+            </div>
+        </aside>
+    </section>
+
+    @if (Model.RecentTransactions.Count > 0)
+    {
+        <section class="cu-card">
+            <div class="cu-section-head">
+                <div>
+                    <span class="cu-kicker">Wallet</span>
+                    <h2>Giao dịch gần đây</h2>
+                </div>
+                <a asp-controller="Wallet" asp-action="Index">Xem ví</a>
+            </div>
+
+            <div class="cu-table-wrap">
+                <table class="table cu-table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Loại</th>
+                            <th class="text-end">Số tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var tx in Model.RecentTransactions)
+                    {
+                        <tr>
+                            <td>@tx.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@tx.TransactionType.GetDisplayName()</td>
+                            <td class="text-end @(tx.Amount >= 0 ? "text-success" : "text-danger")">@tx.Amount.ToString("N0") đ</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</section>

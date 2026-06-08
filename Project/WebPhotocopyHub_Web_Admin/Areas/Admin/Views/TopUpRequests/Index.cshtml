@@ -1,0 +1,65 @@
+@model List<TopUpRequest>
+@{
+    ViewData["Title"] = "Duyệt nạp tiền";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Duyệt yêu cầu nạp tiền</h3>
+    <p class="mb-0">Kiểm tra thông tin chuyển khoản và xử lý yêu cầu top-up đang chờ.</p>
+</section>
+
+<div class="mb-3 d-flex justify-content-end">
+    <a class="btn btn-outline-primary btn-sm" asp-action="ExportCsv">Export CSV</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white align-middle">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Số tiền</th>
+                <th>Nội dung</th>
+                <th>Mã GD</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Count == 0)
+        {
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">Hiện chưa có yêu cầu nạp tiền nào.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.User?.Email</td>
+                    <td>@item.Amount.ToString("N0")</td>
+                    <td>@item.TransferContent</td>
+                    <td>@item.TransactionReferenceCode</td>
+                    <td>
+                        <span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span>
+                    </td>
+                    <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                    @if (item.Status == TopUpStatus.Pending || item.Status == TopUpStatus.PendingAdminApproval)
+                    {
+                        <form asp-action="Review" method="post" class="d-flex flex-wrap gap-1">
+                            <input type="hidden" name="TopUpRequestId" value="@item.Id" />
+                            <input type="hidden" name="IdempotencyKey" value="@System.Guid.NewGuid().ToString("N")" />
+                            <input type="text" name="Note" class="form-control form-control-sm" placeholder="Ghi chú" />
+                            <button class="btn btn-sm btn-success" type="submit" name="IsApprove" value="true">Duyệt</button>
+                                <button class="btn btn-sm btn-danger" type="submit" name="IsApprove" value="false">Từ chối</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>

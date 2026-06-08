@@ -1,0 +1,11 @@
+[
+  {
+    "Name": "Start",
+    "Projects": [
+      {
+        "Path": "WebPhotocopyHub_Web\\WebPhotocopyHub_Web.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

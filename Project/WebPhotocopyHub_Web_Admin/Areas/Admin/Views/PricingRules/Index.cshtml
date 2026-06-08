@@ -1,0 +1,44 @@
+@model List<PricingRule>
+@{
+    ViewData["Title"] = "Quản lý bảng giá";
+}
+
+<div class="d-flex justify-content-end mb-3">
+    <a class="btn btn-primary" asp-action="Edit">Thêm rule</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white">
+        <thead>
+            <tr>
+                <th>Khổ giấy</th>
+                <th>Kiểu in</th>
+                <th>Màu</th>
+                <th>In ảnh</th>
+                <th>Đơn giá</th>
+                <th>Active</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.PaperSize.GetDisplayName()</td>
+                <td>@item.PrintSide.GetDisplayName()</td>
+                <td>@item.ColorMode.GetDisplayName()</td>
+                <td>@(item.IsPhoto ? "Yes" : "No")</td>
+                <td>@item.UnitPrice.ToString("N0")</td>
+                <td>@(item.IsActive ? "Yes" : "No")</td>
+                <td class="d-flex gap-1">
+                    <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@item.Id">Sửa</a>
+                    <form asp-action="Delete" method="post">
+                        <input type="hidden" name="id" value="@item.Id" />
+                        <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

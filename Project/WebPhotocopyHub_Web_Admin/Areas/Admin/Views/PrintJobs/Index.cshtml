@@ -1,0 +1,41 @@
+@model List<PrintJob>
+@{
+    ViewData["Title"] = "Quản lý đơn in";
+}
+
+<section class="page-hero mb-3">
+    <h3 class="mb-2">Quản lý đơn in</h3>
+    <p class="mb-0">Theo dõi trạng thái xử lý và can thiệp nhanh khi có đơn bất thường.</p>
+</section>
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white">
+        <thead>
+            <tr>
+                <th>Mã đơn</th>
+                <th>Khách hàng</th>
+                <th>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Id</td>
+                <td>@item.User?.Email</td>
+                <td>@item.TotalAmount.ToString("N0")</td>
+                <td><span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span></td>
+                <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@item.Id">Chi tiết</a>
+                    </div>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
