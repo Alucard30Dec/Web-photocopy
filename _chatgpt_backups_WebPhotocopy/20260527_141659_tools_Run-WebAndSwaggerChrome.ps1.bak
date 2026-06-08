@@ -1,0 +1,139 @@
+$ErrorActionPreference = "Stop"
+
+try {
+    $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    [Console]::InputEncoding = $Utf8NoBom
+    [Console]::OutputEncoding = $Utf8NoBom
+    $OutputEncoding = $Utf8NoBom
+    chcp 65001 | Out-Null
+} catch {
+    Write-Host "Canh bao: khong the set UTF-8 console. Script van tiep tuc." -ForegroundColor Yellow
+}
+
+$ProjectRoot = 'E:\OneDrive - 0dpmr\WebPhotocopy\Project'
+if (-not (Test-Path -LiteralPath $ProjectRoot)) {
+    throw "Khong tim thay thu muc du an: $ProjectRoot"
+}
+
+Set-Location -LiteralPath $ProjectRoot
+
+$SolutionPath = Join-Path $ProjectRoot 'PhotoCopyHub.sln'
+if (-not (Test-Path -LiteralPath $SolutionPath)) {
+    throw "Khong tim thay PhotoCopyHub.sln trong: $ProjectRoot"
+}
+
+$WebProjectPath = Join-Path $ProjectRoot 'src\PhotoCopyHub.Web\PhotoCopyHub.Web.csproj'
+if (-not (Test-Path -LiteralPath $WebProjectPath)) {
+    throw "Khong tim thay web project: $WebProjectPath"
+}
+
+$HttpUrl = 'http://localhost:5250'
+$HttpsUrl = 'https://localhost:7250'
+$SwaggerUrl = "$HttpUrl/swagger"
+$HomeUrl = "$HttpUrl/"
+$SampleBranchUrl = "$HttpUrl/ToanPhotoCopy"
+
+Write-Host ""
+Write-Host "=== PhotoCopyHub.Web ===" -ForegroundColor Cyan
+Write-Host "Swagger mo truoc : $SwaggerUrl"
+Write-Host "Trang chu mo sau : $HomeUrl"
+Write-Host "Co so mau       : $SampleBranchUrl"
+Write-Host ""
+
+Write-Host "Dang build solution..." -ForegroundColor Cyan
+dotnet build $SolutionPath
+
+Write-Host ""
+Write-Host "Dang dung tien trinh dotnet dang chiem cong neu co..." -ForegroundColor Cyan
+
+$PortsToFree = @(5250, 7250)
+foreach ($Port in $PortsToFree) {
+    $Connections = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
+    foreach ($Connection in $Connections) {
+        $ProcessIdToStop = $Connection.OwningProcess
+        if ($ProcessIdToStop -gt 0) {
+            $ProcessToStop = Get-Process -Id $ProcessIdToStop -ErrorAction SilentlyContinue
+            if ($null -ne $ProcessToStop) {
+                if ($ProcessToStop.ProcessName -eq 'dotnet') {
+                    Write-Host "Stop dotnet PID $ProcessIdToStop tren port $Port"
+                    Stop-Process -Id $ProcessIdToStop -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
+}
+
+Start-Sleep -Seconds 1
+
+Write-Host ""
+Write-Host "Dang chay web..." -ForegroundColor Cyan
+
+$Env:ASPNETCORE_ENVIRONMENT = 'Development'
+$Env:ASPNETCORE_URLS = 'http://localhost:5250;https://localhost:7250'
+$Env:DOTNET_CLI_UI_LANGUAGE = 'en'
+
+$DotnetArgs = @(
+    'run',
+    '--project',
+    $WebProjectPath,
+    '--no-launch-profile'
+)
+
+Write-Host "Lenh dang chay:"
+Write-Host "dotnet $($DotnetArgs -join ' ')"
+Write-Host ""
+
+$WebProcess = Start-Process -FilePath 'dotnet' -ArgumentList $DotnetArgs -WorkingDirectory $ProjectRoot -PassThru -WindowStyle Normal
+
+$Ready = $false
+$Attempts = 0
+$MaxAttempts = 40
+
+while (-not $Ready -and $Attempts -lt $MaxAttempts) {
+    Start-Sleep -Seconds 1
+    $Attempts = $Attempts + 1
+
+    $ProcessStillRunning = Get-Process -Id $WebProcess.Id -ErrorAction SilentlyContinue
+    if ($null -eq $ProcessStillRunning) {
+        throw "dotnet run da thoat som. Hay chay lai lenh dotnet run thu cong de xem log loi."
+    }
+
+    $ResponseOk = $false
+
+    try {
+        $Response = Invoke-WebRequest -Uri $SwaggerUrl -UseBasicParsing -TimeoutSec 2
+        if ($Response.StatusCode -ge 200) {
+            $ResponseOk = $true
+        }
+    } catch {
+        $ResponseOk = $false
+    }
+
+    if ($ResponseOk) {
+        $Ready = $true
+    }
+
+    if (-not $Ready) {
+        Write-Host "Dang cho web khoi dong... $Attempts/$MaxAttempts"
+    }
+}
+
+if (-not $Ready) {
+    Write-Host ""
+    Write-Host "Web process van dang chay nhung chua response tai: $SwaggerUrl" -ForegroundColor Yellow
+    Write-Host "Hay mo thu: $HomeUrl"
+    Write-Host "Neu khong vao duoc, gui lai cua so dotnet run moi duoc mo ra."
+}
+
+if ($Ready) {
+    Write-Host ""
+    Write-Host "Web da san sang. Dang mo trinh duyet..." -ForegroundColor Green
+    Start-Process $SwaggerUrl
+    Start-Sleep -Seconds 1
+    Start-Process $HomeUrl
+    Start-Sleep -Seconds 1
+    Start-Process $SampleBranchUrl
+}
+
+Write-Host ""
+Write-Host "Neu muon dung web, dong cua so dotnet run hoac dung Task Manager de stop dotnet.exe." -ForegroundColor Cyan

@@ -1,0 +1,50 @@
+{
+    "$schema":  "https://json.schemastore.org/launchsettings.json",
+    "profiles":  {
+                     "Start":  {
+                                   "commandName":  "Project",
+                                   "dotnetRunMessages":  true,
+                                   "launchBrowser":  true,
+                                   "launchUrl":  "Dashboard",
+                                   "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                   "environmentVariables":  {
+                                                                "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                "BrowserLaunch__Enabled":  "false",
+                                                                "DatabaseProvider":  "PostgreSql"
+                                                            }
+                               },
+                     "PhotoCopyHub.Web - Debug HTTPS":  {
+                                                            "commandName":  "Project",
+                                                            "dotnetRunMessages":  true,
+                                                            "launchBrowser":  true,
+                                                            "launchUrl":  "Dashboard",
+                                                            "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                            "environmentVariables":  {
+                                                                                         "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                         "DatabaseProvider":  "PostgreSql"
+                                                                                     }
+                                                        },
+                     "PhotoCopyHub.Web - Web":  {
+                                                    "commandName":  "Project",
+                                                    "dotnetRunMessages":  true,
+                                                    "launchBrowser":  true,
+                                                    "launchUrl":  "Dashboard",
+                                                    "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                    "environmentVariables":  {
+                                                                                 "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                 "DatabaseProvider":  "PostgreSql"
+                                                                             }
+                                                },
+                     "PhotoCopyHub.Web - Swagger":  {
+                                                        "commandName":  "Project",
+                                                        "dotnetRunMessages":  true,
+                                                        "launchBrowser":  true,
+                                                        "launchUrl":  "swagger",
+                                                        "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                        "environmentVariables":  {
+                                                                                     "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                     "DatabaseProvider":  "PostgreSql"
+                                                                                 }
+                                                    }
+                 }
+}

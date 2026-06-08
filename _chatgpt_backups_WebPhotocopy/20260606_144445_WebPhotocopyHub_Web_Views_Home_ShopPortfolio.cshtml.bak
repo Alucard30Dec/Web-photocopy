@@ -1,0 +1,172 @@
+@{
+    ViewData["Title"] = "Dành cho tiệm photocopy";
+}
+
+<section class="pc-portfolio-page pc-portfolio-page--shop">
+    <div class="pc-portfolio-hero pc-portfolio-hero--shop">
+        <div class="pc-portfolio-copy">
+            <span class="pc-portfolio-pill pc-portfolio-pill--green">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10h18l-1.5-6h-15Z"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+                Dành cho tiệm photocopy
+            </span>
+
+            <h1>Quản lý đơn in, xác nhận thanh toán và cập nhật trạng thái</h1>
+            <p>
+                PhotoCopyHub giúp tiệm tiếp nhận đơn online, kiểm tra file, xác nhận thanh toán theo từng đơn và cập nhật trạng thái xử lý cho khách hàng.
+            </p>
+
+            <div class="pc-portfolio-actions">
+                <a class="pc-btn pc-btn--success" href="/Home">Về trang chủ</a>
+                <a class="pc-btn pc-btn--ghost" href="#shopGuide">Xem quy trình vận hành</a>
+            </div>
+
+            <div class="pc-portfolio-trust">
+                <span><svg viewBox="0 0 24 24"><path d="M3 7h18M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M6 7v14h12V7"/></svg> Nhận đơn</span>
+                <span><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg> Kiểm file</span>
+                <span><svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M8 17V9"/><path d="M12 19V3"/><path d="M16 17v-7"/><path d="M20 19V7"/></svg> Cập nhật trạng thái</span>
+            </div>
+        </div>
+
+        <div class="pc-showcase-card pc-showcase-card--shop">
+            <div class="pc-showcase-header">
+                <span class="pc-showcase-dot pc-showcase-dot--green"></span>
+                <strong>Dashboard tiệm</strong>
+                <em>Demo</em>
+            </div>
+
+            <div class="pc-dashboard-stat-grid">
+                <div><b>18</b><span>Đơn mới</span></div>
+                <div><b>12</b><span>Đã thanh toán</span></div>
+                <div><b>31</b><span>Hoàn thành</span></div>
+            </div>
+
+            <div class="pc-shop-task">
+                <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+                <div><b>#PC-1024</b><span>In 2 mặt, A4, 3 bản</span></div>
+                <em>Đã thanh toán</em>
+            </div>
+
+            <div class="pc-shop-task">
+                <svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+                <div><b>#PC-1025</b><span>File cần kiểm lại định dạng</span></div>
+                <em>Cần xem</em>
+            </div>
+
+            <div class="pc-shop-task">
+                <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+                <div><b>#PC-1026</b><span>Đã hoàn tất và chờ khách nhận</span></div>
+                <em>Xong</em>
+            </div>
+        </div>
+    </div>
+
+    <div class="pc-portfolio-section">
+        <div class="pc-section-heading">
+            <span class="pc-section-kicker pc-section-kicker--green">Bài toán vận hành</span>
+            <h2>Tiệm photocopy cần kiểm soát gì?</h2>
+            <p>Tiệm cần gom đơn, kiểm tra file, xác nhận thanh toán và cập nhật tiến độ xử lý rõ ràng cho khách.</p>
+        </div>
+
+        <div class="pc-feature-grid">
+            <article class="pc-feature-card pc-feature-card--green">
+                <div class="pc-feature-icon pc-feature-icon--green"><svg viewBox="0 0 24 24"><path d="M3 7h18M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M6 7v14h12V7"/></svg></div>
+                <h3>Đơn tập trung</h3>
+                <p>Đơn online được gom vào danh sách để nhân viên biết đơn mới, đơn đã thanh toán và đơn đang xử lý.</p>
+            </article>
+
+            <article class="pc-feature-card pc-feature-card--green">
+                <div class="pc-feature-icon pc-feature-icon--green"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg></div>
+                <h3>File đúng đơn</h3>
+                <p>Mỗi file được gắn với đơn cụ thể, hạn chế nhầm tài liệu khi tiệm nhận nhiều yêu cầu.</p>
+            </article>
+
+            <article class="pc-feature-card pc-feature-card--green">
+                <div class="pc-feature-icon pc-feature-icon--green"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-9"/></svg></div>
+                <h3>Trạng thái rõ ràng</h3>
+                <p>Nhân viên cập nhật tiến độ để khách biết đơn đang chờ, đang xử lý hay đã hoàn thành.</p>
+            </article>
+        </div>
+    </div>
+
+    <div id="shopGuide" class="pc-portfolio-section pc-portfolio-section--soft pc-portfolio-section--green-soft">
+        <div class="pc-section-heading">
+            <span class="pc-section-kicker pc-section-kicker--green">Quy trình vận hành</span>
+            <h2>Tiệm xử lý đơn theo 4 bước</h2>
+            <p>Luồng phù hợp cho chủ tiệm và nhân viên khi nhận đơn từ khách hàng.</p>
+        </div>
+
+        <div class="pc-guide-timeline">
+            <article>
+                <span class="pc-step-number pc-step-number--green">01</span>
+                <div class="pc-step-icon pc-step-icon--green"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+                <h3>Nhận đơn mới</h3>
+                <p>Nhân viên xem danh sách đơn được gửi từ khách hàng.</p>
+                <ul>
+                    <li>Kiểm tra khách hàng và thời gian gửi.</li>
+                    <li>Xem file đính kèm trong đơn.</li>
+                    <li>Ưu tiên đơn cần xử lý sớm.</li>
+                </ul>
+            </article>
+
+            <article>
+                <span class="pc-step-number pc-step-number--green">02</span>
+                <div class="pc-step-icon pc-step-icon--green"><svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></div>
+                <h3>Kiểm tra file</h3>
+                <p>Tiệm mở hoặc tải file để kiểm tra định dạng và yêu cầu in.</p>
+                <ul>
+                    <li>Kiểm tra số trang, khổ giấy, màu sắc.</li>
+                    <li>Đọc ghi chú in, đóng gáy hoặc bấm kim.</li>
+                    <li>Yêu cầu bổ sung nếu file lỗi hoặc thiếu thông tin.</li>
+                </ul>
+            </article>
+
+            <article>
+                <span class="pc-step-number pc-step-number--green">03</span>
+                <div class="pc-step-icon pc-step-icon--green"><svg viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                <h3>Xác nhận thanh toán</h3>
+                <p>Trước khi chuyển trạng thái xử lý, tiệm xác nhận đơn đã được khách hàng thanh toán.</p>
+                <ul>
+                    <li>Đối chiếu đơn và số tiền khách thanh toán.</li>
+                    <li>Ghi nhận trạng thái thanh toán của đơn.</li>
+                    <li>Chỉ chuyển xử lý khi thanh toán đã rõ ràng.</li>
+                </ul>
+            </article>
+
+            <article>
+                <span class="pc-step-number pc-step-number--green">04</span>
+                <div class="pc-step-icon pc-step-icon--green"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/></svg></div>
+                <h3>Cập nhật trạng thái</h3>
+                <p>Sau khi thanh toán được xác nhận, tiệm cập nhật tiến độ xử lý cho khách theo dõi.</p>
+                <ul>
+                    <li>Chuyển đơn sang đang xử lý khi bắt đầu in.</li>
+                    <li>Đánh dấu hoàn thành khi đơn sẵn sàng.</li>
+                    <li>Lưu lịch sử để đối soát khi cần.</li>
+                </ul>
+            </article>
+        </div>
+    </div>
+
+    <div class="pc-portfolio-section">
+        <div class="pc-section-heading">
+            <span class="pc-section-kicker pc-section-kicker--green">Khu vực quản lý</span>
+            <h2>Những phần tiệm có thể kiểm soát</h2>
+            <p>Tập trung vào đơn in, file, thanh toán, sản phẩm và lịch sử xử lý.</p>
+        </div>
+
+        <div class="pc-operation-grid">
+            <article><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg><h3>Đơn in</h3><p>Theo dõi và xử lý từng yêu cầu của khách.</p></article>
+            <article><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg><h3>File</h3><p>Kiểm tra đúng tài liệu theo từng đơn.</p></article>
+            <article><svg viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/></svg><h3>Thanh toán</h3><p>Xác nhận thanh toán theo từng đơn thực tế.</p></article>
+            <article><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg><h3>Sản phẩm</h3><p>Quản lý sản phẩm và dịch vụ bán kèm.</p></article>
+        </div>
+    </div>
+
+    <div class="pc-final-cta pc-final-cta--shop">
+        <div>
+            <span class="pc-section-kicker pc-section-kicker--green">Sẵn sàng vận hành</span>
+            <h2>Giúp tiệm photocopy làm việc gọn, rõ và chuyên nghiệp hơn</h2>
+            <p>Mỗi đơn, mỗi file, mỗi lần thanh toán và mỗi trạng thái đều được quản lý rõ ràng.</p>
+        </div>
+        <a class="pc-btn pc-btn--success" href="/Home">Quay lại trang giới thiệu</a>
+    </div>
+</section>

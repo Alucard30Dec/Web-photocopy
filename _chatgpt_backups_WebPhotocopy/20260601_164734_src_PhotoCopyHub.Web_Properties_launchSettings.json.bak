@@ -1,0 +1,53 @@
+{
+    "$schema":  "https://json.schemastore.org/launchsettings.json",
+    "profiles":  {
+                     "https":  {
+                                   "commandName":  "Project",
+                                   "dotnetRunMessages":  true,
+                                   "launchBrowser":  false,
+                                   "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                   "environmentVariables":  {
+                                                                "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                "BrowserLaunch__Enabled":  "true",
+                                                                "DatabaseProvider":  "PostgreSql",
+                                                                "ConnectionStrings__DefaultConnection":  "Host=localhost;Port=5432;Database=photocopyhub;Username=postgres;Password=postgres"
+                                                            }
+                               },
+                     "PhotoCopyHub.Web - Debug HTTPS":  {
+                                                            "commandName":  "Project",
+                                                            "dotnetRunMessages":  true,
+                                                            "launchBrowser":  true,
+                                                            "launchUrl":  "swagger",
+                                                            "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                            "environmentVariables":  {
+                                                                                         "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                         "DatabaseProvider":  "PostgreSql",
+                                                                                         "ConnectionStrings__DefaultConnection":  "Host=localhost;Port=5432;Database=photocopyhub;Username=postgres;Password=postgres"
+                                                                                     }
+                                                        },
+                     "PhotoCopyHub.Web - Web":  {
+                                                    "commandName":  "Project",
+                                                    "dotnetRunMessages":  true,
+                                                    "launchBrowser":  true,
+                                                    "launchUrl":  "",
+                                                    "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                    "environmentVariables":  {
+                                                                                 "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                 "DatabaseProvider":  "PostgreSql",
+                                                                                 "ConnectionStrings__DefaultConnection":  "Host=localhost;Port=5432;Database=photocopyhub;Username=postgres;Password=postgres"
+                                                                             }
+                                                },
+                     "PhotoCopyHub.Web - Swagger":  {
+                                                        "commandName":  "Project",
+                                                        "dotnetRunMessages":  true,
+                                                        "launchBrowser":  true,
+                                                        "launchUrl":  "swagger",
+                                                        "applicationUrl":  "https://localhost:7250;http://localhost:5250",
+                                                        "environmentVariables":  {
+                                                                                     "ASPNETCORE_ENVIRONMENT":  "Development",
+                                                                                     "DatabaseProvider":  "PostgreSql",
+                                                                                     "ConnectionStrings__DefaultConnection":  "Host=localhost;Port=5432;Database=photocopyhub;Username=postgres;Password=postgres"
+                                                                                 }
+                                                    }
+                 }
+}

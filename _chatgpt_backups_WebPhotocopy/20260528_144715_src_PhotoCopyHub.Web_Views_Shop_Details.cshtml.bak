@@ -1,0 +1,158 @@
+@model PhotoCopyHub.Web.Models.ShopBranchLinkViewModel
+
+@{
+    ViewData["Title"] = Model.Name;
+
+    var rootUrl = "/" + Model.Slug;
+    var loginUrl = rootUrl + "/Login";
+    var dashboardUrl = rootUrl + "/Dashboard";
+    var printCreateUrl = rootUrl + "/PrintJobs/Create";
+    var printJobsUrl = rootUrl + "/PrintJobs";
+    var productsUrl = rootUrl + "/Products";
+    var walletUrl = rootUrl + "/Wallet";
+    var walletTopUpUrl = rootUrl + "/Wallet/TopUp";
+    var supportUrl = rootUrl + "/SupportOrders/Create";
+    var profileUrl = rootUrl + "/Profile";
+}
+
+<section class="branch-home">
+    <section class="branch-home-hero" aria-labelledby="branchHomeTitle">
+        <div class="branch-home-hero__copy">
+            <span class="branch-home-kicker">Trang khách hàng của cơ sở</span>
+
+            <h1 id="branchHomeTitle">@Model.Name</h1>
+
+            <p class="branch-home-lead">
+                @Model.ShortDescription
+            </p>
+
+            <div class="branch-home-meta" aria-label="Thông tin cơ sở">
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    @Model.Address
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.63 2.63a2 2 0 0 1-.45 2.11L8 9.75a16 16 0 0 0 6.25 6.25l1.29-1.29a2 2 0 0 1 2.11-.45c.85.3 1.73.51 2.63.63A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    @Model.PhoneNumber
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 6v6l4 2"></path>
+                    </svg>
+                    @Model.OpenHours
+                </span>
+            </div>
+
+            <div class="branch-home-actions">
+                <a class="branch-home-btn branch-home-btn--primary" href="@printCreateUrl">
+                    Tạo đơn in ngay
+                </a>
+                <a class="branch-home-btn branch-home-btn--secondary" href="@loginUrl">
+                    Đăng nhập khách hàng
+                </a>
+            </div>
+        </div>
+
+        <aside class="branch-home-panel" aria-label="Truy cập nhanh">
+            <div class="branch-home-panel__top">
+                <span>Link cơ sở</span>
+                <strong>@rootUrl</strong>
+                <p>@Model.CustomerNote</p>
+            </div>
+
+            <div class="branch-home-panel__actions">
+                <a href="@dashboardUrl">Vào tổng quan</a>
+                <a href="@printJobsUrl">Theo dõi đơn in</a>
+                <a href="@walletTopUpUrl">Nạp ví</a>
+            </div>
+        </aside>
+    </section>
+
+    <section class="branch-home-section" aria-labelledby="branchQuickTitle">
+        <div class="branch-home-section__head">
+            <span>Thao tác nhanh</span>
+            <h2 id="branchQuickTitle">Chọn việc bạn muốn làm tại @Model.Name</h2>
+            <p>
+                Các chức năng thường dùng được gom lại để khách hàng đặt in, theo dõi đơn và thanh toán nhanh hơn.
+            </p>
+        </div>
+
+        <div class="branch-home-grid">
+            <a class="branch-home-card branch-home-card--main" href="@printCreateUrl">
+                <span>01</span>
+                <strong>Tạo đơn in</strong>
+                <small>Upload file, chọn khổ giấy, số bản, in màu hoặc trắng đen.</small>
+            </a>
+
+            <a class="branch-home-card" href="@printJobsUrl">
+                <span>02</span>
+                <strong>Theo dõi đơn</strong>
+                <small>Xem trạng thái xác nhận, xử lý, hoàn tất và lịch sử đơn in.</small>
+            </a>
+
+            <a class="branch-home-card" href="@productsUrl">
+                <span>03</span>
+                <strong>Mua văn phòng phẩm</strong>
+                <small>Đặt giấy, bút, bìa hồ sơ và sản phẩm có sẵn tại cơ sở.</small>
+            </a>
+
+            <a class="branch-home-card" href="@supportUrl">
+                <span>04</span>
+                <strong>Dịch vụ hỗ trợ</strong>
+                <small>Đặt scan, đóng gáy, ép plastic hoặc dịch vụ hoàn thiện tài liệu.</small>
+            </a>
+
+            <a class="branch-home-card" href="@walletUrl">
+                <span>05</span>
+                <strong>Ví khách hàng</strong>
+                <small>Kiểm tra số dư, lịch sử giao dịch và yêu cầu nạp tiền.</small>
+            </a>
+
+            <a class="branch-home-card" href="@profileUrl">
+                <span>06</span>
+                <strong>Hồ sơ</strong>
+                <small>Cập nhật thông tin liên hệ, địa chỉ và thông tin tài khoản.</small>
+            </a>
+        </div>
+    </section>
+
+    <section class="branch-home-bottom">
+        <div class="branch-home-process">
+            <span class="branch-home-kicker">Quy trình đặt in</span>
+            <h2>Đặt in online, cơ sở chuẩn bị trước</h2>
+
+            <ol>
+                <li>
+                    <strong>Gửi file</strong>
+                    <small>Upload tài liệu và nhập yêu cầu in.</small>
+                </li>
+                <li>
+                    <strong>Cơ sở kiểm tra</strong>
+                    <small>Tiệm xác nhận file, chi phí và thời gian xử lý.</small>
+                </li>
+                <li>
+                    <strong>Nhận tài liệu</strong>
+                    <small>Theo dõi trạng thái và nhận đơn khi hoàn tất.</small>
+                </li>
+            </ol>
+        </div>
+
+        <div class="branch-home-services">
+            <span class="branch-home-kicker">Dịch vụ phổ biến</span>
+            <h2>Dịch vụ tại cơ sở</h2>
+
+            <div>
+                @foreach (var service in Model.PopularServices)
+                {
+                    <span>@service</span>
+                }
+            </div>
+        </div>
+    </section>
+</section>

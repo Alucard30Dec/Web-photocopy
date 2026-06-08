@@ -1,0 +1,44 @@
+{
+  "DatabaseProvider": "Sqlite",
+  "Database": {
+    "UseSqliteFallbackWhenPrimaryUnavailable": true,
+    "PrimaryConnectTimeoutMs": 3000
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=photocopyhub.dev.db",
+    "FallbackSqliteConnection": "Data Source=photocopyhub.dev.db"
+  },
+  "Swagger": {
+    "Enabled": true
+  },
+  "Api": {
+    "Cors": {
+      "AllowedOrigins": []
+    }
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Information",
+      "Microsoft.EntityFrameworkCore": "Warning"
+    }
+  },
+  "SeedAdmin": {
+    "Email": "admin@photocopyhub.local",
+    "Password": "Admin@123456",
+    "FullName": "Quản trị hệ thống"
+  },
+  "SeedShopOperator": {
+    "Email": "operator@photocopyhub.local",
+    "Password": "Operator@123456",
+    "FullName": "Nhân viên vận hành"
+  },
+  "SeedSampleData": {
+    "Enabled": true
+  },
+  "FileStorage": {
+    "Provider": "Local",
+    "RootPath": "App_Data/uploads",
+    "MaxFileSizeMb": 20
+  }
+}

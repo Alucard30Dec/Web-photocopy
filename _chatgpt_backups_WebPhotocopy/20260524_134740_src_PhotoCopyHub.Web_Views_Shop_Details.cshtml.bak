@@ -1,0 +1,92 @@
+@model PhotoCopyHub.Web.Models.ShopBranchLinkViewModel
+
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<section class="shop-front-hero">
+    <div class="shop-front-copy">
+        <span class="shop-route-pill">/shop/@Model.Slug</span>
+        <h1>@Model.Name</h1>
+        <p>
+            Đây là trang chính của cơ sở photocopy dành cho khách hàng. Khách có thể bắt đầu tạo đơn in, xem sản phẩm văn phòng phẩm, đặt dịch vụ hỗ trợ và theo dõi lịch sử sau khi đăng nhập.
+        </p>
+
+        <div class="shop-front-actions">
+            <a class="btn btn-primary" asp-controller="PrintJobs" asp-action="Create" asp-route-branch="@Model.Slug">Tạo đơn in</a>
+            <a class="btn btn-outline-primary" asp-controller="Products" asp-action="Index" asp-route-branch="@Model.Slug">Xem sản phẩm</a>
+            <a class="btn btn-outline-secondary" asp-controller="SupportOrders" asp-action="Create" asp-route-branch="@Model.Slug">Dịch vụ hỗ trợ</a>
+        </div>
+    </div>
+
+    <div class="shop-front-panel">
+        <div class="shop-front-panel-head">
+            <strong>Cổng khách hàng</strong>
+            <span>@Model.Slug</span>
+        </div>
+
+        <div class="shop-front-steps">
+            <article>
+                <span>01</span>
+                <strong>Upload file</strong>
+                <small>Gửi PDF, Word, PowerPoint hoặc hình ảnh.</small>
+            </article>
+            <article>
+                <span>02</span>
+                <strong>Chọn yêu cầu</strong>
+                <small>Số bản, khổ giấy, màu sắc, in một mặt/hai mặt.</small>
+            </article>
+            <article>
+                <span>03</span>
+                <strong>Theo dõi đơn</strong>
+                <small>Xem trạng thái xử lý và lịch sử đơn.</small>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="shop-front-section">
+    <div class="shop-front-section-heading">
+        <h2>Dịch vụ tại cơ sở</h2>
+        <p>Trang này là landing page riêng cho từng tiệm photocopy, phù hợp để khách hàng thao tác theo đúng cơ sở đã chọn.</p>
+    </div>
+
+    <div class="shop-front-service-grid">
+        <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 16V4m0 0 4 4m-4-4-4 4"></path>
+                <path d="M20 16.5V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5"></path>
+            </svg>
+            <h3>Đặt in tài liệu</h3>
+            <p>Tạo yêu cầu in/photo với file và cấu hình rõ ràng.</p>
+            <a asp-controller="PrintJobs" asp-action="Create" asp-route-branch="@Model.Slug">Bắt đầu</a>
+        </article>
+        <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 10h18l-1.5-6h-15z"></path>
+                <path d="M5 10v10h14V10"></path>
+                <path d="M9 20v-6h6v6"></path>
+            </svg>
+            <h3>Sản phẩm văn phòng phẩm</h3>
+            <p>Xem catalog sản phẩm đang được quản lý trong hệ thống.</p>
+            <a asp-controller="Products" asp-action="Index" asp-route-branch="@Model.Slug">Xem catalog</a>
+        </article>
+        <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+            </svg>
+            <h3>Dịch vụ hỗ trợ</h3>
+            <p>Đặt hỗ trợ chỉnh sửa, scan, đóng gáy hoặc yêu cầu thêm.</p>
+            <a asp-controller="SupportOrders" asp-action="Create" asp-route-branch="@Model.Slug">Đặt dịch vụ</a>
+        </article>
+    </div>
+</section>
+
+<section class="shop-front-admin-box">
+    <div>
+        <span class="shop-route-pill shop-route-pill--green">Khu vận hành</span>
+        <h2>Nhân viên tiệm photocopy?</h2>
+        <p>Truy cập khu quản trị riêng của cơ sở để xem đơn in, đơn sản phẩm, đơn hỗ trợ, tồn kho và nạp tiền tại quầy.</p>
+    </div>
+    <a class="btn btn-success" href="/shop/@Model.Slug/admin">Vào quản trị tiệm</a>
+</section>

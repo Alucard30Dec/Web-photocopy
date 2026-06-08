@@ -1,0 +1,71 @@
+@model LoginViewModel
+@{
+    Layout = "_BranchCustomerLayout";
+    var branch = ViewData["Branch"] as ShopBranchLinkViewModel;
+    ViewData["Title"] = "Đăng nhập quản trị cơ sở";
+
+    var branchSlug = branch?.Slug ?? ViewContext.RouteData.Values["branchSlug"]?.ToString() ?? "";
+    var branchName = branch?.Name ?? branchSlug;
+    var formAction = "/" + branchSlug + "/Admin/Login";
+    var homeUrl = "/" + branchSlug;
+    var customerLoginUrl = "/" + branchSlug + "/Login";
+    var defaultAdminUrl = "/" + branchSlug + "/Admin";
+
+    if (string.IsNullOrWhiteSpace(Model.ReturnUrl))
+    {
+        Model.ReturnUrl = defaultAdminUrl;
+    }
+}
+
+<section class="role-login-page role-login-page--shop">
+    <div class="role-login-hero">
+        <a class="role-login-brand" href="@homeUrl">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v6H4z"></path><path d="M6 10v10h12V10"></path><path d="M9 14h6"></path></svg></span>
+            @branchName Admin
+        </a>
+        <h1>Khu vận hành cơ sở</h1>
+        <p>Đăng nhập bằng tài khoản chủ shop hoặc nhân viên để xử lý đơn in, đơn sản phẩm và tồn kho.</p>
+        <div class="role-login-pills">
+            <span>Hàng chờ in</span>
+            <span>Duyệt nạp tiền</span>
+            <span>Tồn kho</span>
+        </div>
+    </div>
+
+    <div class="role-login-card">
+        <span class="role-login-kicker">Shop operator</span>
+        <h2>Đăng nhập quản trị cơ sở</h2>
+
+        <div class="alert alert-info small mb-3">
+            Tài khoản vận hành mẫu:
+            <div><strong>operator@photocopyhub.local</strong> / <strong>Operator@123456</strong></div>
+        </div>
+
+        <form action="@formAction" method="post" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" type="email" class="form-control mb-3" autocomplete="username" placeholder="operator@photocopyhub.local" />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" type="password" class="form-control mb-3" autocomplete="current-password" placeholder="Mật khẩu nhân viên" />
+            <span asp-validation-for="Password" class="text-danger small"></span>
+
+            <div class="form-check mb-3">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label"></label>
+            </div>
+
+            <button class="btn btn-success w-100" type="submit">Vào quản trị cơ sở</button>
+        </form>
+
+        <a class="role-login-alt" href="@customerLoginUrl">Tôi là khách hàng</a>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

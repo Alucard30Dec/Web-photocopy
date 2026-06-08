@@ -1,0 +1,279 @@
+using System.Data.Common;
+using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using PhotoCopyHub.Application.Contracts;
+using PhotoCopyHub.Domain.Entities;
+using PhotoCopyHub.Infrastructure.Data;
+using PhotoCopyHub.Infrastructure.Options;
+using PhotoCopyHub.Infrastructure.Services;
+
+namespace PhotoCopyHub.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
+        services.Configure<BusinessOptions>(configuration.GetSection(BusinessOptions.SectionName));
+
+        // ChatGPT 2026-06-02: connection string PostgreSQL phải lấy từ user-secrets/env, không hard-code trong source.
+        var connectionString = ResolvePostgreSqlConnectionString(configuration);
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+        {
+            options.UseNpgsql(
+                connectionString,
+                npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+        });
+
+        services.AddSingleton<IAmazonS3>(serviceProvider =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<FileStorageOptions>>().Value;
+            var s3 = options.S3;
+
+            var config = new AmazonS3Config
+            {
+                ForcePathStyle = s3.ForcePathStyle,
+                UseHttp = s3.UseHttp
+            };
+
+            if (!string.IsNullOrWhiteSpace(s3.ServiceUrl))
+            {
+                config.ServiceURL = s3.ServiceUrl;
+            }
+
+            if (string.IsNullOrWhiteSpace(s3.ServiceUrl))
+            {
+                var regionName = string.IsNullOrWhiteSpace(s3.Region) || s3.Region.Equals("auto", StringComparison.OrdinalIgnoreCase)
+                    ? "ap-southeast-1"
+                    : s3.Region;
+
+                config.RegionEndpoint = RegionEndpoint.GetBySystemName(regionName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(s3.AccessKeyId) &&
+                !string.IsNullOrWhiteSpace(s3.SecretAccessKey))
+            {
+                return new AmazonS3Client(
+                    new BasicAWSCredentials(s3.AccessKeyId, s3.SecretAccessKey),
+                    config);
+            }
+
+            return new AmazonS3Client(config);
+        });
+
+        services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequiredLength = 8;
+                options.Stores.MaxLengthForKeys = 191;
+                options.User.RequireUniqueEmail = true;
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+        services.AddScoped<IPricingService, PricingService>();
+        services.AddScoped<IWalletService, WalletService>();
+        services.AddScoped<ITopUpService, TopUpService>();
+        services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<IPrintJobService, PrintJobService>();
+        services.AddScoped<IProductOrderService, ProductOrderService>();
+        services.AddScoped<ISupportServiceOrderService, SupportServiceOrderService>();
+        services.AddScoped<IPricingRuleService, PricingRuleService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IWalletReconciliationService, WalletReconciliationService>();
+        services.AddScoped<IDbInitializer, DbInitializer>();
+
+        return services;
+    }
+
+    private static string ResolvePostgreSqlConnectionString(IConfiguration configuration)
+    {
+        var candidates = new[]
+        {
+            configuration.GetConnectionString("DefaultConnection"),
+            configuration.GetConnectionString("PostgreSqlConnection"),
+            configuration["PHOTOCOPYHUB_POSTGRES_CONNECTION"],
+            Environment.GetEnvironmentVariable("PHOTOCOPYHUB_POSTGRES_CONNECTION"),
+            Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+        };
+
+        foreach (var candidate in candidates)
+        {
+            var normalized = NormalizePostgreSqlConnectionString(candidate);
+            if (!string.IsNullOrWhiteSpace(normalized))
+            {
+                return normalized;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "PostgreSQL connection string is not configured or is not valid. " +
+            "Set ConnectionStrings:DefaultConnection, ConnectionStrings:PostgreSqlConnection, " +
+            "PHOTOCOPYHUB_POSTGRES_CONNECTION, or ConnectionStrings__DefaultConnection. " +
+            "Accepted formats: Host=...;Port=5432;Database=...;Username=...;Password=...;SSL Mode=Require " +
+            "or Supabase URI postgresql://user:password@host:5432/database.");
+    }
+
+    private static string? NormalizePostgreSqlConnectionString(string? connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return null;
+        }
+
+        var trimmed = connectionString.Trim();
+
+        if (LooksLikePostgreSqlUri(trimmed))
+        {
+            return ConvertPostgreSqlUriToNpgsqlConnectionString(trimmed);
+        }
+
+        if (LooksLikePostgreSqlConnectionString(trimmed))
+        {
+            return EnsureProviderDefaults(trimmed);
+        }
+
+        return null;
+    }
+
+    private static bool LooksLikePostgreSqlUri(string connectionString)
+    {
+        return Uri.TryCreate(connectionString, UriKind.Absolute, out var uri)
+            && (uri.Scheme.Equals("postgresql", StringComparison.OrdinalIgnoreCase)
+                || uri.Scheme.Equals("postgres", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string ConvertPostgreSqlUriToNpgsqlConnectionString(string connectionString)
+    {
+        if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
+        {
+            throw new InvalidOperationException("PostgreSQL URI không hợp lệ. Hãy kiểm tra lại connection string Supabase.");
+        }
+
+        if (!uri.Scheme.Equals("postgresql", StringComparison.OrdinalIgnoreCase)
+            && !uri.Scheme.Equals("postgres", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("PostgreSQL URI phải bắt đầu bằng postgres:// hoặc postgresql://.");
+        }
+
+        if (string.IsNullOrWhiteSpace(uri.Host))
+        {
+            throw new InvalidOperationException("PostgreSQL URI thiếu host.");
+        }
+
+        var userInfoParts = uri.UserInfo.Split(':', 2);
+        if (userInfoParts.Length == 0 || string.IsNullOrWhiteSpace(userInfoParts[0]))
+        {
+            throw new InvalidOperationException("PostgreSQL URI thiếu username.");
+        }
+
+        var database = uri.AbsolutePath.Trim('/');
+        if (string.IsNullOrWhiteSpace(database))
+        {
+            database = "postgres";
+        }
+
+        var username = Uri.UnescapeDataString(userInfoParts[0]);
+        var password = userInfoParts.Length > 1
+            ? Uri.UnescapeDataString(userInfoParts[1])
+            : string.Empty;
+
+        var builder = new DbConnectionStringBuilder
+        {
+            ["Host"] = uri.IdnHost,
+            ["Database"] = Uri.UnescapeDataString(database),
+            ["Username"] = username,
+            ["SSL Mode"] = "Require"
+        };
+
+        if (uri.Port > 0)
+        {
+            builder["Port"] = uri.Port;
+        }
+
+        if (!string.IsNullOrEmpty(password))
+        {
+            builder["Password"] = password;
+        }
+
+        return builder.ConnectionString;
+    }
+
+    private static string EnsureProviderDefaults(string connectionString)
+    {
+        var builder = new DbConnectionStringBuilder();
+
+        try
+        {
+            builder.ConnectionString = connectionString;
+        }
+        catch (ArgumentException)
+        {
+            return connectionString;
+        }
+
+        if (TryGetString(builder, "Host", out var host)
+            && host.Contains("supabase", StringComparison.OrdinalIgnoreCase)
+            && !ContainsKey(builder, "SSL Mode")
+            && !ContainsKey(builder, "SslMode"))
+        {
+            builder["SSL Mode"] = "Require";
+        }
+
+        return builder.ConnectionString;
+    }
+
+    private static bool LooksLikePostgreSqlConnectionString(string connectionString)
+    {
+        if (connectionString.Contains(".db", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (connectionString.Contains("Filename=", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
+            && connectionString.Contains("Database=", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryGetString(DbConnectionStringBuilder builder, string key, out string value)
+    {
+        value = string.Empty;
+
+        if (!builder.TryGetValue(key, out var rawValue) || rawValue is null)
+        {
+            return false;
+        }
+
+        value = rawValue.ToString() ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(value);
+    }
+
+    private static bool ContainsKey(DbConnectionStringBuilder builder, string key)
+    {
+        return builder.Keys
+            .Cast<string>()
+            .Any(candidate => candidate.Equals(key, StringComparison.OrdinalIgnoreCase));
+    }
+}

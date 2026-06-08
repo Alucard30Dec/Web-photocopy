@@ -1,0 +1,71 @@
+@model LoginViewModel
+@{
+    Layout = "_BranchCustomerLayout";
+    var branch = ViewData["Branch"] as ShopBranchLinkViewModel;
+    ViewData["Title"] = "Đăng nhập khách hàng";
+
+    var branchSlug = branch?.Slug ?? ViewContext.RouteData.Values["branchSlug"]?.ToString() ?? "";
+    var branchName = branch?.Name ?? branchSlug;
+    var formAction = "/" + branchSlug + "/Login";
+    var homeUrl = "/" + branchSlug;
+    var defaultDashboardUrl = "/" + branchSlug + "/Dashboard";
+
+    if (string.IsNullOrWhiteSpace(Model.ReturnUrl))
+    {
+        Model.ReturnUrl = defaultDashboardUrl;
+    }
+}
+
+<section class="role-login-page role-login-page--customer">
+    <div class="role-login-hero">
+        <a class="role-login-brand" href="@homeUrl">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18l-1.5-6h-15z"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span>
+            @branchName
+        </a>
+        <h1>Đăng nhập khách hàng</h1>
+        <p>Đăng nhập để tạo đơn in, thanh toán theo từng đơn và theo dõi trạng thái xử lý tại @branchName.</p>
+        <div class="role-login-pills">
+            <span>Gửi file</span>
+            <span>Thanh toán theo đơn</span>
+            <span>Theo dõi trạng thái</span>
+        </div>
+    </div>
+
+    <div class="role-login-card">
+        <span class="role-login-kicker">Khách hàng</span>
+        <h2>Vào trang đặt in</h2>
+
+        <div class="alert alert-info small mb-3">
+            <div class="fw-semibold mb-1">Tài khoản khách hàng mẫu:</div>
+            <div><strong>sinhvien01@photocopyhub.local</strong> / <strong>Student@123</strong></div>
+            <div><strong>khachhang@photocopyhub.local</strong> / <strong>Customer@123</strong></div>
+        </div>
+
+        <form action="@formAction" method="post" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" type="email" class="form-control mb-3" autocomplete="username" placeholder="sinhvien01@photocopyhub.local" />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" type="password" class="form-control mb-3" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+            <span asp-validation-for="Password" class="text-danger small"></span>
+
+            <div class="form-check mb-3">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label"></label>
+            </div>
+
+            <button class="btn btn-primary w-100" type="submit">Đăng nhập khách hàng</button>
+        </form>
+
+        <a class="role-login-alt" href="/@branchSlug/Register">Chưa có tài khoản? Tạo tài khoản khách hàng</a>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,286 @@
+$ErrorActionPreference = "Stop"
+
+$WebPhotocopyRoot = 'E:\OneDrive - 0dpmr\WebPhotocopy'
+$ProjectRoot = Join-Path $WebPhotocopyRoot 'Project'
+$ZipPath = Join-Path $WebPhotocopyRoot 'WebPhotocopy.zip'
+
+if (-not (Test-Path -LiteralPath $ProjectRoot)) {
+    throw "Khong tim thay thu muc Project: $ProjectRoot"
+}
+
+$TempRoot = Join-Path $env:TEMP "WebPhotocopy_ChatGPT_Source"
+$TempProjectRoot = Join-Path $TempRoot 'Project'
+
+if (Test-Path -LiteralPath $TempRoot) {
+    Remove-Item -LiteralPath $TempRoot -Recurse -Force
+}
+
+New-Item -ItemType Directory -Path $TempProjectRoot -Force | Out-Null
+
+$ExcludedDirectoryNames = @(
+    '.git',
+    '.github_backup',
+    '.vs',
+    '.vscode-server',
+    'bin',
+    'obj',
+    'node_modules',
+    'packages',
+    'TestResults',
+    'coverage',
+    'logs',
+    'log',
+    'uploaded',
+    'uploads',
+    'files',
+    'App_Data',
+    '_chatgpt_backups',
+    '_chatgpt_backups_WebPhotocopy'
+)
+
+$ExcludedRelativeDirectoryPrefixes = @(
+    'wwwroot\uploads',
+    'wwwroot\files',
+    'src\PhotoCopyHub.Web\wwwroot\uploads',
+    'src\PhotoCopyHub.Web\wwwroot\files',
+    'src\PhotoCopyHub.Web\App_Data'
+)
+
+$ExcludedFileNames = @(
+    'appsettings.Development.json',
+    'appsettings.Local.json',
+    'appsettings.Production.json',
+    'secrets.json',
+    '.env',
+    '.env.local',
+    '.env.development',
+    '.env.production',
+    'service-account.json',
+    'credentials.json',
+    'id_rsa',
+    'id_rsa.pub',
+    'WebPhotocopy.zip'
+)
+
+$ExcludedExtensions = @(
+    '.zip',
+    '.7z',
+    '.rar',
+    '.db',
+    '.sqlite',
+    '.sqlite3',
+    '.bak',
+    '.log',
+    '.pfx',
+    '.p12',
+    '.pem',
+    '.key',
+    '.crt',
+    '.cer',
+    '.user',
+    '.suo',
+    '.cache',
+    '.tmp'
+)
+
+function Get-RelativePathCompat {
+    param(
+        [Parameter(Mandatory = $true)][string]$BasePath,
+        [Parameter(Mandatory = $true)][string]$FullPath
+    )
+
+    $baseFull = [System.IO.Path]::GetFullPath($BasePath).TrimEnd('\', '/')
+    $targetFull = [System.IO.Path]::GetFullPath($FullPath)
+
+    if (-not $targetFull.StartsWith($baseFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Path khong nam trong base path. Base=$baseFull Target=$targetFull"
+    }
+
+    return $targetFull.Substring($baseFull.Length).TrimStart('\', '/').Replace('/', '\')
+}
+
+function Test-IsExcludedPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$FullPath,
+        [Parameter(Mandatory = $true)][bool]$IsDirectory
+    )
+
+    $relative = Get-RelativePathCompat -BasePath $ProjectRoot -FullPath $FullPath
+    $relative = $relative.Replace('/', '\').Trim('\')
+
+    if ([string]::IsNullOrWhiteSpace($relative)) {
+        return $false
+    }
+
+    foreach ($excludedPrefix in $ExcludedRelativeDirectoryPrefixes) {
+        $normalizedPrefix = $excludedPrefix.Trim('\')
+        if ($relative.Equals($normalizedPrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+            $relative.StartsWith($normalizedPrefix + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+
+    $segments = $relative -split '\\'
+    foreach ($segment in $segments) {
+        foreach ($excludedDir in $ExcludedDirectoryNames) {
+            if ($segment.Equals($excludedDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        }
+    }
+
+    if (-not $IsDirectory) {
+        $fileName = [System.IO.Path]::GetFileName($FullPath)
+        $extension = [System.IO.Path]::GetExtension($FullPath)
+
+        foreach ($excludedFile in $ExcludedFileNames) {
+            if ($fileName.Equals($excludedFile, [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        }
+
+        foreach ($excludedExtension in $ExcludedExtensions) {
+            if ($extension.Equals($excludedExtension, [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        }
+
+        if ($fileName.EndsWith('.csproj.user', [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+
+        if ($fileName.EndsWith('.pubxml.user', [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+
+        if ($fileName -like '*.nupkg') {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Copy-FileToClipboard {
+    param([Parameter(Mandatory = $true)][string]$FilePath)
+
+    if (-not (Test-Path -LiteralPath $FilePath)) {
+        throw "Khong tim thay file de copy clipboard: $FilePath"
+    }
+
+    Add-Type -AssemblyName System.Windows.Forms
+    $collection = New-Object System.Collections.Specialized.StringCollection
+    [void]$collection.Add((Get-Item -LiteralPath $FilePath).FullName)
+    [System.Windows.Forms.Clipboard]::SetFileDropList($collection)
+}
+
+Write-Host ""
+Write-Host "Dang gom source sach tu:" -ForegroundColor Cyan
+Write-Host $ProjectRoot
+
+$AllFiles = Get-ChildItem -LiteralPath $ProjectRoot -Recurse -File -Force | Where-Object {
+    -not (Test-IsExcludedPath -FullPath $_.FullName -IsDirectory $false)
+}
+
+if (-not $AllFiles -or $AllFiles.Count -eq 0) {
+    throw "Khong tim thay file nao de dua vao zip."
+}
+
+foreach ($file in $AllFiles) {
+    $relative = Get-RelativePathCompat -BasePath $ProjectRoot -FullPath $file.FullName
+    $destination = Join-Path $TempProjectRoot $relative
+    $destinationDir = Split-Path -Parent $destination
+
+    if (-not (Test-Path -LiteralPath $destinationDir)) {
+        New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
+    }
+
+    Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
+}
+
+$ManifestPath = Join-Path $TempRoot 'CHATGPT_ZIP_MANIFEST.txt'
+
+$ManifestLines = @(
+    'WebPhotocopy / PhotoCopyHub - ChatGPT source zip',
+    "CreatedAt: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')",
+    "ProjectRoot: $ProjectRoot",
+    "ZipPath: $ZipPath",
+    "FileCount: $($AllFiles.Count)",
+    '',
+    'Da loai tru co chu dich:',
+    '- .git, .vs, bin, obj, node_modules, packages',
+    '- App_Data, uploads, wwwroot/uploads, wwwroot/files, logs',
+    '- appsettings.Development.json, appsettings.Production.json, appsettings.Local.json',
+    '- .env*, secrets.json, credentials.json, service-account.json',
+    '- *.db, *.sqlite, *.zip, *.bak, *.log, *.pfx, *.pem, *.key',
+    '- *_chatgpt_backups*',
+    '',
+    'Ghi chu:',
+    '- File zip nay dung de upload len ChatGPT khi can sua code.',
+    '- File WebPhotocopy.zip se bi ghi de moi lan chay.',
+    '- Khong dung zip nay de deploy production.',
+    '- Neu vua lo chia se secret, can rotate secret o provider that.'
+)
+
+[System.IO.File]::WriteAllLines($ManifestPath, $ManifestLines, [System.Text.UTF8Encoding]::new($false))
+
+if (Test-Path -LiteralPath $ZipPath) {
+    Write-Host ""
+    Write-Host "Dang xoa file zip cu de ghi de:" -ForegroundColor Yellow
+    Write-Host $ZipPath
+    Remove-Item -LiteralPath $ZipPath -Force
+}
+
+Write-Host ""
+Write-Host "Dang tao zip moi:" -ForegroundColor Cyan
+Write-Host $ZipPath
+
+Compress-Archive -Path (Join-Path $TempRoot '*') -DestinationPath $ZipPath -CompressionLevel Optimal -Force
+
+$ZipInfo = Get-Item -LiteralPath $ZipPath
+$SizeMb = [Math]::Round($ZipInfo.Length / 1MB, 2)
+
+Write-Host ""
+Write-Host "Da tao zip sach:" -ForegroundColor Green
+Write-Host $ZipPath
+Write-Host "Dung luong: $SizeMb MB"
+Write-Host "So file source da copy: $($AllFiles.Count)"
+
+Write-Host ""
+Write-Host "Kiem tra nhanh noi dung zip:" -ForegroundColor Cyan
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+try {
+    $suspicious = $zip.Entries | Where-Object {
+        $_.FullName -match 'appsettings\.Development\.json|appsettings\.Production\.json|appsettings\.Local\.json|\.env|secrets\.json|credentials\.json|service-account\.json|\.db$|\.sqlite$|/bin/|/obj/|/\.git/|uploads/|App_Data/'
+    }
+
+    if ($suspicious.Count -gt 0) {
+        Write-Host "CANH BAO: Co file nghi ngo trong zip:" -ForegroundColor Yellow
+        $suspicious | Select-Object -First 50 | ForEach-Object {
+            Write-Host "- $($_.FullName)" -ForegroundColor Yellow
+        }
+
+        throw "Zip co file nghi ngo. Da dung de ban kiem tra."
+    }
+
+    Write-Host "OK: Khong thay file secret/runtime pho bien trong zip." -ForegroundColor Green
+}
+finally {
+    $zip.Dispose()
+}
+
+Write-Host ""
+Write-Host "Dang copy FILE ZIP vao Clipboard..." -ForegroundColor Cyan
+Copy-FileToClipboard -FilePath $ZipPath
+
+Remove-Item -LiteralPath $TempRoot -Recurse -Force
+
+Write-Host ""
+Write-Host "HOAN TAT." -ForegroundColor Green
+Write-Host "File zip da duoc tao voi ten co dinh va da nam trong Clipboard."
+Write-Host "Bay gio mo ChatGPT va nhan Ctrl + V de dan/upload file zip."
+Write-Host ""
+Write-Host "File zip:" -ForegroundColor Cyan
+Write-Host $ZipPath

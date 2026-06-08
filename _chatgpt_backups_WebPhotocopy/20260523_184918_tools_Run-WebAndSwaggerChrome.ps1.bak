@@ -1,0 +1,123 @@
+$ErrorActionPreference = "Stop"
+
+$ProjectRoot = 'E:\OneDrive - 0dpmr\WebPhotocopy\Project'
+Set-Location -LiteralPath $ProjectRoot
+
+$WebProject = Join-Path $ProjectRoot 'src\PhotoCopyHub.Web\PhotoCopyHub.Web.csproj'
+$HttpBaseUrl = 'http://localhost:5250'
+$HttpsBaseUrl = 'https://localhost:7250'
+
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+$env:ASPNETCORE_URLS = "$HttpBaseUrl;$HttpsBaseUrl"
+
+function Find-Chrome {
+    $candidates = @(
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+        "$env:LocalAppData\Google\Chrome\Application\chrome.exe"
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
+function Test-TcpPort {
+    param(
+        [Parameter(Mandatory = $true)][string]$HostName,
+        [Parameter(Mandatory = $true)][int]$Port
+    )
+
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $async = $client.BeginConnect($HostName, $Port, $null, $null)
+        $success = $async.AsyncWaitHandle.WaitOne(1000, $false)
+        if (-not $success) {
+            return $false
+        }
+
+        $client.EndConnect($async)
+        return $true
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $client.Close()
+    }
+}
+
+function Open-ChromeWindows {
+    $chrome = Find-Chrome
+    $webUrl = "$HttpBaseUrl/"
+    $swaggerUrl = "$HttpBaseUrl/swagger"
+
+    if ($chrome) {
+        Start-Process -FilePath $chrome -ArgumentList @('--new-window', $webUrl)
+        Start-Sleep -Seconds 1
+        Start-Process -FilePath $chrome -ArgumentList @('--new-window', $swaggerUrl)
+        return
+    }
+
+    Start-Process $webUrl
+    Start-Sleep -Seconds 1
+    Start-Process $swaggerUrl
+}
+
+Write-Host ""
+Write-Host "=== PhotoCopyHub.Web ===" -ForegroundColor Cyan
+Write-Host "Web chính : $HttpBaseUrl/" -ForegroundColor Cyan
+Write-Host "Swagger   : $HttpBaseUrl/swagger" -ForegroundColor Cyan
+Write-Host ""
+
+$dotnetArgs = @(
+    'run',
+    '--project',
+    $WebProject,
+    '--no-launch-profile'
+)
+
+$dotnetProcess = Start-Process `
+    -FilePath 'dotnet' `
+    -ArgumentList $dotnetArgs `
+    -PassThru `
+    -NoNewWindow
+
+$opened = $false
+
+try {
+    for ($i = 1; $i -le 90; $i++) {
+        if ($dotnetProcess.HasExited) {
+            throw "dotnet run đã thoát sớm. Xem lỗi hiển thị phía trên trong console."
+        }
+
+        if (Test-TcpPort -HostName 'localhost' -Port 5250) {
+            Open-ChromeWindows
+            $opened = $true
+            break
+        }
+
+        Start-Sleep -Seconds 1
+    }
+
+    if (-not $opened) {
+        Write-Host "Không xác nhận được cổng 5250 sau 90 giây, vẫn thử mở Chrome." -ForegroundColor Yellow
+        Open-ChromeWindows
+    }
+
+    Write-Host ""
+    Write-Host "Ứng dụng đang chạy. Output dotnet run sẽ hiển thị ở console này." -ForegroundColor Green
+    Write-Host "Dừng bằng nút Stop trong Visual Studio hoặc đóng console." -ForegroundColor Yellow
+    Write-Host ""
+
+    $dotnetProcess.WaitForExit()
+}
+finally {
+    if ($dotnetProcess -and -not $dotnetProcess.HasExited) {
+        Stop-Process -Id $dotnetProcess.Id -Force
+    }
+}

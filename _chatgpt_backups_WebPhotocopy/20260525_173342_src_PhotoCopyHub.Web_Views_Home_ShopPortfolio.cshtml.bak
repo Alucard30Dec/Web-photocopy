@@ -1,0 +1,82 @@
+@{
+    ViewData["Title"] = "Dành cho tiệm photocopy";
+}
+
+<section class="pc-portfolio-page">
+    <div class="pc-portfolio-hero">
+        <div class="pc-portfolio-copy">
+            <span class="pc-portfolio-pill pc-portfolio-pill--green">Dành cho tiệm photocopy</span>
+            <h1>Website quản lý đơn in cho tiệm photocopy hiện đại</h1>
+            <p>
+                PhotoCopyHub giúp tiệm tiếp nhận đơn online, quản lý file theo từng đơn, cập nhật trạng thái xử lý,
+                theo dõi đơn hàng, sản phẩm, dịch vụ hỗ trợ và hoạt động vận hành mỗi ngày trên một hệ thống tập trung.
+            </p>
+            <div class="pc-portfolio-actions">
+                <a class="pc-btn pc-btn--success" href="/">Về trang chủ</a>
+                <a class="pc-btn pc-btn--ghost" href="#shopFlow">Xem quy trình</a>
+            </div>
+        </div>
+
+        <div class="pc-portfolio-panel">
+            <div class="pc-panel-title">Dashboard tiệm photo</div>
+            <div class="pc-panel-stats">
+                <div><b>18</b><span>Đơn mới</span></div>
+                <div><b>12</b><span>Đang xử lý</span></div>
+                <div><b>31</b><span>Hoàn thành</span></div>
+            </div>
+            <div class="pc-panel-row"><b>#PC-1024</b><span>Đang in</span></div>
+            <div class="pc-panel-row"><b>#PC-1025</b><span>Cần kiểm file</span></div>
+            <div class="pc-panel-row"><b>#PC-1026</b><span>Hoàn thành</span></div>
+        </div>
+    </div>
+
+    <div class="pc-portfolio-section">
+        <div class="pc-section-heading">
+            <h2>Vì sao tiệm photocopy cần hệ thống riêng?</h2>
+            <p>Tiệm photo thường nhận đơn từ nhiều kênh: trực tiếp, Zalo, email, USB. PhotoCopyHub giúp gom thông tin đơn và file về một nơi dễ kiểm soát hơn.</p>
+        </div>
+
+        <div class="pc-portfolio-cards">
+            <article>
+                <h3>Tiếp nhận đơn tập trung</h3>
+                <p>Đơn in online được đưa vào danh sách quản lý, giúp nhân viên biết đơn mới, đơn đang xử lý và đơn đã hoàn thành.</p>
+            </article>
+            <article>
+                <h3>File gắn đúng đơn</h3>
+                <p>Mỗi tài liệu được gắn với đơn cụ thể, giảm nguy cơ tải nhầm file, in nhầm yêu cầu hoặc thất lạc tài liệu.</p>
+            </article>
+            <article>
+                <h3>Nhìn nhanh vận hành</h3>
+                <p>Tiệm có thể theo dõi số lượng đơn, trạng thái xử lý, sản phẩm, dịch vụ hỗ trợ và lịch sử hoạt động.</p>
+            </article>
+        </div>
+    </div>
+
+    <div class="pc-portfolio-section pc-portfolio-section--soft">
+        <div class="pc-section-heading">
+            <h2>Tính năng dành cho chủ tiệm và nhân viên</h2>
+            <p>Tập trung vào quản lý thực tế: nhận đơn, kiểm file, cập nhật trạng thái, xử lý thanh toán và đối soát.</p>
+        </div>
+
+        <div class="pc-portfolio-steps">
+            <article><span>01</span><h3>Quản lý đơn in</h3><p>Xem danh sách đơn theo trạng thái, thời gian và thông tin khách hàng.</p></article>
+            <article><span>02</span><h3>Preview và tải file</h3><p>Kiểm tra tài liệu khách gửi trước khi xử lý để giảm sai sót.</p></article>
+            <article><span>03</span><h3>Cập nhật trạng thái</h3><p>Chuyển đơn qua các bước: tiếp nhận, đang xử lý, hoàn thành hoặc cần bổ sung.</p></article>
+            <article><span>04</span><h3>Ví, nạp tiền và đối soát</h3><p>Theo dõi yêu cầu nạp tiền, giao dịch ví và dữ liệu phục vụ đối soát nội bộ.</p></article>
+        </div>
+    </div>
+
+    <div id="shopFlow" class="pc-portfolio-section">
+        <div class="pc-section-heading">
+            <h2>Quy trình vận hành cho tiệm</h2>
+            <p>Phù hợp với cách tiệm photocopy tiếp nhận, kiểm file, in ấn và trả đơn mỗi ngày.</p>
+        </div>
+
+        <div class="pc-portfolio-steps">
+            <article><span>01</span><h3>Khách gửi đơn online</h3><p>Hệ thống nhận thông tin yêu cầu in và file tài liệu từ khách hàng.</p></article>
+            <article><span>02</span><h3>Nhân viên kiểm file</h3><p>Tiệm xem file, cấu hình in, ghi chú và liên hệ khách nếu cần bổ sung.</p></article>
+            <article><span>03</span><h3>Tiệm xử lý đơn</h3><p>Nhân viên in, photo, đóng gáy hoặc thực hiện dịch vụ hỗ trợ theo yêu cầu.</p></article>
+            <article><span>04</span><h3>Hoàn thành và quản lý lịch sử</h3><p>Đơn được cập nhật trạng thái, lưu lịch sử để tra cứu và đối soát sau này.</p></article>
+        </div>
+    </div>
+</section>

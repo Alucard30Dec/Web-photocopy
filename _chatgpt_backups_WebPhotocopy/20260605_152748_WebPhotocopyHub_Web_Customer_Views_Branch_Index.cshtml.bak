@@ -1,0 +1,245 @@
+@model PhotoCopyHub.Web.Models.ShopBranchLinkViewModel
+
+@{
+    ViewData["Title"] = Model.Name;
+    Layout = "_BranchCustomerLayout";
+
+    var rootUrl = "/" + Model.Slug;
+    var loginUrl = rootUrl + "/Login";
+    var dashboardUrl = rootUrl + "/Dashboard";
+    var printCreateUrl = rootUrl + "/PrintJobs/Create";
+    var printJobsUrl = rootUrl + "/PrintJobs";
+    var productsUrl = rootUrl + "/Products";
+    var supportUrl = rootUrl + "/SupportOrders/Create";
+    var profileUrl = rootUrl + "/Profile";
+    var isSignedIn = User?.Identity?.IsAuthenticated == true;
+
+    var loginToPrintUrl = loginUrl + "?returnUrl=" + Uri.EscapeDataString(printCreateUrl);
+    var loginToDashboardUrl = loginUrl + "?returnUrl=" + Uri.EscapeDataString(dashboardUrl);
+    var loginToPrintJobsUrl = loginUrl + "?returnUrl=" + Uri.EscapeDataString(printJobsUrl);
+    var loginToProductsUrl = loginUrl + "?returnUrl=" + Uri.EscapeDataString(productsUrl);
+    var loginToSupportUrl = loginUrl + "?returnUrl=" + Uri.EscapeDataString(supportUrl);
+}
+
+<section class="bcx-page">
+    <section class="bcx-hero" aria-label="Trang khách hàng của cơ sở">
+        <div class="bcx-hero-main">
+            <span class="bcx-kicker">Trang khách hàng</span>
+            <h1>@Model.Name</h1>
+            <p class="bcx-lead">
+                Gửi file in, chọn cấu hình, thanh toán đúng theo từng đơn và theo dõi trạng thái xử lý tại cơ sở.
+            </p>
+
+            <div class="bcx-status-card @(isSignedIn ? "is-ok" : "is-guest")">
+                <strong>@(isSignedIn ? "Bạn đã đăng nhập" : "Bạn chưa đăng nhập")</strong>
+                <span>
+                    @(isSignedIn
+                        ? "Bạn có thể tạo đơn, xem đơn của mình, đặt sản phẩm và cập nhật thông tin cá nhân."
+                        : "Đăng nhập để tạo đơn in, thanh toán theo đơn và theo dõi trạng thái xử lý.")
+                </span>
+            </div>
+
+            <div class="bcx-meta">
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    @Model.Address
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.63 2.63a2 2 0 0 1-.45 2.11L8 9.75a16 16 0 0 0 6.25 6.25l1.29-1.29a2 2 0 0 1 2.11-.45c.85.3 1.73.51 2.63.63A2 2 0 0 1 22 16.92Z"></path></svg>
+                    @Model.PhoneNumber
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                    @Model.OpenHours
+                </span>
+            </div>
+
+            <div class="bcx-actions">
+                @if (isSignedIn)
+                {
+                    <a class="bcx-btn bcx-btn--primary" href="@printCreateUrl">Tạo đơn in</a>
+                    <a class="bcx-btn bcx-btn--soft" href="@printJobsUrl">Xem đơn của tôi</a>
+                }
+
+                @if (!isSignedIn)
+                {
+                    <a class="bcx-btn bcx-btn--primary" href="@loginToPrintUrl">Đăng nhập để đặt in</a>
+                    <a class="bcx-btn bcx-btn--soft" href="#bcxProcess">Xem quy trình</a>
+                }
+            </div>
+        </div>
+
+        <aside class="bcx-side-panel" aria-label="Thông tin thao tác nhanh">
+            <div class="bcx-side-head">
+                <span>Link cơ sở</span>
+                <strong>@rootUrl</strong>
+            </div>
+
+            <div class="bcx-side-note">
+                <b>Quy trình chính</b>
+                <p>Khách gửi yêu cầu trước, thanh toán theo đơn, sau đó theo dõi trạng thái xử lý.</p>
+            </div>
+
+            <div class="bcx-side-actions">
+                @if (isSignedIn)
+                {
+                    <a href="@dashboardUrl">Mở tổng quan</a>
+                    <a href="@printCreateUrl">Tạo đơn mới</a>
+                    <a href="@printJobsUrl">Theo dõi đơn</a>
+                }
+
+                @if (!isSignedIn)
+                {
+                    <a href="@loginToDashboardUrl">Đăng nhập vào cơ sở</a>
+                    <a href="@loginToPrintUrl">Đăng nhập để tạo đơn</a>
+                    <a href="@loginToPrintJobsUrl">Đăng nhập để theo dõi đơn</a>
+                }
+            </div>
+        </aside>
+    </section>
+
+    <section class="bcx-section" id="bcxProcess" aria-labelledby="bcxProcessTitle">
+        <div class="bcx-section-head">
+            <span>Quy trình thực tế</span>
+            <h2 id="bcxProcessTitle">Đặt in theo 4 bước rõ ràng</h2>
+            <p>Luồng đặt in được sắp xếp theo đúng thứ tự thao tác của khách hàng.</p>
+        </div>
+
+        <div class="bcx-process-grid">
+            <article>
+                <span>01</span>
+                <strong>Gửi file</strong>
+                <small>Upload tài liệu cần in: PDF, Word, PowerPoint hoặc hình ảnh.</small>
+            </article>
+            <article>
+                <span>02</span>
+                <strong>Chọn cấu hình</strong>
+                <small>Nhập số bản, khổ giấy, màu in, in một mặt/hai mặt và ghi chú.</small>
+            </article>
+            <article>
+                <span>03</span>
+                <strong>Thanh toán theo đơn</strong>
+                <small>Dịch vụ hết bao nhiêu thì thanh toán bấy nhiêu, không cần nạp tiền trước.</small>
+            </article>
+            <article>
+                <span>04</span>
+                <strong>Theo dõi trạng thái</strong>
+                <small>Xem đơn đã tiếp nhận, đang xử lý, hoàn thành hoặc cần bổ sung thông tin.</small>
+            </article>
+        </div>
+    </section>
+
+    <section class="bcx-section" aria-labelledby="bcxFeatureTitle">
+        <div class="bcx-section-head">
+            <span>@(isSignedIn ? "Thao tác của bạn" : "Chức năng sau khi đăng nhập")</span>
+            <h2 id="bcxFeatureTitle">Các chức năng cần dùng khi đặt in</h2>
+            <p>
+                @(isSignedIn
+                    ? "Truy cập nhanh các thao tác thường dùng tại cơ sở này."
+                    : "Khách chưa đăng nhập chỉ nên xem thông tin cơ sở và quy trình. Các thao tác cá nhân sẽ mở sau khi đăng nhập.")
+            </p>
+        </div>
+
+        @if (isSignedIn)
+        {
+            <div class="bcx-action-grid">
+                <a class="bcx-action-card is-primary" href="@printCreateUrl">
+                    <span>01</span>
+                    <strong>Tạo đơn in</strong>
+                    <small>Gửi file và yêu cầu in mới cho cơ sở.</small>
+                </a>
+
+                <a class="bcx-action-card" href="@printJobsUrl">
+                    <span>02</span>
+                    <strong>Đơn của tôi</strong>
+                    <small>Theo dõi thanh toán, xử lý và hoàn thành.</small>
+                </a>
+
+                <a class="bcx-action-card" href="@printJobsUrl">
+                    <span>03</span>
+                    <strong>Thanh toán theo đơn</strong>
+                    <small>Xem đơn cần thanh toán hoặc đã thanh toán.</small>
+                </a>
+
+                <a class="bcx-action-card" href="@productsUrl">
+                    <span>04</span>
+                    <strong>Sản phẩm</strong>
+                    <small>Đặt giấy, bút, bìa hồ sơ và vật tư liên quan.</small>
+                </a>
+
+                <a class="bcx-action-card" href="@supportUrl">
+                    <span>05</span>
+                    <strong>Dịch vụ hỗ trợ</strong>
+                    <small>Đặt scan, đóng gáy, ép plastic hoặc xử lý bổ sung.</small>
+                </a>
+
+                <a class="bcx-action-card" href="@profileUrl">
+                    <span>06</span>
+                    <strong>Hồ sơ</strong>
+                    <small>Cập nhật thông tin liên hệ và thông tin nhận hàng.</small>
+                </a>
+            </div>
+        }
+
+        @if (!isSignedIn)
+        {
+            <div class="bcx-login-box">
+                <div>
+                    <strong>Đăng nhập để sử dụng chức năng cá nhân</strong>
+                    <p>Tạo đơn, theo dõi đơn, đặt sản phẩm và gửi yêu cầu dịch vụ đều cần tài khoản khách hàng.</p>
+                </div>
+                <div class="bcx-login-actions">
+                    <a class="bcx-btn bcx-btn--primary" href="@loginToPrintUrl">Đăng nhập để tạo đơn</a>
+                    <a class="bcx-btn bcx-btn--soft" href="@loginToDashboardUrl">Đăng nhập vào cơ sở</a>
+                </div>
+            </div>
+
+            <div class="bcx-preview-grid">
+                <article>
+                    <strong>Tạo đơn in</strong>
+                    <small>Upload file, chọn cấu hình và gửi yêu cầu.</small>
+                </article>
+                <article>
+                    <strong>Theo dõi đơn</strong>
+                    <small>Xem tiến độ xử lý sau khi thanh toán.</small>
+                </article>
+                <article>
+                    <strong>Sản phẩm & dịch vụ</strong>
+                    <small>Đặt thêm vật tư hoặc dịch vụ hoàn thiện.</small>
+                </article>
+            </div>
+        }
+    </section>
+
+    <section class="bcx-bottom-grid" aria-label="Dịch vụ và lưu ý">
+        <div class="bcx-section bcx-section--compact">
+            <div class="bcx-section-head">
+                <span>Dịch vụ phổ biến</span>
+                <h2>Nhu cầu thường gặp</h2>
+                <p>Các dịch vụ khách hàng hay đặt tại cơ sở.</p>
+            </div>
+
+            <div class="bcx-service-list">
+                @foreach (var service in Model.PopularServices)
+                {
+                    <span>@service</span>
+                }
+            </div>
+        </div>
+
+        <div class="bcx-section bcx-section--compact">
+            <div class="bcx-section-head">
+                <span>Lưu ý trước khi gửi</span>
+                <h2>Giúp tiệm xử lý nhanh hơn</h2>
+                <p>Chuẩn bị đúng thông tin để hạn chế phải trao đổi lại.</p>
+            </div>
+
+            <ul class="bcx-check-list">
+                <li>Kiểm tra đúng file cuối cùng trước khi upload.</li>
+                <li>Ghi rõ số bản, khổ giấy và kiểu in.</li>
+                <li>Ghi chú đóng gáy, bấm kim hoặc ép plastic nếu có.</li>
+                <li>Giữ thông tin liên hệ để tiệm báo khi cần bổ sung.</li>
+            </ul>
+        </div>
+    </section>
+</section>

@@ -1,0 +1,120 @@
+$ErrorActionPreference = "Stop"
+
+$ProjectRoot = 'E:\OneDrive - 0dpmr\WebPhotocopy\Project'
+if (-not (Test-Path -LiteralPath $ProjectRoot)) {
+    throw "Không tìm thấy thư mục dự án: $ProjectRoot"
+}
+
+Set-Location -LiteralPath $ProjectRoot
+
+$SolutionPath = Join-Path $ProjectRoot 'PhotoCopyHub.sln'
+$WebProjectPath = Join-Path $ProjectRoot 'src\PhotoCopyHub.Web\PhotoCopyHub.Web.csproj'
+
+if (-not (Test-Path -LiteralPath $SolutionPath)) {
+    throw "Không tìm thấy PhotoCopyHub.sln trong: $ProjectRoot"
+}
+
+if (-not (Test-Path -LiteralPath $WebProjectPath)) {
+    throw "Không tìm thấy web project: $WebProjectPath"
+}
+
+$HttpsUrl = 'https://localhost:7250'
+$HttpUrl = 'http://localhost:5250'
+$SwaggerUrl = "$HttpsUrl/swagger"
+$HomeUrl = "$HttpsUrl/"
+$BranchUrl = "$HttpsUrl/ToanPhotoCopy"
+
+Write-Host ""
+Write-Host "=== PhotoCopyHub.Web ===" -ForegroundColor Cyan
+Write-Host "Swagger mở trước : $SwaggerUrl" -ForegroundColor Green
+Write-Host "Trang chủ mở sau : $HomeUrl" -ForegroundColor Green
+Write-Host "Cơ sở mẫu        : $BranchUrl" -ForegroundColor Green
+Write-Host ""
+
+Write-Host "Đang build solution..." -ForegroundColor Cyan
+dotnet build $SolutionPath
+
+Write-Host ""
+Write-Host "Đang dừng tiến trình dotnet đang chiếm cổng nếu có..." -ForegroundColor Cyan
+Get-Process dotnet -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.Path -like '*dotnet*'
+    } |
+    ForEach-Object {
+        try {
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        }
+        catch {
+        }
+    }
+
+Start-Sleep -Seconds 1
+
+Write-Host ""
+Write-Host "Đang chạy web..." -ForegroundColor Cyan
+Write-Host "Lệnh đang chạy:" -ForegroundColor DarkCyan
+Write-Host "dotnet run --project `"$WebProjectPath`" --no-launch-profile --urls `"$HttpUrl;$HttpsUrl`"" -ForegroundColor DarkGray
+
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = "dotnet"
+$psi.Arguments = "run --project `"$WebProjectPath`" --no-launch-profile --urls `"$HttpUrl;$HttpsUrl`""
+$psi.WorkingDirectory = $ProjectRoot
+$psi.UseShellExecute = $false
+$psi.RedirectStandardOutput = $true
+$psi.RedirectStandardError = $true
+$psi.CreateNoWindow = $false
+
+$process = New-Object System.Diagnostics.Process
+$process.StartInfo = $psi
+
+$null = $process.Start()
+
+$ready = $false
+$deadline = (Get-Date).AddSeconds(45)
+
+while ((Get-Date) -lt $deadline) {
+    if ($process.HasExited) {
+        Write-Host ""
+        Write-Host "dotnet run đã thoát sớm. Log output:" -ForegroundColor Red
+        Write-Host ($process.StandardOutput.ReadToEnd())
+        Write-Host ($process.StandardError.ReadToEnd()) -ForegroundColor Red
+        throw "Web dừng đột ngột trước khi mở Swagger."
+    }
+
+    try {
+        $response = Invoke-WebRequest -Uri $SwaggerUrl -UseBasicParsing -TimeoutSec 3 -SkipCertificateCheck
+        if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+            $ready = $true
+            break
+        }
+    }
+    catch {
+        Start-Sleep -Seconds 1
+    }
+}
+
+if (-not $ready) {
+    Write-Host ""
+    Write-Host "Không mở được Swagger trong 45 giây. Web có thể đang lỗi startup." -ForegroundColor Red
+    throw "Timeout chờ Swagger: $SwaggerUrl"
+}
+
+Write-Host ""
+Write-Host "Swagger đã sẵn sàng. Mở Swagger trước..." -ForegroundColor Green
+Start-Process $SwaggerUrl
+
+Start-Sleep -Seconds 2
+
+Write-Host "Mở trang chủ sau Swagger..." -ForegroundColor Green
+Start-Process $HomeUrl
+
+Start-Sleep -Seconds 1
+Write-Host "Mở cơ sở mẫu ToanPhotoCopy..." -ForegroundColor Green
+Start-Process $BranchUrl
+
+Write-Host ""
+Write-Host "Web đang chạy. Để dừng web, đóng cửa sổ này hoặc nhấn Ctrl + C." -ForegroundColor Yellow
+
+while (-not $process.HasExited) {
+    Start-Sleep -Seconds 2
+}

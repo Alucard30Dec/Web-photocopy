@@ -1,0 +1,391 @@
+using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.OpenApi.Models;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using PhotoCopyHub.Application.Contracts;
+using PhotoCopyHub.Domain.Constants;
+using PhotoCopyHub.Domain.Entities;
+using PhotoCopyHub.Infrastructure;
+using PhotoCopyHub.Infrastructure.Data;
+using PhotoCopyHub.Web;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ ";
+    options.UseUtcTimestamp = true;
+});
+
+builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services
+    .AddHealthChecks()
+    .AddCheck(
+        "self",
+        () => HealthCheckResult.Healthy("Application process is running."),
+        tags: new[] { "live" })
+    .AddDbContextCheck<ApplicationDbContext>(
+        name: "database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "ready" });
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+builder.Services
+    .AddControllersWithViews(options =>
+    {
+        var policy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build();
+        options.Filters.Add(new AuthorizeFilter(policy));
+        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+    })
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "PhotoCopyHub API",
+        Version = "v1",
+        Description = "HTTP API cho catalog, báo giá, ví và đơn in của PhotoCopyHub."
+    });
+
+    options.AddSecurityDefinition("cookieAuth", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Cookie,
+        Name = ".AspNetCore.Identity.Application",
+        Description = "API đang dùng cookie đăng nhập ASP.NET Core Identity hiện có. Đăng nhập trên web rồi mở Swagger trong cùng trình duyệt."
+    });
+});
+
+var apiCorsOrigins = builder.Configuration.GetSection("Api:Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+if (apiCorsOrigins.Length > 0)
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("ApiCors", policy =>
+        {
+            policy
+                .WithOrigins(apiCorsOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+    });
+}
+
+builder.Services.AddRazorPages();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: $"{context.Connection.RemoteIpAddress}-auth",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("money", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: $"{context.Connection.RemoteIpAddress}-money-{context.User.Identity?.Name}",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AppPolicies.CustomerPortal, policy =>
+        policy.RequireRole(RoleConstants.Customer, RoleConstants.Admin));
+
+    options.AddPolicy(AppPolicies.ShopOperation, policy =>
+        policy.RequireRole(RoleConstants.ShopOperator, RoleConstants.Admin));
+
+    options.AddPolicy(AppPolicies.AdminOnly, policy =>
+        policy.RequireRole(RoleConstants.Admin));
+
+    options.AddPolicy(AppPolicies.BackOffice, policy =>
+        policy.RequireRole(RoleConstants.ShopOperator, RoleConstants.Admin));
+
+    options.AddPolicy(AppPolicies.TopUpReview, policy =>
+        policy.RequireRole(RoleConstants.ShopOperator, RoleConstants.Admin));
+
+    options.AddPolicy(AppPolicies.CounterTopUp, policy =>
+        policy.RequireRole(RoleConstants.ShopOperator, RoleConstants.Admin));
+
+    options.AddPolicy(AppPolicies.WalletAdjustment, policy =>
+        policy.RequireRole(RoleConstants.Admin, RoleConstants.ShopOperator));
+
+    options.AddPolicy(AppPolicies.ManageUsers, policy =>
+        policy.RequireRole(RoleConstants.Admin));
+
+    options.AddPolicy(AppPolicies.DownloadPrintFile, policy =>
+        policy.RequireRole(RoleConstants.ShopOperator, RoleConstants.Admin));
+});
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Home/AccessDenied";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.SlidingExpiration = true;
+});
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.FromMinutes(5);
+});
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var initializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+    await initializer.InitializeAsync();
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+else
+{
+    app.UseDeveloperExceptionPage();
+}
+
+var swaggerEnabled = app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled");
+if (swaggerEnabled)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "PhotoCopyHub API v1");
+        options.RoutePrefix = "swagger";
+        options.DocumentTitle = "PhotoCopyHub API";
+    });
+}
+
+app.UseForwardedHeaders();
+app.UseHttpsRedirection();
+app.Use(async (context, next) =>
+{
+    var isSwaggerRequest = context.Request.Path.StartsWithSegments("/swagger");
+
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()";
+    context.Response.Headers["Content-Security-Policy"] = isSwaggerRequest
+        ? "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        : "default-src 'self'; " +
+          "script-src 'self' https://cdn.jsdelivr.net; " +
+          "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
+          "font-src 'self' https://fonts.gstatic.com data:; " +
+          "img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+
+    await next();
+});
+app.UseStaticFiles();
+
+app.UseRouting();
+
+if (apiCorsOrigins.Length > 0)
+{
+    app.UseCors("ApiCors");
+}
+
+app.MapHealthChecks("/healthz/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live"),
+    ResponseWriter = WriteHealthCheckResponseAsync
+}).AllowAnonymous();
+
+app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = WriteHealthCheckResponseAsync
+}).AllowAnonymous();
+
+app.UseAuthentication();
+app.UseRateLimiter();
+
+app.Use(async (context, next) =>
+{
+    var correlationId = GetCorrelationId(context);
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers["X-Correlation-ID"] = correlationId;
+        return Task.CompletedTask;
+    });
+
+    var logger = context.RequestServices
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("PhotoCopyHub.RequestScope");
+
+    var userId = context.User?.Identity?.IsAuthenticated == true
+        ? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+        : null;
+
+    using (logger.BeginScope(new Dictionary<string, object?>
+    {
+        ["CorrelationId"] = correlationId,
+        ["TraceId"] = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier,
+        ["UserId"] = userId,
+        ["RequestPath"] = context.Request.Path.Value
+    }))
+    {
+        await next();
+    }
+});
+
+app.Use(async (context, next) =>
+{
+    if (context.User?.Identity?.IsAuthenticated == true)
+    {
+        var userManager = context.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+        var signInManager = context.RequestServices.GetRequiredService<SignInManager<ApplicationUser>>();
+        var userId = userManager.GetUserId(context.User);
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            var isActive = await userManager.Users
+                .AsNoTracking()
+                .AnyAsync(x => x.Id == userId && x.IsActive);
+
+            if (!isActive)
+            {
+                await signInManager.SignOutAsync();
+                context.Response.Redirect("/Account/Login");
+                return;
+            }
+        }
+    }
+
+    await next();
+});
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.MapControllerRoute(
+    name: "admin-lower",
+    pattern: "admin/{controller=Dashboard}/{action=Index}/{id?}",
+    defaults: new { area = "Admin" });
+
+app.MapControllerRoute(
+    name: "shop-branch-admin",
+    pattern: "shop/{branchSlug:regex(^[a-z0-9]+(?:-[a-z0-9]+)+$)}/admin/{controller=Dashboard}/{action=Index}/{id?}",
+    defaults: new { area = "Shop" });
+
+app.MapControllerRoute(
+    name: "public-customer",
+    pattern: "Customer",
+    defaults: new { controller = "Home", action = "Customer" });
+
+app.MapControllerRoute(
+    name: "public-shop-portfolio",
+    pattern: "Shop",
+    defaults: new { controller = "Home", action = "Shop" });
+
+app.MapControllerRoute(
+    name: "shop-directory",
+    pattern: "shop",
+    defaults: new { controller = "Shop", action = "Index" });
+
+app.MapControllerRoute(
+    name: "shop-branch-front",
+    pattern: "shop/{branchSlug:regex(^[a-z0-9]+(?:-[a-z0-9]+)+$)}",
+    defaults: new { controller = "Shop", action = "Details" });
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{area:exists}/{controller=Dashboard}/{action=Index}/{id?}");
+
+app.MapControllers();
+app.MapControllerRoute(
+    name: "shop-branch-short-link",
+    pattern: "{branchSlug}",
+    defaults: new { controller = "Shop", action = "Details" },
+    constraints: new
+    {
+        branchSlug = "^(?!admin$|Admin$|swagger$|Swagger$|healthz$|Healthz$|Customer$|Shop$|Home$|Account$|PrintJobs$|Products$|SupportOrders$|Wallet$|Cart$|Orders$|Files$)[A-Za-z][A-Za-z0-9-]{2,63}$"
+    });
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapRazorPages();
+
+app.Run();
+
+static string GetCorrelationId(HttpContext context)
+{
+    const string headerName = "X-Correlation-ID";
+
+    if (context.Request.Headers.TryGetValue(headerName, out var incoming) &&
+        !string.IsNullOrWhiteSpace(incoming.FirstOrDefault()))
+    {
+        return incoming.First()!;
+    }
+
+    return Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
+}
+
+static Task WriteHealthCheckResponseAsync(HttpContext context, HealthReport report)
+{
+    context.Response.ContentType = "application/json; charset=utf-8";
+
+    var payload = new
+    {
+        status = report.Status.ToString(),
+        totalDurationMs = report.TotalDuration.TotalMilliseconds,
+        entries = report.Entries.ToDictionary(
+            x => x.Key,
+            x => new
+            {
+                status = x.Value.Status.ToString(),
+                description = x.Value.Description,
+                durationMs = x.Value.Duration.TotalMilliseconds,
+                error = x.Value.Exception?.Message
+            })
+    };
+
+    return context.Response.WriteAsync(JsonSerializer.Serialize(payload));
+}

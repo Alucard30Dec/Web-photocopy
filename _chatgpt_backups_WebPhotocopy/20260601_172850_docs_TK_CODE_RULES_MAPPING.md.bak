@@ -1,0 +1,52 @@
+# PhotoCopyHub - TK Code Rules Mapping
+
+Mục tiêu: chuẩn hóa cấu trúc project theo hướng dễ kiểm soát, gần style TK, nhưng không phá giao diện và flow hiện có.
+
+## Project structure
+
+| Project | Vai trò |
+|---|---|
+| PhotoCopyHub.DataAccess | Data access, PostgreSQL bootstrap, store/view/function mapping |
+| PhotoCopyHub.Report | Report/export/print template |
+| PhotoCopyHub.Web | ASP.NET Core MVC host hiện tại, giữ nguyên UI/controller/view |
+| PhotoCopyHub.Web.Common | Helper/common web layer |
+| PhotoCopyHub.Web.Control | Partial/control/view component dùng chung |
+| PhotoCopyHub.Web.Customer | Khu khách hàng |
+| PhotoCopyHub.Web.Shop | Khu shop/branch |
+| PhotoCopyHub.Web.Admin | Khu admin |
+| PhotoCopyHub.Web.Dashboard | Dashboard/thống kê |
+| PhotoCopyHub.Web.Sys | Account/auth/audit/system settings |
+| PhotoCopyHub.ExternalSources | Kết nối hệ thống ngoài/API bên thứ ba |
+
+## Quy tắc TK áp dụng
+
+### Database
+
+- Không viết raw command text nghiệp vụ trực tiếp trong controller.
+- Ưu tiên dùng service hiện có, sau đó dần đưa DB operation về store/function/procedure.
+- Store/function đặt theo nhóm:
+  - `sp_sel_List`
+  - `sp_sel_Get`
+  - `sp_ins`
+  - `sp_upd`
+  - `sp_del`
+- Không dùng `sp_executesql`.
+- Không dùng `select *` trong store/function list nghiệp vụ.
+- View đặt dạng `view_<PhanHe>_<Entity>`.
+- Với project hiện tại chưa có `deleted`, không ép view `A.deleted = 0` ngay để tránh phá EF/schema. Nếu sau này thêm soft-delete thì view phải chuẩn hóa lại.
+
+### Naming module
+
+- DM: danh mục/master data.
+- XNK: transaction/order flow.
+- TC: tài chính/wallet/top-up.
+- Sys: hệ thống/account/auth.
+- Log: audit/log.
+- 3RD/ExternalSources: dữ liệu hoặc API từ hệ thống ngoài.
+
+### Code safety
+
+- Không di chuyển controller/view khi chưa test từng module.
+- Không đổi route/action/service contract nếu chưa cần.
+- Không đổi auth/role/policy khi chỉ đổi cấu trúc.
+- Không động vào upload/download/preview hoặc wallet/refund nếu không có yêu cầu riêng.

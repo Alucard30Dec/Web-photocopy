@@ -1,0 +1,68 @@
+@{
+    ViewData["Title"] = "Dành cho khách hàng";
+}
+
+<section class="pc-portfolio-page pc-portfolio-page--customer">
+    <div class="pc-portfolio-hero2">
+        <div class="pc-portfolio-copy">
+            <span class="pc-portfolio-pill">Dành cho khách hàng</span>
+            <h1>Đặt in online nhanh hơn, rõ ràng hơn và dễ theo dõi hơn</h1>
+            <p>PhotoCopyHub giúp khách hàng upload tài liệu, chọn yêu cầu in, gửi đơn và theo dõi trạng thái ngay trên web. Mọi bước được trình bày đơn giản để người dùng mới cũng dễ thao tác.</p>
+            <div class="pc-portfolio-actions">
+                <a class="pc-btn pc-btn--primary" asp-controller="Home" asp-action="Index">Về trang chủ</a>
+                <a class="pc-btn pc-btn--ghost" href="#customerFlow">Xem quy trình</a>
+            </div>
+        </div>
+
+        <div class="pc-portfolio-device">
+            <div class="pc-device-top"></div>
+            <div class="pc-device-upload">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M20 16.5V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5"/></svg>
+                <strong>Upload tài liệu</strong>
+                <span>PDF, Word, PowerPoint, hình ảnh</span>
+            </div>
+            <div class="pc-device-row"><b>Khổ giấy</b><span>A4</span></div>
+            <div class="pc-device-row"><b>Kiểu in</b><span>2 mặt</span></div>
+            <div class="pc-device-row"><b>Trạng thái</b><span>Đang xử lý</span></div>
+        </div>
+    </div>
+
+    <div class="pc-portfolio-section">
+        <div class="pc-section-heading">
+            <h2>Lợi ích cho khách hàng</h2>
+            <p>Không cần nhắn tin qua lại nhiều lần, mọi yêu cầu in được chuẩn hóa thành đơn rõ ràng.</p>
+        </div>
+
+        <div class="pc-portfolio-cards">
+            <article>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M20 16.5V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5"/></svg>
+                <h3>Upload trước khi đến tiệm</h3>
+                <p>Chuẩn bị file sẵn trên web để giảm thời gian chờ tại quầy.</p>
+            </article>
+            <article>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <h3>Chọn yêu cầu rõ ràng</h3>
+                <p>Ghi rõ số bản, khổ giấy, màu sắc, in một mặt hoặc hai mặt.</p>
+            </article>
+            <article>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
+                <h3>Theo dõi trạng thái</h3>
+                <p>Biết đơn đã tiếp nhận, đang in, hoàn thành hoặc cần bổ sung.</p>
+            </article>
+        </div>
+    </div>
+
+    <div id="customerFlow" class="pc-portfolio-section pc-portfolio-section--soft">
+        <div class="pc-section-heading">
+            <h2>Quy trình khách hàng</h2>
+            <p>Thiết kế ngắn gọn để khách hàng hoàn tất đơn in trong vài bước.</p>
+        </div>
+
+        <div class="pc-portfolio-steps">
+            <article><span>01</span><h3>Mở trang tạo đơn</h3><p>Điền thông tin cơ bản và yêu cầu cần in.</p></article>
+            <article><span>02</span><h3>Tải file</h3><p>Gửi tài liệu cần photo/in ấn lên hệ thống.</p></article>
+            <article><span>03</span><h3>Chọn cấu hình</h3><p>Chọn khổ giấy, số bản, màu sắc và ghi chú.</p></article>
+            <article><span>04</span><h3>Theo dõi và nhận tài liệu</h3><p>Kiểm tra trạng thái rồi đến nhận khi đơn hoàn thành.</p></article>
+        </div>
+    </div>
+</section>

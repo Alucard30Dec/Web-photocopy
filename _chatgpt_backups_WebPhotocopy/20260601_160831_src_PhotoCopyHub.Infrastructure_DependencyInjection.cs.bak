@@ -1,0 +1,145 @@
+using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using PhotoCopyHub.Application.Contracts;
+using PhotoCopyHub.Domain.Entities;
+using PhotoCopyHub.Infrastructure.Data;
+using PhotoCopyHub.Infrastructure.Options;
+using PhotoCopyHub.Infrastructure.Services;
+
+namespace PhotoCopyHub.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
+        services.Configure<BusinessOptions>(configuration.GetSection(BusinessOptions.SectionName));
+
+        var databaseProvider = configuration["DatabaseProvider"] ?? "PostgreSql";
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+        {
+            if (databaseProvider.Equals("PostgreSql", StringComparison.OrdinalIgnoreCase) ||
+                databaseProvider.Equals("Postgres", StringComparison.OrdinalIgnoreCase) ||
+                databaseProvider.Equals("Npgsql", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    throw new InvalidOperationException(
+                        "Thiếu ConnectionStrings:DefaultConnection. " +
+                        "Hãy cấu hình bằng dotnet user-secrets trong Development hoặc env var ConnectionStrings__DefaultConnection trên Production.");
+                }
+
+                options.UseNpgsql(
+                    connectionString,
+                    npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+            }
+            else if (databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    throw new InvalidOperationException("Thiếu ConnectionStrings:DefaultConnection cho SQL Server.");
+                }
+
+                options.UseSqlServer(connectionString);
+            }
+            else if (databaseProvider.Equals("MySql", StringComparison.OrdinalIgnoreCase) ||
+                     databaseProvider.Equals("TiDb", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    throw new InvalidOperationException("Thiếu ConnectionStrings:DefaultConnection cho MySQL/TiDB.");
+                }
+
+                options.UseMySql(
+                    connectionString,
+                    new MySqlServerVersion(new Version(8, 0, 0)),
+                    mysqlOptions => mysqlOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+            }
+            else if (databaseProvider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+            {
+                options.UseSqlite(
+                    string.IsNullOrWhiteSpace(connectionString)
+                        ? "Data Source=photocopyhub.db"
+                        : connectionString);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"DatabaseProvider không được hỗ trợ: {databaseProvider}. Hỗ trợ: PostgreSql, SqlServer, MySql, TiDb, Sqlite.");
+            }
+        });
+
+        services.AddSingleton<IAmazonS3>(serviceProvider =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<FileStorageOptions>>().Value;
+            var s3 = options.S3;
+
+            var config = new AmazonS3Config
+            {
+                ForcePathStyle = s3.ForcePathStyle,
+                UseHttp = s3.UseHttp
+            };
+
+            if (!string.IsNullOrWhiteSpace(s3.ServiceUrl))
+            {
+                config.ServiceURL = s3.ServiceUrl;
+            }
+            else
+            {
+                var regionName = string.IsNullOrWhiteSpace(s3.Region) || s3.Region.Equals("auto", StringComparison.OrdinalIgnoreCase)
+                    ? "ap-southeast-1"
+                    : s3.Region;
+
+                config.RegionEndpoint = RegionEndpoint.GetBySystemName(regionName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(s3.AccessKeyId) &&
+                !string.IsNullOrWhiteSpace(s3.SecretAccessKey))
+            {
+                return new AmazonS3Client(
+                    new BasicAWSCredentials(s3.AccessKeyId, s3.SecretAccessKey),
+                    config);
+            }
+
+            return new AmazonS3Client(config);
+        });
+
+        services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequiredLength = 8;
+                options.Stores.MaxLengthForKeys = 191;
+                options.User.RequireUniqueEmail = true;
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+        services.AddScoped<IPricingService, PricingService>();
+        services.AddScoped<IWalletService, WalletService>();
+        services.AddScoped<ITopUpService, TopUpService>();
+        services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<IPrintJobService, PrintJobService>();
+        services.AddScoped<IProductOrderService, ProductOrderService>();
+        services.AddScoped<ISupportServiceOrderService, SupportServiceOrderService>();
+        services.AddScoped<IPricingRuleService, PricingRuleService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IWalletReconciliationService, WalletReconciliationService>();
+        services.AddScoped<IDbInitializer, DbInitializer>();
+
+        return services;
+    }
+}

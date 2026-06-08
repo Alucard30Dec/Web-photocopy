@@ -1,0 +1,146 @@
+@model PhotoCopyHub.Web.Models.ShopBranchLinkViewModel
+
+@{
+    ViewData["Title"] = Model.Name;
+    var shortUrl = "/" + Model.Slug;
+    var legacyUrl = "/shop/" + Model.Slug;
+    var adminUrl = "/shop/" + Model.Slug + "/admin";
+}
+
+<section class="branch-site-page">
+    <div class="branch-site-hero">
+        <div class="branch-site-copy">
+            <span class="branch-site-pill">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10h18l-1.5-6h-15z"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>
+                Cơ sở photocopy
+            </span>
+
+            <h1>@Model.Name</h1>
+            <p>@Model.ShortDescription</p>
+
+            <div class="branch-site-meta">
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    @Model.Address
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.63 2.63a2 2 0 0 1-.45 2.11L8 9.75a16 16 0 0 0 6.25 6.25l1.29-1.29a2 2 0 0 1 2.11-.45c.85.3 1.73.51 2.63.63A2 2 0 0 1 22 16.92z"></path></svg>
+                    @Model.PhoneNumber
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4.93"></path><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 19.07"></path></svg>
+                    @shortUrl
+                </span>
+            </div>
+
+            <div class="branch-site-actions">
+                <a class="branch-btn branch-btn--primary" asp-controller="PrintJobs" asp-action="Create" asp-route-branch="@Model.Slug">Tạo đơn in</a>
+                <a class="branch-btn branch-btn--secondary" asp-controller="Products" asp-action="Index" asp-route-branch="@Model.Slug">Xem sản phẩm</a>
+                <a class="branch-btn branch-btn--ghost" asp-controller="SupportOrders" asp-action="Create" asp-route-branch="@Model.Slug">Dịch vụ hỗ trợ</a>
+            </div>
+        </div>
+
+        <div class="branch-site-panel">
+            <div class="branch-panel-header">
+                <strong>Cổng khách hàng</strong>
+                <span>@shortUrl</span>
+            </div>
+
+            <div class="branch-panel-card branch-panel-card--upload">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0 4 4m-4-4-4 4"></path><path d="M20 16.5V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5"></path></svg>
+                <div>
+                    <b>Upload file in/photo</b>
+                    <span>PDF, Word, PowerPoint, hình ảnh</span>
+                </div>
+            </div>
+
+            <div class="branch-panel-list">
+                <div><span>Khổ giấy</span><b>A4 / A3</b></div>
+                <div><span>Kiểu in</span><b>1 mặt / 2 mặt</b></div>
+                <div><span>Trạng thái</span><b>Đang tiếp nhận</b></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="branch-site-section">
+        <div class="branch-section-heading">
+            <span>Dịch vụ chính</span>
+            <h2>Các nhu cầu photocopy phổ biến tại @Model.Name</h2>
+            <p>Layout chung này có thể dùng cho mọi cơ sở. Khi có dữ liệu thật, tên tiệm, địa chỉ, số điện thoại, dịch vụ và sản phẩm có thể lấy từ database.</p>
+        </div>
+
+        <div class="branch-service-grid">
+            <article>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v8H6z"></path></svg>
+                <h3>In và photocopy tài liệu</h3>
+                <p>Hỗ trợ in tài liệu học tập, hồ sơ, hợp đồng, biểu mẫu và các loại giấy tờ thường dùng.</p>
+            </article>
+
+            <article>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M8 13h8M8 17h6"></path></svg>
+                <h3>Upload file online</h3>
+                <p>Khách gửi file trước khi tới tiệm, giúp nhân viên kiểm tra và chuẩn bị nhanh hơn.</p>
+            </article>
+
+            <article>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4z"></path><path d="M8 7V4h8v3M8 17v3h8v-3"></path></svg>
+                <h3>Đóng gáy và hoàn thiện</h3>
+                <p>Có thể ghi chú yêu cầu bấm kim, đóng gáy, phân tập, in màu hoặc các yêu cầu đặc biệt.</p>
+            </article>
+        </div>
+    </div>
+
+    <div class="branch-site-section branch-site-section--soft">
+        <div class="branch-section-heading">
+            <span>Hướng dẫn khách hàng</span>
+            <h2>Cách đặt in tại @Model.Name</h2>
+            <p>Quy trình 4 bước giúp khách mới hiểu nhanh cách gửi tài liệu và theo dõi đơn.</p>
+        </div>
+
+        <div class="branch-guide-grid">
+            <article>
+                <span>01</span>
+                <h3>Mở link cơ sở</h3>
+                <p>Truy cập <b>@shortUrl</b> để vào đúng trang của cơ sở photocopy.</p>
+            </article>
+            <article>
+                <span>02</span>
+                <h3>Tạo đơn in</h3>
+                <p>Bấm tạo đơn, tải file và nhập số bản, khổ giấy, kiểu in, ghi chú cần thiết.</p>
+            </article>
+            <article>
+                <span>03</span>
+                <h3>Tiệm kiểm tra yêu cầu</h3>
+                <p>Nhân viên xem file, xác nhận cấu hình in và cập nhật trạng thái xử lý.</p>
+            </article>
+            <article>
+                <span>04</span>
+                <h3>Nhận tài liệu</h3>
+                <p>Khách theo dõi trạng thái đơn và đến nhận khi đơn hoàn thành.</p>
+            </article>
+        </div>
+    </div>
+
+    <div class="branch-site-section">
+        <div class="branch-section-heading">
+            <span>Liên kết nhanh</span>
+            <h2>Đường dẫn của cơ sở</h2>
+            <p>Link ngắn dùng cho khách hàng. Link quản trị giữ trong nhánh /shop/{slug}/admin để tách rõ khu nhân viên.</p>
+        </div>
+
+        <div class="branch-link-grid">
+            <a href="@shortUrl">
+                <small>Trang khách hàng</small>
+                <strong>@shortUrl</strong>
+            </a>
+            <a href="@legacyUrl">
+                <small>Link cũ vẫn hỗ trợ</small>
+                <strong>@legacyUrl</strong>
+            </a>
+            <a href="@adminUrl">
+                <small>Quản trị cơ sở</small>
+                <strong>@adminUrl</strong>
+            </a>
+        </div>
+    </div>
+</section>

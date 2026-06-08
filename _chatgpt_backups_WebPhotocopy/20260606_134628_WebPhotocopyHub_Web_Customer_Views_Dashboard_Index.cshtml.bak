@@ -1,0 +1,269 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Tổng quan";
+
+    var displayName = User.Identity?.Name;
+    if (string.IsNullOrWhiteSpace(displayName))
+    {
+        displayName = "khách hàng";
+    }
+
+    var totalServiceOrders = Model.ProductOrdersCount + Model.SupportOrdersCount;
+}
+
+<section class="customer-modern-dashboard">
+    <section class="cmd-hero" aria-label="Tổng quan khách hàng">
+        <div class="cmd-hero-copy">
+            <span class="cmd-kicker">Trang khách hàng</span>
+            <h1>Xin chào, @displayName 👋</h1>
+            <p>Bạn đang ở khu vực khách hàng. Tạo đơn in, thanh toán theo từng đơn và theo dõi trạng thái xử lý tại cơ sở.</p>
+
+            <div class="cmd-meta-row">
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    Cơ sở đang chọn
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                    08:00 - 21:00 hằng ngày
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                    Thanh toán theo đơn
+                </span>
+            </div>
+
+            <div class="cmd-highlight">
+                <div class="cmd-highlight-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><path d="m9 12 2 2 4-5"></path></svg>
+                </div>
+                <div>
+                    <strong>Thanh toán theo đúng dịch vụ đã sử dụng</strong>
+                    <p>Dịch vụ hết bao nhiêu thì thanh toán bấy nhiêu. Không cần nạp tiền trước.</p>
+                </div>
+            </div>
+        </div>
+
+        <aside class="cmd-upload-preview" aria-label="Tạo đơn nhanh">
+            <div class="cmd-preview-window">
+                <div class="cmd-preview-top">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                <div class="cmd-file-preview">
+                    <div class="cmd-pdf-badge">PDF</div>
+                    <div class="cmd-file-lines">
+                        <i></i><i></i><i></i><i></i>
+                    </div>
+                    <div class="cmd-upload-circle">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M20 20H4"></path></svg>
+                    </div>
+                </div>
+
+                <div class="cmd-config-card">
+                    <span>A4</span>
+                    <span>2 mặt</span>
+                    <span>Đen trắng</span>
+                    <span>Số bản: 3</span>
+                    <a asp-controller="PrintJobs" asp-action="Create">Tạo đơn in</a>
+                </div>
+            </div>
+        </aside>
+    </section>
+
+    <section class="cmd-quick-section" aria-labelledby="cmdQuickTitle">
+        <div class="cmd-section-title">
+            <h2 id="cmdQuickTitle">Thao tác nhanh</h2>
+            <p>Những chức năng khách hàng dùng thường xuyên nhất.</p>
+        </div>
+
+        <div class="cmd-quick-grid">
+            <a class="cmd-quick-card is-blue" asp-controller="PrintJobs" asp-action="Create">
+                <span><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path></svg></span>
+                <strong>Tạo đơn in</strong>
+                <small>Gửi file và yêu cầu in mới</small>
+            </a>
+
+            <a class="cmd-quick-card is-green" asp-controller="PrintJobs" asp-action="Index">
+                <span><svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h10"></path></svg></span>
+                <strong>Đơn của tôi</strong>
+                <small>Theo dõi và quản lý đơn hàng</small>
+            </a>
+
+            <a class="cmd-quick-card is-amber" asp-controller="PrintJobs" asp-action="Index">
+                <span><svg viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"></path></svg></span>
+                <strong>Thanh toán</strong>
+                <small>Thanh toán theo từng đơn</small>
+            </a>
+
+            <a class="cmd-quick-card is-purple" asp-controller="Products" asp-action="Index">
+                <span><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path></svg></span>
+                <strong>Sản phẩm</strong>
+                <small>Giấy, bút, bìa và vật tư</small>
+            </a>
+
+            <a class="cmd-quick-card is-rose" asp-controller="SupportOrders" asp-action="Create">
+                <span><svg viewBox="0 0 24 24"><path d="M12 2v20"></path><path d="M5 7h14"></path><path d="M7 17h10"></path></svg></span>
+                <strong>Dịch vụ hỗ trợ</strong>
+                <small>Scan, đóng gáy, ép plastic</small>
+            </a>
+
+            <a class="cmd-quick-card is-sky" asp-controller="Profile" asp-action="Index">
+                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 22c1.8-4 4.5-6 8-6s6.2 2 8 6"></path></svg></span>
+                <strong>Hồ sơ</strong>
+                <small>Thông tin tài khoản và địa chỉ</small>
+            </a>
+        </div>
+    </section>
+
+    <section class="cmd-content-grid" aria-label="Thông tin đặt in">
+        <div class="cmd-panel cmd-process-panel">
+            <div class="cmd-section-title">
+                <h2>Quy trình đặt in</h2>
+                <p>Thực hiện đúng thứ tự để đơn được xử lý nhanh hơn.</p>
+            </div>
+
+            <div class="cmd-process-list">
+                <article>
+                    <span>01</span>
+                    <div>
+                        <strong>Gửi file</strong>
+                        <small>Upload tài liệu cần in.</small>
+                    </div>
+                </article>
+                <article>
+                    <span>02</span>
+                    <div>
+                        <strong>Chọn cấu hình</strong>
+                        <small>Chọn số bản, khổ giấy, màu in, 1 mặt/2 mặt.</small>
+                    </div>
+                </article>
+                <article>
+                    <span>03</span>
+                    <div>
+                        <strong>Thanh toán theo đơn</strong>
+                        <small>Thanh toán đúng theo dịch vụ đã sử dụng.</small>
+                    </div>
+                </article>
+                <article>
+                    <span>04</span>
+                    <div>
+                        <strong>Theo dõi trạng thái</strong>
+                        <small>Xem đơn đang tiếp nhận, xử lý hay hoàn thành.</small>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <div class="cmd-panel">
+            <div class="cmd-section-title cmd-title-row">
+                <div>
+                    <h2>Đơn hàng gần đây</h2>
+                    <p>Tổng quan nhanh các nhóm đơn của bạn.</p>
+                </div>
+                <a asp-controller="PrintJobs" asp-action="Index">Xem tất cả</a>
+            </div>
+
+            <div class="cmd-order-summary">
+                <article>
+                    <span class="cmd-order-icon is-blue"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path></svg></span>
+                    <div>
+                        <strong>Đơn in</strong>
+                        <small>@Model.PrintJobsCount đơn đã tạo</small>
+                    </div>
+                    <a asp-controller="PrintJobs" asp-action="Index">→</a>
+                </article>
+
+                <article>
+                    <span class="cmd-order-icon is-green"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path></svg></span>
+                    <div>
+                        <strong>Sản phẩm & dịch vụ</strong>
+                        <small>@totalServiceOrders yêu cầu liên quan</small>
+                    </div>
+                    <a asp-controller="Products" asp-action="Index">→</a>
+                </article>
+
+                <article>
+                    <span class="cmd-order-icon is-amber"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg></span>
+                    <div>
+                        <strong>Thanh toán</strong>
+                        <small>Theo từng đơn thực tế</small>
+                    </div>
+                    <a asp-controller="PrintJobs" asp-action="Index">→</a>
+                </article>
+            </div>
+        </div>
+
+        <div class="cmd-panel cmd-service-panel">
+            <div class="cmd-section-title cmd-title-row">
+                <div>
+                    <h2>Dịch vụ phổ biến</h2>
+                    <p>Các nhu cầu hay dùng tại tiệm.</p>
+                </div>
+                <a asp-controller="SupportOrders" asp-action="Create">Xem thêm</a>
+            </div>
+
+            <div class="cmd-service-grid">
+                <a asp-controller="PrintJobs" asp-action="Create"><strong>In tài liệu</strong><small>A4, A3, màu/đen trắng</small></a>
+                <a asp-controller="PrintJobs" asp-action="Create"><strong>Photocopy</strong><small>1 mặt, 2 mặt</small></a>
+                <a asp-controller="SupportOrders" asp-action="Create"><strong>Scan tài liệu</strong><small>Scan màu, đen trắng</small></a>
+                <a asp-controller="SupportOrders" asp-action="Create"><strong>Đóng gáy</strong><small>Gáy xoắn, gáy keo</small></a>
+                <a asp-controller="SupportOrders" asp-action="Create"><strong>Ép plastic</strong><small>Ép bằng, ép card</small></a>
+                <a asp-controller="SupportOrders" asp-action="Create"><strong>Cắt giấy</strong><small>Cắt A4, A3 theo yêu cầu</small></a>
+            </div>
+        </div>
+    </section>
+
+    <section class="cmd-support-strip" aria-label="Hỗ trợ khách hàng">
+        <div>
+            <span class="cmd-support-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.63 2.63a2 2 0 0 1-.45 2.11L8 9.75a16 16 0 0 0 6.25 6.25l1.29-1.29a2 2 0 0 1 2.11-.45c.85.3 1.73.51 2.63.63A2 2 0 0 1 22 16.92Z"></path></svg></span>
+            <div>
+                <strong>Cần hỗ trợ? Liên hệ với cơ sở</strong>
+                <small>Gọi điện hoặc đến trực tiếp cửa hàng để được tư vấn file, giấy in và thời gian nhận.</small>
+            </div>
+        </div>
+
+        <div>
+            <span class="cmd-support-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><path d="m9 12 2 2 4-5"></path></svg></span>
+            <div>
+                <strong>Chất lượng đảm bảo</strong>
+                <small>In đúng file, đúng cấu hình, xử lý theo yêu cầu.</small>
+            </div>
+        </div>
+
+        <div>
+            <span class="cmd-support-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="m7 15 4-4 3 3 5-7"></path></svg></span>
+            <div>
+                <strong>Giá minh bạch</strong>
+                <small>Thanh toán theo từng đơn, không cần nạp trước.</small>
+            </div>
+        </div>
+    </section>
+
+    @if (Model.RecentTransactions.Count > 0)
+    {
+        <section class="cmd-panel cmd-history-panel" aria-labelledby="cmdPaymentHistoryTitle">
+            <div class="cmd-section-title cmd-title-row">
+                <div>
+                    <h2 id="cmdPaymentHistoryTitle">Hoạt động thanh toán gần đây</h2>
+                    <p>Lịch sử thanh toán và điều chỉnh liên quan đến đơn hàng.</p>
+                </div>
+            </div>
+
+            <div class="cmd-history-list">
+                @foreach (var tx in Model.RecentTransactions.Take(5))
+                {
+                    <article>
+                        <div>
+                            <strong>@tx.TransactionType.GetDisplayName()</strong>
+                            <small>@tx.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+                        <span class="@(tx.Amount >= 0 ? "is-positive" : "is-negative")">@tx.Amount.ToString("N0") đ</span>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+</section>

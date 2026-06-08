@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\PhotoCopyHub.Web.Shop.props" />
+</Project>

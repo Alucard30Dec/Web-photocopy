@@ -1,0 +1,168 @@
+@{
+    ViewData["Title"] = "Trang chủ";
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var customerReturnUrl = Url.Action("Index", "Dashboard") ?? "/Dashboard";
+    var shopReturnUrl = Url.Action("Index", "Dashboard", new { area = "Shop" }) ?? "/Shop/Dashboard";
+    var adminReturnUrl = Url.Action("Index", "Dashboard", new { area = "Admin" }) ?? "/Admin/Dashboard";
+
+    var branches = new[]
+    {
+        new { Name = "Cơ sở Đại học Quốc gia", Address = "Ký túc xá khu B - Linh Trung", Hours = "7:00 - 22:00", Queue = "12 đơn đang xử lý", Accent = "branch-accent-teal" },
+        new { Name = "Cơ sở Sư Phạm", Address = "280 An Dương Vương - Quận 5", Hours = "7:30 - 21:30", Queue = "8 đơn đang xử lý", Accent = "branch-accent-amber" },
+        new { Name = "Cơ sở Bách Khoa", Address = "268 Lý Thường Kiệt - Quận 10", Hours = "6:45 - 22:30", Queue = "15 đơn đang xử lý", Accent = "branch-accent-rose" }
+    };
+}
+
+<section class="landing-hero mb-4">
+    <div class="landing-copy">
+        <span class="landing-kicker">In ấn học tập, tài liệu văn phòng, dịch vụ tại quầy</span>
+        <h1>PhotoCopyHub</h1>
+        <p>
+            Một cổng đặt in cho khách hàng và một không gian vận hành cho từng tiệm photocopy.
+            Khách chọn cơ sở gần nhất, gửi file trước, theo dõi ví và nhận trạng thái đơn rõ ràng.
+        </p>
+
+        <div class="landing-actions">
+            @if (isAuthenticated)
+            {
+                <a class="btn btn-primary px-4" asp-controller="Dashboard" asp-action="Index">Vào dashboard</a>
+                <a class="btn btn-outline-secondary px-4" asp-controller="PrintJobs" asp-action="Create">Tạo đơn in</a>
+            }
+            else
+            {
+                <a class="btn btn-primary px-4" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@customerReturnUrl">Khách hàng đăng nhập</a>
+                <a class="btn btn-outline-secondary px-4" asp-controller="Account" asp-action="Register">Tạo tài khoản</a>
+            }
+            <a class="btn btn-outline-secondary px-4" href="#branches">Chọn cơ sở</a>
+        </div>
+
+        <div class="landing-metrics" aria-label="Chỉ số vận hành">
+            <div>
+                <strong>3</strong>
+                <span>cơ sở nổi bật</span>
+            </div>
+            <div>
+                <strong>24/7</strong>
+                <span>gửi file trước</span>
+            </div>
+            <div>
+                <strong>1</strong>
+                <span>ví điện tử nội bộ</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="landing-visual" aria-label="Bảng vận hành đơn in">
+        <div class="visual-topline">
+            <span class="status-dot"></span>
+            <span>PhotoCopyHub Workspace</span>
+            <strong>Live</strong>
+        </div>
+        <div class="print-board">
+            <div class="print-column">
+                <span>Khách gửi file</span>
+                <strong>Báo cáo nhóm.pdf</strong>
+                <small>In màu, A4, đóng gáy</small>
+            </div>
+            <div class="print-column active">
+                <span>Tiệm xử lý</span>
+                <strong>Đang in</strong>
+                <small>Cơ sở Bách Khoa</small>
+            </div>
+            <div class="print-column">
+                <span>Admin</span>
+                <strong>Đối soát ví</strong>
+                <small>Giao dịch minh bạch</small>
+            </div>
+        </div>
+        <div class="visual-ticket">
+            <div>
+                <span>Mã đơn</span>
+                <strong>PCH-2408</strong>
+            </div>
+            <div>
+                <span>Hẹn lấy</span>
+                <strong>18:30</strong>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="portal-section mb-4" id="portals">
+    <div class="section-heading">
+        <div>
+            <h2>Lối vào theo vai trò</h2>
+            <p>Ba khu vực dùng chung dữ liệu nhưng tách rõ công việc của khách, tiệm và quản trị.</p>
+        </div>
+    </div>
+
+    <div class="portal-grid">
+        <article class="portal-card portal-customer">
+            <span class="portal-eyebrow">Khách hàng</span>
+            <h3>Đặt in và theo dõi ví</h3>
+            <p>Chọn cơ sở, gửi tài liệu, nạp ví và xem lịch sử đơn in tại một nơi.</p>
+            <a class="btn btn-primary w-100" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@customerReturnUrl">Vào khu khách hàng</a>
+        </article>
+
+        <article class="portal-card portal-shop">
+            <span class="portal-eyebrow">Tiệm photocopy</span>
+            <h3>Xử lý hàng chờ tại quầy</h3>
+            <p>Duyệt nạp tại quầy, nhận đơn in, cập nhật trạng thái và quản lý tồn kho.</p>
+            <a class="btn btn-outline-secondary w-100" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@shopReturnUrl">Vào khu tiệm</a>
+        </article>
+
+        <article class="portal-card portal-admin">
+            <span class="portal-eyebrow">Admin</span>
+            <h3>Quản trị toàn hệ thống</h3>
+            <p>Quản lý người dùng, bảng giá, đối soát ví, audit log và dữ liệu vận hành.</p>
+            <a class="btn btn-outline-secondary w-100" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@adminReturnUrl">Vào khu admin</a>
+        </article>
+    </div>
+</section>
+
+<section class="branch-section mb-4" id="branches">
+    <div class="section-heading">
+        <div>
+            <h2>Chọn cơ sở gần bạn</h2>
+            <p>Mỗi cơ sở có hàng chờ riêng để khách đặt đúng nơi nhận bài và tiệm xử lý đúng khu vực.</p>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary" asp-controller="Home" asp-action="Pricing">Xem bảng giá</a>
+    </div>
+
+    <div class="branch-grid">
+        @foreach (var branch in branches)
+        {
+            <article class="branch-card @branch.Accent">
+                <div class="branch-card-header">
+                    <span class="branch-pin"></span>
+                    <span>@branch.Hours</span>
+                </div>
+                <h3>@branch.Name</h3>
+                <p>@branch.Address</p>
+                <div class="branch-meta">
+                    <span>@branch.Queue</span>
+                    <span>Nhận file online</span>
+                </div>
+                <div class="branch-actions">
+                    <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@customerReturnUrl" asp-route-branch="@branch.Name">Khách đặt in</a>
+                    <a class="btn btn-outline-secondary btn-sm" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@shopReturnUrl" asp-route-branch="@branch.Name">Tiệm đăng nhập</a>
+                </div>
+            </article>
+        }
+    </div>
+</section>
+
+<section class="operations-strip">
+    <div>
+        <span class="strip-label">Tài liệu</span>
+        <strong>PDF, DOCX, PPTX, hình ảnh</strong>
+    </div>
+    <div>
+        <span class="strip-label">Dịch vụ</span>
+        <strong>In, scan, ép plastic, đóng gáy</strong>
+    </div>
+    <div>
+        <span class="strip-label">Vận hành</span>
+        <strong>Đơn in, ví, tồn kho, đối soát</strong>
+    </div>
+</section>

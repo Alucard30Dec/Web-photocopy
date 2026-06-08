@@ -1,0 +1,197 @@
+$ErrorActionPreference = "Stop"
+
+$ProjectRoot = 'E:\OneDrive - 0dpmr\WebPhotocopy\Project'
+if (-not (Test-Path -LiteralPath $ProjectRoot)) {
+    throw "Không tìm thấy thư mục dự án: $ProjectRoot"
+}
+
+Set-Location -LiteralPath $ProjectRoot
+
+$SolutionPath = Join-Path $ProjectRoot 'PhotoCopyHub.sln'
+$WebProjectPath = Join-Path $ProjectRoot 'src\PhotoCopyHub.Web\PhotoCopyHub.Web.csproj'
+$LogsDir = Join-Path $ProjectRoot 'logs'
+$LogPath = Join-Path $LogsDir 'run-web-latest.log'
+$BuildLogPath = Join-Path $LogsDir 'build-latest.log'
+$RuntimeScriptPath = Join-Path $LogsDir 'run-web-runtime.ps1'
+
+if (-not (Test-Path -LiteralPath $SolutionPath)) {
+    throw "Không tìm thấy PhotoCopyHub.sln trong: $ProjectRoot"
+}
+
+if (-not (Test-Path -LiteralPath $WebProjectPath)) {
+    throw "Không tìm thấy Web project: $WebProjectPath"
+}
+
+if (-not (Test-Path -LiteralPath $LogsDir)) {
+    New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null
+}
+
+if (Test-Path -LiteralPath $LogPath) {
+    Remove-Item -LiteralPath $LogPath -Force
+}
+
+if (Test-Path -LiteralPath $BuildLogPath) {
+    Remove-Item -LiteralPath $BuildLogPath -Force
+}
+
+Write-Host "Dang dung tien trinh dotnet cua PhotoCopyHub neu co..." -ForegroundColor Cyan
+
+$DotnetProcesses = Get-CimInstance Win32_Process -Filter "name = 'dotnet.exe'" | Where-Object {
+    $_.CommandLine -like '*PhotoCopyHub.Web*' -or
+    $_.CommandLine -like '*PhotoCopyHub.Web.csproj*' -or
+    $_.CommandLine -like '*localhost:5250*'
+}
+
+foreach ($process in $DotnetProcesses) {
+    Write-Host "Stop dotnet PID: $($process.ProcessId)" -ForegroundColor DarkYellow
+    Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+}
+
+$PortProcesses = @()
+$CanCheckPort = Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue
+
+if ($null -ne $CanCheckPort) {
+    $PortProcesses = Get-NetTCPConnection -LocalPort 5250 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
+}
+
+foreach ($portPid in $PortProcesses) {
+    if ($portPid -gt 0 -and $portPid -ne $PID) {
+        Write-Host "Stop process dang chiem port 5250 PID: $portPid" -ForegroundColor DarkYellow
+        Stop-Process -Id $portPid -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Start-Sleep -Seconds 1
+
+Write-Host ""
+Write-Host "Dang build solution..." -ForegroundColor Cyan
+
+& dotnet build "$SolutionPath" 2>&1 | Tee-Object -FilePath $BuildLogPath
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "Build fail. Log build:" -ForegroundColor Red
+    Get-Content -LiteralPath $BuildLogPath -Tail 160
+    throw "Build fail, dung chay web."
+}
+
+Write-Host ""
+Write-Host "Build succeeded. Dang tao runtime script..." -ForegroundColor Green
+
+$RuntimeContent = @"
+`$ErrorActionPreference = "Continue"
+
+Set-Location -LiteralPath "$ProjectRoot"
+
+`$env:ASPNETCORE_ENVIRONMENT = "Development"
+`$env:ASPNETCORE_URLS = "http://localhost:5250"
+`$env:DOTNET_ENVIRONMENT = "Development"
+
+"=== PhotoCopyHub.Web ===" | Tee-Object -FilePath "$LogPath"
+"Project   : $WebProjectPath" | Tee-Object -FilePath "$LogPath" -Append
+"Web chinh : http://localhost:5250/" | Tee-Object -FilePath "$LogPath" -Append
+"Trang tiem: http://localhost:5250/ToanPhotoCopy" | Tee-Object -FilePath "$LogPath" -Append
+"Swagger   : http://localhost:5250/swagger" | Tee-Object -FilePath "$LogPath" -Append
+"" | Tee-Object -FilePath "$LogPath" -Append
+"Lệnh đang chạy:" | Tee-Object -FilePath "$LogPath" -Append
+"dotnet run --project `"$WebProjectPath`" --no-launch-profile --no-build --urls `"http://localhost:5250`"" | Tee-Object -FilePath "$LogPath" -Append
+"" | Tee-Object -FilePath "$LogPath" -Append
+
+dotnet run --project "$WebProjectPath" --no-launch-profile --no-build --urls "http://localhost:5250" *>&1 | Tee-Object -FilePath "$LogPath" -Append
+
+"" | Tee-Object -FilePath "$LogPath" -Append
+"dotnet run da thoat. Neu ban khong tu tat web thi loi that nam o cac dong phia tren." | Tee-Object -FilePath "$LogPath" -Append
+Read-Host "Nhan Enter de dong cua so runtime"
+"@
+
+[System.IO.File]::WriteAllText($RuntimeScriptPath, $RuntimeContent, [System.Text.UTF8Encoding]::new($false))
+
+Write-Host "Dang mo cua so runtime rieng de chay web..." -ForegroundColor Cyan
+
+$RuntimeProcess = Start-Process -FilePath "powershell.exe" -ArgumentList @(
+    "-NoExit",
+    "-ExecutionPolicy", "Bypass",
+    "-File", "`"$RuntimeScriptPath`""
+) -PassThru
+
+Write-Host "PID cua so runtime: $($RuntimeProcess.Id)" -ForegroundColor Green
+
+$TargetUrl = "http://localhost:5250/ToanPhotoCopy"
+$Ready = $false
+
+for ($i = 1; $i -le 60; $i++) {
+    Start-Sleep -Seconds 1
+    $RuntimeProcess.Refresh()
+
+    if ($RuntimeProcess.HasExited) {
+        Write-Host ""
+        Write-Host "Runtime da thoat som. Day la log loi that:" -ForegroundColor Red
+        Write-Host "----------------------------------------" -ForegroundColor DarkGray
+
+        if (Test-Path -LiteralPath $LogPath) {
+            Get-Content -LiteralPath $LogPath -Tail 180
+        }
+
+        Write-Host "----------------------------------------" -ForegroundColor DarkGray
+        throw "Runtime thoat som. Hay copy log loi that o tren gui lai neu can sua tiep."
+    }
+
+    $PortReady = $false
+
+    if ($null -ne $CanCheckPort) {
+        $Listening = Get-NetTCPConnection -LocalPort 5250 -State Listen -ErrorAction SilentlyContinue
+        if ($null -ne $Listening) {
+            $PortReady = $true
+        }
+    }
+
+    if ($PortReady) {
+        $Ready = $true
+        break
+    }
+
+    Write-Host "Dang cho web san sang... $i/60" -ForegroundColor DarkGray
+}
+
+if (-not $Ready) {
+    Write-Host ""
+    Write-Host "Web chua mo port 5250 sau 60 giay. Log hien tai:" -ForegroundColor Yellow
+    Write-Host "----------------------------------------" -ForegroundColor DarkGray
+
+    if (Test-Path -LiteralPath $LogPath) {
+        Get-Content -LiteralPath $LogPath -Tail 180
+    }
+
+    Write-Host "----------------------------------------" -ForegroundColor DarkGray
+    throw "Web chua san sang. Xem logs\run-web-latest.log."
+}
+
+Write-Host ""
+Write-Host "Web da san sang. Dang mo Chrome..." -ForegroundColor Green
+
+$ChromeCandidates = @(
+    "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+    "$env:LocalAppData\Google\Chrome\Application\chrome.exe"
+)
+
+$ChromePath = $null
+
+foreach ($candidate in $ChromeCandidates) {
+    if ($null -eq $ChromePath -and (Test-Path -LiteralPath $candidate)) {
+        $ChromePath = $candidate
+    }
+}
+
+if ($null -ne $ChromePath) {
+    Start-Process -FilePath $ChromePath -ArgumentList @($TargetUrl)
+}
+
+if ($null -eq $ChromePath) {
+    Start-Process $TargetUrl
+}
+
+Write-Host ""
+Write-Host "Da mo Chrome tai: $TargetUrl" -ForegroundColor Green
+Write-Host "Log runtime: $LogPath" -ForegroundColor Cyan
+Write-Host "Neu muon mo Swagger: http://localhost:5250/swagger" -ForegroundColor Cyan

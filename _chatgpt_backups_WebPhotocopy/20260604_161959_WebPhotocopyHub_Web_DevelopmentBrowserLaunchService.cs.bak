@@ -1,0 +1,107 @@
+using System.Diagnostics;
+
+namespace PhotoCopyHub.Web;
+
+public sealed class DevelopmentBrowserLaunchService : IHostedService
+{
+    private static readonly string[] Urls =
+    {
+        "https://localhost:7250/Dashboard",
+        "https://localhost:7250/swagger",
+        "https://localhost:7250/"
+    };
+
+    private readonly IHostApplicationLifetime _applicationLifetime;
+    private readonly ILogger<DevelopmentBrowserLaunchService> _logger;
+
+    public DevelopmentBrowserLaunchService(
+        IHostApplicationLifetime applicationLifetime,
+        ILogger<DevelopmentBrowserLaunchService> logger)
+    {
+        _applicationLifetime = applicationLifetime;
+        _logger = logger;
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            _ = Task.Run(OpenBrowserWindowsAsync, CancellationToken.None);
+        });
+
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenBrowserWindowsAsync()
+    {
+        await Task.Delay(800);
+
+        var chromePath = FindChromePath();
+        foreach (var url in Urls)
+        {
+            try
+            {
+                OpenUrl(url, chromePath);
+                await Task.Delay(500);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not open browser URL {Url}.", url);
+            }
+        }
+    }
+
+    private static void OpenUrl(string url, string? chromePath)
+    {
+        if (!string.IsNullOrWhiteSpace(chromePath))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = chromePath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                ArgumentList = { "--new-window", url }
+            });
+
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = url,
+            UseShellExecute = true
+        });
+    }
+
+    private static string? FindChromePath()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Google",
+                "Chrome",
+                "Application",
+                "chrome.exe"),
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                "Google",
+                "Chrome",
+                "Application",
+                "chrome.exe"),
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Google",
+                "Chrome",
+                "Application",
+                "chrome.exe")
+        };
+
+        return candidates.FirstOrDefault(File.Exists);
+    }
+}

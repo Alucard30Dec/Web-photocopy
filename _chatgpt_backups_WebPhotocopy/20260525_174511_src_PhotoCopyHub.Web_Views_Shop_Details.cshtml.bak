@@ -1,0 +1,44 @@
+@model PhotoCopyHub.Web.Models.ShopBranchLinkViewModel
+
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<section class="shop-front-hero">
+    <div class="shop-front-copy">
+        <span class="shop-route-pill">/shop/@Model.Slug</span>
+        <h1>@Model.Name</h1>
+        <p>ÄÃ¢y lÃ  trang chÃ­nh cá»§a cÆ¡ sá»Ÿ photocopy dÃ nh cho khÃ¡ch hÃ ng. KhÃ¡ch cÃ³ thá»ƒ báº¯t Ä‘áº§u táº¡o Ä‘Æ¡n in, xem sáº£n pháº©m vÄƒn phÃ²ng pháº©m, Ä‘áº·t dá»‹ch vá»¥ há»— trá»£ vÃ  theo dÃµi lá»‹ch sá»­ sau khi Ä‘Äƒng nháº­p.</p>
+
+        <div class="shop-front-actions">
+            <a class="btn btn-primary" asp-controller="PrintJobs" asp-action="Create" asp-route-branch="@Model.Slug">Táº¡o Ä‘Æ¡n in</a>
+            <a class="btn btn-outline-primary" asp-controller="Products" asp-action="Index" asp-route-branch="@Model.Slug">Xem sáº£n pháº©m</a>
+            <a class="btn btn-outline-secondary" asp-controller="SupportOrders" asp-action="Create" asp-route-branch="@Model.Slug">Dá»‹ch vá»¥ há»— trá»£</a>
+        </div>
+    </div>
+
+    <div class="shop-front-panel">
+        <div class="shop-front-panel-head">
+            <strong>Cá»•ng khÃ¡ch hÃ ng</strong>
+            <span>@Model.Slug</span>
+        </div>
+
+        <div class="shop-front-steps">
+            <article>
+                <span>01</span>
+                <strong>Upload file</strong>
+                <small>Gá»­i PDF, Word, PowerPoint hoáº·c hÃ¬nh áº£nh.</small>
+            </article>
+            <article>
+                <span>02</span>
+                <strong>Chá»n yÃªu cáº§u</strong>
+                <small>Sá»‘ báº£n, khá»• giáº¥y, mÃ u sáº¯c, in má»™t máº·t/hai máº·t.</small>
+            </article>
+            <article>
+                <span>03</span>
+                <strong>Theo dÃµi Ä‘Æ¡n</strong>
+                <small>Xem tráº¡ng thÃ¡i xá»­ lÃ½ vÃ  lá»‹ch sá»­ Ä‘Æ¡n.</small>
+            </article>
+        </div>
+    </div>
+</section>

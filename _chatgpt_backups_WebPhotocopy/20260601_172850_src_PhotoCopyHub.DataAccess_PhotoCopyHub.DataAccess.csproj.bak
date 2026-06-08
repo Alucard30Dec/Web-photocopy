@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>PhotoCopyHub.DataAccess</RootNamespace>
+    <AssemblyName>PhotoCopyHub.DataAccess</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoCopyHub.Domain\PhotoCopyHub.Domain.csproj" />
+    <ProjectReference Include="..\PhotoCopyHub.Application\PhotoCopyHub.Application.csproj" />
+    <ProjectReference Include="..\PhotoCopyHub.Infrastructure\PhotoCopyHub.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

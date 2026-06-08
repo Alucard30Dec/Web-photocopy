@@ -1,0 +1,111 @@
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+    var branchSlug = ViewContext.RouteData.Values["branchSlug"]?.ToString() ?? string.Empty;
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+
+    var branch = ShopBranchCatalog.Find(branchSlug) ?? new ShopBranchLinkViewModel
+    {
+        Slug = branchSlug,
+        Name = branchSlug,
+        Address = "Đang cập nhật",
+        PhoneNumber = "Đang cập nhật",
+        OpenHours = "Đang cập nhật"
+    };
+
+    var branchHomeUrl = "/" + branch.Slug;
+
+    string BranchUrl(string controllerName, string actionName = "Index")
+    {
+        return Url.Action(actionName, controllerName, new { area = string.Empty, branchSlug = branch.Slug }) ?? $"/{branch.Slug}/{controllerName}";
+    }
+
+    string LoginUrl(string returnUrl)
+    {
+        return Url.Action("CustomerLogin", "Account", new { area = string.Empty, branchSlug = branch.Slug, returnUrl }) ?? $"/{branch.Slug}/Login?returnUrl={System.Uri.EscapeDataString(returnUrl)}";
+    }
+
+    string Active(string controllerName, string? actionName = null)
+    {
+        var controllerMatch = string.Equals(controller, controllerName, StringComparison.OrdinalIgnoreCase);
+        var actionMatch = string.IsNullOrWhiteSpace(actionName) ||
+            string.Equals(action, actionName, StringComparison.OrdinalIgnoreCase);
+
+        return controllerMatch && actionMatch ? "active" : string.Empty;
+    }
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - @branch.Name</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="branch-customer-shell">
+<header class="branch-customer-header">
+    <a class="branch-customer-brand" href="@branchHomeUrl" aria-label="Trang cơ sở @branch.Name">
+        <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18l-1.5-6h-15z"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span>
+        <strong>@branch.Name</strong>
+    </a>
+
+    <div class="branch-customer-status">
+        <span><i aria-hidden="true"></i>Đang mở</span>
+        <small>@branch.OpenHours</small>
+    </div>
+
+    <div class="branch-customer-header-actions">
+        <a href="@branchHomeUrl">Trang cơ sở</a>
+
+        @if (isSignedIn)
+        {
+            <a href="@BranchUrl("Dashboard")">Tổng quan</a>
+            <form asp-controller="Account" asp-action="Logout" method="post">
+                <input type="hidden" name="returnUrl" value="@branchHomeUrl" />
+                <button type="submit">Đăng xuất</button>
+            </form>
+        }
+
+        @if (!isSignedIn)
+        {
+            <a href="@LoginUrl(BranchUrl("Dashboard"))">Đăng nhập</a>
+        }
+    </div>
+</header>
+
+<nav class="branch-customer-nav" aria-label="Menu khách hàng">
+    <a class="@Active("Shop", "Details")" href="@branchHomeUrl">Trang cơ sở</a>
+
+    @if (isSignedIn)
+    {
+        <a class="@Active("Dashboard")" href="@BranchUrl("Dashboard")">Tổng quan</a>
+        <a class="@Active("PrintJobs", "Create")" href="@BranchUrl("PrintJobs", "Create")">Tạo đơn in</a>
+        <a class="@Active("PrintJobs", "Index")" href="@BranchUrl("PrintJobs")">Đơn in</a>
+        <a class="@Active("Products")" href="@BranchUrl("Products")">Sản phẩm</a>
+        <a class="@Active("Wallet")" href="@BranchUrl("Wallet")">Ví</a>
+        <a class="@Active("SupportOrders")" href="@BranchUrl("SupportOrders", "Create")">Dịch vụ hỗ trợ</a>
+        <a class="@Active("Profile")" href="@BranchUrl("Profile")">Hồ sơ</a>
+    }
+
+    @if (!isSignedIn)
+    {
+        <a href="@LoginUrl(BranchUrl("PrintJobs", "Create"))">Tạo đơn in</a>
+        <a href="@LoginUrl(BranchUrl("PrintJobs"))">Theo dõi đơn</a>
+        <a href="@LoginUrl(BranchUrl("Wallet"))">Ví</a>
+        <a href="@LoginUrl(BranchUrl("Dashboard"))">Đăng nhập khách hàng</a>
+    }
+</nav>
+
+<main class="branch-customer-main">
+    <partial name="_Alert" />
+    @RenderBody()
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
