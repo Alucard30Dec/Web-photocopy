@@ -64,9 +64,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/_content/WebPhotocopyHub.Web.Customer/css/customer-role-ui.css" asp-append-version="true" />
+    <style>
+        /* Customer fixed shared frame patch */
+        .customer-shell--fixed-frame .customer-topbar,
+        .customer-shell--fixed-frame .customer-topbar-v2 {
+            position: sticky;
+            top: 0;
+            z-index: 1100;
+        }
+
+        .customer-shell--fixed-frame .customer-main {
+            position: relative;
+            z-index: 1;
+        }
+
+        .customer-shell--fixed-frame .dropdown-menu {
+            z-index: 1110;
+        }
+    </style>
+    <style>
+        /* Customer fixed frame patch - keep customer topbar shared and sticky */
+        .customer-shell--fixed-frame .customer-topbar-v2 {
+            position: sticky;
+            top: 0;
+            z-index: 1100;
+        }
+
+        .customer-shell--fixed-frame .customer-main {
+            position: relative;
+            z-index: 1;
+        }
+
+        .customer-shell--fixed-frame .dropdown-menu {
+            z-index: 1110;
+        }
+    </style>
 </head>
-<body class="customer-shell customer-shell--fixed-frame customer-shell--unified">
+<body class="customer-shell customer-shell--fixed-frame">
 <header class="customer-topbar customer-topbar-v2">
     <a class="customer-brand" href="@branchHomeUrl" aria-label="Trang chủ @branch.Name">
         <span class="customer-brand-icon" aria-hidden="true">▣</span>

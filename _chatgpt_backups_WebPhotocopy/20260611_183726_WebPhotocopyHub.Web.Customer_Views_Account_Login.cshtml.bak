@@ -1,7 +1,7 @@
 @model LoginViewModel
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+    Layout = "_BranchCustomerLayout";
     var branch = ViewData["Branch"] as ShopBranchLinkViewModel;
     ViewData["Title"] = "Đăng nhập khách hàng";
 

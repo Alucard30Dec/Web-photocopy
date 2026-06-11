@@ -1,7 +1,3 @@
-@{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
-}
-
 @model List<PrintJob>
 @{
     ViewData["Title"] = "Đơn in của tôi";

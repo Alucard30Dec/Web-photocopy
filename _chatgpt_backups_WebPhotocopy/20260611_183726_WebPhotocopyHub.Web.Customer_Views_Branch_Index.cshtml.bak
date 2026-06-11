@@ -2,7 +2,7 @@
 
 @{
     ViewData["Title"] = Model.Branch.Name;
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+    Layout = "_BranchCustomerLayout";
 
     var loginUrl = CustomerBranchContext.ToPath(ViewContext, "Login");
     var dashboardUrl = CustomerBranchContext.ToPath(ViewContext, "Dashboard");

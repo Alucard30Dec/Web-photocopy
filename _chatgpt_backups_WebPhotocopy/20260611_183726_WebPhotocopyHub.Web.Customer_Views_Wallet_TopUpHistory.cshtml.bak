@@ -1,7 +1,3 @@
-@{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
-}
-
 @model List<TopUpRequest>
 @{
     ViewData["Title"] = "Lịch sử yêu cầu nạp tiền";

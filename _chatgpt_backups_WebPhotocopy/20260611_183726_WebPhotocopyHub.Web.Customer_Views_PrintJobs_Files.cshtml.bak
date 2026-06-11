@@ -1,7 +1,3 @@
-@{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
-}
-
 @model List<UploadedFileMetadata>
 @{
     ViewData["Title"] = "File đã upload";
