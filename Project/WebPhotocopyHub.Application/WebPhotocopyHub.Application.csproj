@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>WebPhotocopyHub.Application</RootNamespace>
+    <AssemblyName>WebPhotocopyHub.Application</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WebPhotocopyHub.Domain\WebPhotocopyHub.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,261 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Logging;
+using WebPhotocopyHub.Domain.Constants;
+using WebPhotocopyHub.Domain.Entities;
+using WebPhotocopyHub.Web.Models;
+
+namespace WebPhotocopyHub.Web.Controllers;
+
+[AllowAnonymous]
+public class AccountController : Controller
+{
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly ILogger<AccountController> _logger;
+
+    public AccountController(
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        RoleManager<IdentityRole> roleManager,
+        ILogger<AccountController> logger)
+    {
+        _userManager = userManager;
+        _signInManager = signInManager;
+        _roleManager = roleManager;
+        _logger = logger;
+    }
+
+    [HttpGet("/{branchSlug}/Register")]
+    public IActionResult Register(string branchSlug)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null)
+        {
+            return NotFound();
+        }
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+        return View(new RegisterViewModel());
+    }
+
+    [HttpPost("/{branchSlug}/Register")]
+    [EnableRateLimiting("auth")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Register(string branchSlug, RegisterViewModel model)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null)
+        {
+            return NotFound();
+        }
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+
+        if (!ModelState.IsValid)
+        {
+            return View("Register", model);
+        }
+
+        var email = model.Email.Trim();
+        if (await _userManager.FindByEmailAsync(email) is not null)
+        {
+            ModelState.AddModelError(nameof(model.Email), "Email này đã được sử dụng.");
+            return View("Register", model);
+        }
+
+        try
+        {
+            var user = new ApplicationUser
+            {
+                FullName = model.FullName,
+                Email = email,
+                UserName = email,
+                PhoneNumber = model.PhoneNumber,
+                Address = model.Address,
+                EmailConfirmed = true,
+                PhoneNumberConfirmed = true,
+                IsActive = true,
+                CurrentBalance = 0
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password);
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, LocalizeIdentityError(error));
+                }
+
+                return View("Register", model);
+            }
+
+            if (!await _roleManager.RoleExistsAsync(RoleConstants.Customer))
+            {
+                var createRoleResult = await _roleManager.CreateAsync(new IdentityRole(RoleConstants.Customer));
+                if (!createRoleResult.Succeeded)
+                {
+                    foreach (var error in createRoleResult.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, LocalizeIdentityError(error));
+                    }
+
+                    return View("Register", model);
+                }
+            }
+
+            var addRoleResult = await _userManager.AddToRoleAsync(user, RoleConstants.Customer);
+            if (!addRoleResult.Succeeded)
+            {
+                foreach (var error in addRoleResult.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, LocalizeIdentityError(error));
+                }
+
+                return View("Register", model);
+            }
+
+            await _signInManager.SignInAsync(user, isPersistent: false);
+
+            TempData["Success"] = "Đăng ký thành công.";
+            return LocalRedirect($"/{branch.Slug}/Dashboard");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Đăng ký tài khoản khách hàng thất bại cho email {Email}.", email);
+            ModelState.AddModelError(string.Empty, "Đăng ký thất bại do lỗi hệ thống. Vui lòng thử lại sau.");
+            return View("Register", model);
+        }
+    }
+
+    [HttpGet("/{branchSlug}/Login")]
+    public IActionResult Login(string branchSlug, string? returnUrl = null)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null)
+        {
+            return NotFound();
+        }
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+
+        return View(new LoginViewModel
+        {
+            ReturnUrl = returnUrl ?? $"/{branch.Slug}/Dashboard"
+        });
+    }
+
+    [HttpPost("/{branchSlug}/Login")]
+    [EnableRateLimiting("auth")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Login(string branchSlug, LoginViewModel model)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null)
+        {
+            return NotFound();
+        }
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+
+        return await LoginForRolesAsync(
+            model,
+            new[] { RoleConstants.Customer },
+            $"/{branch.Slug}/Dashboard",
+            "Khách hàng");
+    }
+
+    [Authorize]
+    [HttpPost("/Account/Logout")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Logout(string? returnUrl = null)
+    {
+        await _signInManager.SignOutAsync();
+        TempData["Success"] = "Bạn đã đăng xuất.";
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return LocalRedirect(returnUrl);
+        }
+
+        return RedirectToAction("Index", "Home");
+    }
+
+    private async Task<IActionResult> LoginForRolesAsync(
+        LoginViewModel model,
+        IReadOnlyCollection<string> allowedRoles,
+        string defaultRedirectUrl,
+        string loginScope)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View("Login", model);
+        }
+
+        var email = model.Email.Trim();
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null || !user.IsActive)
+        {
+            ModelState.AddModelError(string.Empty, "Tài khoản không tồn tại hoặc đã bị khóa.");
+            return View("Login", model);
+        }
+
+        var result = await _signInManager.PasswordSignInAsync(email, model.Password, model.RememberMe, lockoutOnFailure: true);
+        if (!result.Succeeded)
+        {
+            if (result.IsLockedOut)
+            {
+                ModelState.AddModelError(string.Empty, "Tài khoản đang bị khóa tạm thời do đăng nhập sai nhiều lần. Vui lòng thử lại sau.");
+                return View("Login", model);
+            }
+
+            ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không đúng.");
+            return View("Login", model);
+        }
+
+        var roleAllowed = false;
+        foreach (var role in allowedRoles)
+        {
+            if (await _userManager.IsInRoleAsync(user, role))
+            {
+                roleAllowed = true;
+                break;
+            }
+        }
+
+        if (!roleAllowed)
+        {
+            await _signInManager.SignOutAsync();
+            ModelState.AddModelError(string.Empty, $"Tài khoản này không thuộc khu vực đăng nhập {loginScope}.");
+            return View("Login", model);
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+        {
+            return Redirect(model.ReturnUrl);
+        }
+
+        return LocalRedirect(defaultRedirectUrl);
+    }
+
+    private static string LocalizeIdentityError(IdentityError error)
+    {
+        return error.Code switch
+        {
+            "DuplicateEmail" => "Email này đã được sử dụng.",
+            "DuplicateUserName" => "Tên đăng nhập đã tồn tại.",
+            "PasswordTooShort" => "Mật khẩu quá ngắn, cần ít nhất 8 ký tự.",
+            "PasswordRequiresDigit" => "Mật khẩu cần có ít nhất 1 chữ số.",
+            "PasswordRequiresLower" => "Mật khẩu cần có ít nhất 1 chữ thường.",
+            "PasswordRequiresUpper" => "Mật khẩu cần có ít nhất 1 chữ hoa.",
+            _ => error.Description
+        };
+    }
+}

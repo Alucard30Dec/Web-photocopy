@@ -3,7 +3,7 @@
     "Name": "Start",
     "Projects": [
       {
-        "Path": "WebPhotocopyHub_Web\\WebPhotocopyHub_Web.csproj",
+        "Path": "WebPhotocopyHub.Web\\WebPhotocopyHub.Web.csproj",
         "Action": "Start"
       }
     ]

@@ -1,4 +1,4 @@
-# PhotoCopyHub
+# WebPhotocopyHub
 
 Huong dan nay giup may dev khac clone repo va chay ung dung voi Supabase PostgreSQL hien tai. Khong commit password hay connection string that vao repo.
 
@@ -11,7 +11,7 @@ Huong dan nay giup may dev khac clone repo va chay ung dung voi Supabase Postgre
 
 ## Cau hinh Supabase cho may dev moi
 
-Ung dung doc connection string tu bien moi truong `PHOTOCOPYHUB_POSTGRES_CONNECTION`. Gia tri mau:
+Ung dung doc connection string tu bien moi truong `WEBPHOTOCOPYHUB_POSTGRES_CONNECTION`. Gia tri mau:
 
 ```powershell
 Host=aws-...pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.<project-ref>;Password=<password>;SSL Mode=Require;Trust Server Certificate=true;Application Name=DTBWebPhotocopyHub
@@ -29,8 +29,10 @@ Neu khong truyen `-ConnectionString`, script se hoi nhap connection string trong
 - Chan placeholder nhu `[YOUR-PASSWORD]` hoac `<password>`.
 - Yeu cau `Database=postgres`.
 - Yeu cau host la Supabase hoac Supabase pooler.
-- Luu bien moi truong user-level `PHOTOCOPYHUB_POSTGRES_CONNECTION`.
+- Luu bien moi truong user-level `WEBPHOTOCOPYHUB_POSTGRES_CONNECTION`.
 - Chi in connection string da che password.
+
+Neu may dev cu da co `PHOTOCOPYHUB_POSTGRES_CONNECTION`, ung dung van doc bien cu nhu fallback; cau hinh moi nen dung `WEBPHOTOCOPYHUB_POSTGRES_CONNECTION`.
 
 Sau khi setup, mo terminal moi hoac restart Visual Studio de process moi doc duoc bien moi truong.
 
@@ -39,7 +41,7 @@ Sau khi setup, mo terminal moi hoac restart Visual Studio de process moi doc duo
 ```powershell
 dotnet restore .\WebPhotocopyHub.sln
 dotnet build .\WebPhotocopyHub.sln --no-restore
-dotnet run --project .\WebPhotocopyHub_Web\WebPhotocopyHub_Web.csproj --launch-profile Start
+dotnet run --project .\WebPhotocopyHub.Web\WebPhotocopyHub.Web.csproj --launch-profile Start
 ```
 
 Ung dung mac dinh chay tai:
@@ -55,7 +57,7 @@ Health check:
 ## Kiem tra nhanh env var
 
 ```powershell
-[Environment]::GetEnvironmentVariable('PHOTOCOPYHUB_POSTGRES_CONNECTION', 'User')
+[Environment]::GetEnvironmentVariable('WEBPHOTOCOPYHUB_POSTGRES_CONNECTION', 'User')
 ```
 
 Neu app bao loi connection string, kiem tra lai password Supabase, host pooler, SSL mode, va dam bao terminal/Visual Studio da duoc restart sau khi set env var.

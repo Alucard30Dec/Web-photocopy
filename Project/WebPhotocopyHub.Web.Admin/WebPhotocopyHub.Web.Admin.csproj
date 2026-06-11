@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>WebPhotocopyHub.Web.Admin</RootNamespace>
+    <AssemblyName>WebPhotocopyHub.Web.Admin</AssemblyName>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WebPhotocopyHub.Domain\WebPhotocopyHub.Domain.csproj" />
+    <ProjectReference Include="..\WebPhotocopyHub.Application\WebPhotocopyHub.Application.csproj" />
+    <ProjectReference Include="..\WebPhotocopyHub.Report\WebPhotocopyHub.Report.csproj" />
+  </ItemGroup>
+</Project>

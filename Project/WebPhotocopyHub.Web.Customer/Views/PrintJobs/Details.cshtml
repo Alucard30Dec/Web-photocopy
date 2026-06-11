@@ -1,0 +1,68 @@
+@model PrintJob
+@{
+    ViewData["Title"] = "Chi tiết đơn in";
+    var updatedAt = (Model.UpdatedAt ?? Model.CreatedAt).ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+}
+
+<section class="cu-page">
+    <section class="cu-hero">
+        <div>
+            <span class="cu-kicker">Print order detail</span>
+            <h1>Chi tiết đơn in</h1>
+            <p>Mã đơn: <span class="cu-code">@Model.Id</span></p>
+            <div class="cu-actions">
+                <a class="btn btn-outline-secondary" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Quay lại danh sách</a>
+                <a class="btn btn-primary" asp-action="DownloadFile" asp-route-id="@Model.UploadedFileId" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Tải file</a>
+            </div>
+        </div>
+        <aside class="cu-hero-card">
+            <span class="cu-card-label">Trạng thái</span>
+            <strong>@Model.Status.GetDisplayName()</strong>
+            <small>Cập nhật gần nhất: @updatedAt</small>
+        </aside>
+    </section>
+
+    <section class="cu-grid cu-grid--detail">
+        <div class="cu-card">
+            <div class="cu-section-head">
+                <div>
+                    <span class="cu-kicker">Thông tin in</span>
+                    <h2>Cấu hình đơn</h2>
+                </div>
+                <span class="badge @Model.Status.ToBadgeClass()">@Model.Status.GetDisplayName()</span>
+            </div>
+
+            <div class="cu-detail-list">
+                <div><span>Khổ giấy</span><strong>@Model.PaperSize.GetDisplayName()</strong></div>
+                <div><span>Kiểu in</span><strong>@Model.PrintSide.GetDisplayName()</strong></div>
+                <div><span>Màu sắc</span><strong>@Model.ColorMode.GetDisplayName()</strong></div>
+                <div><span>Số bản / trang</span><strong>@Model.Copies / @Model.TotalPages</strong></div>
+                <div><span>Tổng trang cần in</span><strong>@(Model.Copies * Model.TotalPages)</strong></div>
+                <div><span>Tổng tiền</span><strong>@Model.TotalAmount.ToString("N0") đ</strong></div>
+                <div><span>Hình thức nhận</span><strong>@Model.DeliveryMethod.GetDisplayName()</strong></div>
+                <div><span>Địa chỉ giao</span><strong>@(string.IsNullOrWhiteSpace(Model.DeliveryAddress) ? "Nhận tại tiệm" : Model.DeliveryAddress)</strong></div>
+                <div class="cu-detail-list__full"><span>Ghi chú</span><strong>@(string.IsNullOrWhiteSpace(Model.Notes) ? "Không có ghi chú." : Model.Notes)</strong></div>
+            </div>
+        </div>
+
+        <aside class="cu-card">
+            <div class="cu-section-head">
+                <div>
+                    <span class="cu-kicker">Preview</span>
+                    <h2>File đơn in</h2>
+                </div>
+            </div>
+
+            <iframe
+                src="@Url.Action("PreviewFile", new { id = Model.UploadedFileId })"
+                title="Xem trước file đơn in @Model.Id"
+                class="cu-preview-frame"
+                loading="lazy">
+            </iframe>
+
+            <div class="cu-actions mt-3">
+                <a class="btn btn-outline-secondary" asp-action="DownloadFile" asp-route-id="@Model.UploadedFileId" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Tải file</a>
+            </div>
+        </aside>
+    </section>
+</section>

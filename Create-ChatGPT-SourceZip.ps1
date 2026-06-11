@@ -47,13 +47,13 @@ $ExcludedDirectoryNames = @(
 )
 
 $ExcludedRelativeDirectoryPrefixes = @(
-    'WebPhotocopyHub_Web\wwwroot\uploads',
-    'WebPhotocopyHub_Web\wwwroot\files',
-    'WebPhotocopyHub_Web\App_Data',
-    'WebPhotocopyHub_Web\logs',
-    'WebPhotocopyHub_Web\runtime-data',
-    'WebPhotocopyHub_Web\_ProjectSupport\RootFiles\logs',
-    'WebPhotocopyHub_Web\_ProjectSupport\RootFiles\runtime-data'
+    'WebPhotocopyHub.Web\wwwroot\uploads',
+    'WebPhotocopyHub.Web\wwwroot\files',
+    'WebPhotocopyHub.Web\App_Data',
+    'WebPhotocopyHub.Web\logs',
+    'WebPhotocopyHub.Web\runtime-data',
+    'WebPhotocopyHub.Web\_ProjectSupport\RootFiles\logs',
+    'WebPhotocopyHub.Web\_ProjectSupport\RootFiles\runtime-data'
 )
 
 $ExcludedFileNames = @(
@@ -128,9 +128,9 @@ foreach ($RequiredRelativeFile in @(
     'WebPhotocopyHub.sln',
     'WebPhotocopyHub.slnLaunch',
     'nuget.config',
-    'WebPhotocopyHub_Web\Program.cs',
-    'WebPhotocopyHub_Web\appsettings.json',
-    'WebPhotocopyHub_Web\Properties\launchSettings.json'
+    'WebPhotocopyHub.Web\Program.cs',
+    'WebPhotocopyHub.Web\appsettings.json',
+    'WebPhotocopyHub.Web\Properties\launchSettings.json'
 )) {
     if (-not $RequiredRelativeFiles.Contains($RequiredRelativeFile)) {
         $RequiredRelativeFiles.Add($RequiredRelativeFile) | Out-Null

@@ -1,0 +1,56 @@
+@model List<ProductOrder>
+@{
+    ViewData["Title"] = "Đơn văn phòng phẩm";
+}
+
+<section class="cu-page">
+    <section class="cu-hero">
+        <div>
+            <span class="cu-kicker">Product orders</span>
+            <h1>Đơn văn phòng phẩm</h1>
+            <p>Theo dõi các đơn mua giấy, bút, bìa và vật tư tại cơ sở.</p>
+            <div class="cu-actions">
+                <a class="btn btn-primary" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Đặt sản phẩm mới</a>
+            </div>
+        </div>
+        <aside class="cu-hero-card">
+            <span class="cu-card-label">Tổng đơn</span>
+            <strong>@Model.Count</strong>
+            <small>Đơn sản phẩm của tài khoản hiện tại.</small>
+        </aside>
+    </section>
+
+    <section class="cu-card">
+        <div class="cu-table-wrap">
+            <table class="table cu-table">
+                <thead>
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Ngày tạo</th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5"><div class="cu-empty"><strong>Chưa có đơn sản phẩm.</strong><span>Chọn sản phẩm và tạo đơn mới.</span></div></td>
+                    </tr>
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td><span class="cu-code">@item.Id</span></td>
+                        <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-end fw-semibold">@item.TotalAmount.ToString("N0") đ</td>
+                        <td><span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span></td>
+                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@item.Id" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Chi tiết</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
