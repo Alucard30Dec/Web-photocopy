@@ -34,37 +34,33 @@
             <h1>Tổng quan của @displayName</h1>
             <p>Xem nhanh đơn in, đơn sản phẩm, dịch vụ hỗ trợ, ví và hồ sơ tại cơ sở @branch.Name.</p>
             <div class="customer-hero-actions">
-                <a class="customer-primary-action" href="@printCreateUrl">Tạo đơn in</a>
-                <a class="customer-secondary-action" href="@branchHomeUrl">Về trang chính</a>
+                <a class="customer-primary-action" href="@printCreateUrl"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg>Tạo đơn in</a>
+                <a class="customer-secondary-action" href="@branchHomeUrl"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-house-door"></use></svg>Về trang chính</a>
             </div>
         </div>
 
         <aside class="customer-balance-card">
-            <span>Số dư ví</span>
+            <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg>Số dư ví</span>
             <strong>@Model.CurrentBalance.ToString("N0") đ</strong>
-            <a href="@walletUrl">Xem ví & giao dịch</a>
+            <a href="@walletUrl"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-right-circle"></use></svg>Xem ví & giao dịch</a>
         </aside>
     </section>
 
     <section class="customer-stat-grid" aria-label="Chỉ số tổng quan">
         <a class="customer-stat-card" href="@printJobsUrl">
-            <span>Đơn in</span>
-            <strong>@Model.PrintJobsCount</strong>
+            <span class="cu-stat-icon is-blue" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-files"></use></svg></span><span>Đơn in</span><strong>@Model.PrintJobsCount</strong>
             <small>Đơn đã tạo tại cơ sở.</small>
         </a>
         <a class="customer-stat-card" href="@productOrdersUrl">
-            <span>Đơn sản phẩm</span>
-            <strong>@Model.ProductOrdersCount</strong>
+            <span class="cu-stat-icon is-purple" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span><span>Đơn sản phẩm</span><strong>@Model.ProductOrdersCount</strong>
             <small>Văn phòng phẩm đã đặt.</small>
         </a>
         <a class="customer-stat-card" href="@supportHistoryUrl">
-            <span>Dịch vụ hỗ trợ</span>
-            <strong>@Model.SupportOrdersCount</strong>
+            <span class="cu-stat-icon is-rose" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-life-preserver"></use></svg></span><span>Dịch vụ hỗ trợ</span><strong>@Model.SupportOrdersCount</strong>
             <small>Scan, đóng gáy, ép plastic.</small>
         </a>
         <a class="customer-stat-card" href="@topUpHistoryUrl">
-            <span>Nạp tiền chờ duyệt</span>
-            <strong>@Model.PendingTopUpCount</strong>
+            <span class="cu-stat-icon is-amber" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-hourglass-split"></use></svg></span><span>Nạp tiền chờ duyệt</span><strong>@Model.PendingTopUpCount</strong>
             <small>Yêu cầu đang chờ xử lý.</small>
         </a>
     </section>
@@ -79,12 +75,12 @@
             </div>
 
             <div class="customer-action-grid is-dashboard-actions">
-                <a class="customer-action-card is-blue" href="@printCreateUrl"><span>🖨</span><strong>Tạo đơn in</strong><small>Gửi file và yêu cầu in mới.</small></a>
-                <a class="customer-action-card is-green" href="@printJobsUrl"><span>📄</span><strong>Đơn của tôi</strong><small>Theo dõi trạng thái xử lý.</small></a>
-                <a class="customer-action-card is-purple" href="@productsUrl"><span>▣</span><strong>Sản phẩm</strong><small>Mua vật tư tại cơ sở.</small></a>
-                <a class="customer-action-card is-rose" href="@supportCreateUrl"><span>✦</span><strong>Dịch vụ</strong><small>Tạo yêu cầu hỗ trợ.</small></a>
-                <a class="customer-action-card is-amber" href="@topUpUrl"><span>₫</span><strong>Nạp tiền</strong><small>Gửi yêu cầu nạp ví.</small></a>
-                <a class="customer-action-card is-sky" href="@profileUrl"><span>👤</span><strong>Hồ sơ</strong><small>Cập nhật thông tin cá nhân.</small></a>
+                <a class="customer-action-card is-blue" href="@printCreateUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg></span><strong>Tạo đơn in</strong><small>Gửi file và yêu cầu in mới.</small></a>
+                <a class="customer-action-card is-green" href="@printJobsUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clipboard-check"></use></svg></span><strong>Đơn của tôi</strong><small>Theo dõi trạng thái xử lý.</small></a>
+                <a class="customer-action-card is-purple" href="@productsUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span><strong>Sản phẩm</strong><small>Mua vật tư tại cơ sở.</small></a>
+                <a class="customer-action-card is-rose" href="@supportCreateUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-life-preserver"></use></svg></span><strong>Dịch vụ</strong><small>Tạo yêu cầu hỗ trợ.</small></a>
+                <a class="customer-action-card is-amber" href="@topUpUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg></span><strong>Nạp tiền</strong><small>Gửi yêu cầu nạp ví.</small></a>
+                <a class="customer-action-card is-sky" href="@profileUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-person-gear"></use></svg></span><strong>Hồ sơ</strong><small>Cập nhật thông tin cá nhân.</small></a>
             </div>
         </article>
 

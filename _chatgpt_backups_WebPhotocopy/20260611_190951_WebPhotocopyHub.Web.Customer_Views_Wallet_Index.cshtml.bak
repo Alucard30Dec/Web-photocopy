@@ -1,0 +1,79 @@
+@{
+    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+}
+
+@model WalletIndexViewModel
+@{
+    ViewData["Title"] = "Ví của tôi";
+
+    var creditTotal = Model.Transactions.Where(x => x.Amount > 0).Sum(x => x.Amount);
+    var debitTotal = Model.Transactions.Where(x => x.Amount < 0).Sum(x => Math.Abs(x.Amount));
+}
+
+<section class="cu-page">
+    <section class="cu-hero">
+        <div>
+            <span class="cu-kicker">Wallet</span>
+            <h1>Ví của tôi</h1>
+            <p>Theo dõi số dư, giao dịch nạp tiền, thanh toán đơn in, đơn sản phẩm và dịch vụ hỗ trợ.</p>
+            <div class="cu-actions">
+                <a class="btn btn-primary" asp-action="TopUp" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><i class="bi bi-plus-circle"></i>Tạo yêu cầu nạp tiền</a>
+                <a class="btn btn-outline-secondary" asp-action="TopUpHistory" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><i class="bi bi-clock-history"></i>Lịch sử nạp tiền</a>
+            </div>
+        </div>
+        <aside class="cu-hero-card">
+            <span class="cu-card-label">Số dư hiện tại</span>
+            <strong>@Model.CurrentBalance.ToString("N0") đ</strong>
+            <small>Giao dịch được ghi lại để đối soát khi cần.</small>
+        </aside>
+    </section>
+
+    <section class="cu-stat-grid">
+        <div class="cu-stat-card"><span class="cu-stat-icon is-green" aria-hidden="true"><i class="bi bi-arrow-down-circle"></i></span><span>Tổng đã nạp</span><strong>@creditTotal.ToString("N0") đ</strong><small>Các giao dịch tăng số dư.</small></div>
+        <div class="cu-stat-card"><span class="cu-stat-icon is-rose" aria-hidden="true"><i class="bi bi-arrow-up-circle"></i></span><span>Tổng đã chi</span><strong>@debitTotal.ToString("N0") đ</strong><small>Các khoản thanh toán đơn.</small></div>
+        <div class="cu-stat-card"><span class="cu-stat-icon is-blue" aria-hidden="true"><i class="bi bi-receipt"></i></span><span>Số giao dịch</span><strong>@Model.Transactions.Count</strong><small>Lịch sử ví của tài khoản.</small></div>
+    </section>
+
+    <section class="cu-card">
+        <div class="cu-section-head">
+            <div>
+                <span class="cu-kicker">Transactions</span>
+                <h2>Lịch sử giao dịch ví</h2>
+            </div>
+        </div>
+
+        <div class="cu-table-wrap">
+            <table class="table cu-table">
+                <thead>
+                    <tr>
+                        <th>Thời gian</th>
+                        <th>Loại</th>
+                        <th class="text-end">Số tiền</th>
+                        <th class="text-end">Số dư trước</th>
+                        <th class="text-end">Số dư sau</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Transactions.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6"><div class="cu-empty"><strong>Chưa có giao dịch nào.</strong><span>Các giao dịch ví sẽ hiển thị tại đây.</span></div></td>
+                    </tr>
+                }
+                @foreach (var tx in Model.Transactions)
+                {
+                    <tr>
+                        <td>@tx.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@tx.TransactionType.GetDisplayName()</td>
+                        <td class="text-end @(tx.Amount >= 0 ? "text-success" : "text-danger")">@tx.Amount.ToString("N0") đ</td>
+                        <td class="text-end">@tx.BalanceBefore.ToString("N0") đ</td>
+                        <td class="text-end">@tx.BalanceAfter.ToString("N0") đ</td>
+                        <td>@tx.Note</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>

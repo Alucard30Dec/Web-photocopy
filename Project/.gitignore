@@ -18,6 +18,7 @@ obj/
 appsettings.Local.json
 **/appsettings.Local.json
 *.local.json
+WebPhotocopyHub.Web/LocalTools/
 
 # OS/editor files
 Thumbs.db

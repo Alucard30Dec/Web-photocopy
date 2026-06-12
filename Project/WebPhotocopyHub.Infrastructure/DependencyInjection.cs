@@ -23,6 +23,7 @@ public static class DependencyInjection
     {
         services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
         services.Configure<BusinessOptions>(configuration.GetSection(BusinessOptions.SectionName));
+        services.Configure<OfficePreviewOptions>(configuration.GetSection(OfficePreviewOptions.SectionName));
 
         var connectionString = ResolvePostgreSqlConnectionString(configuration);
 
@@ -89,6 +90,7 @@ public static class DependencyInjection
         services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<ITopUpService, TopUpService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<IOfficePreviewService, OfficePreviewService>();
         services.AddScoped<IPrintJobService, PrintJobService>();
         services.AddScoped<IProductOrderService, ProductOrderService>();
         services.AddScoped<ISupportServiceOrderService, SupportServiceOrderService>();

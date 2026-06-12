@@ -25,14 +25,14 @@
 
 <section class="customer-auth-page">
     <div class="customer-auth-hero">
-        <a class="customer-auth-brand" href="@homeUrl"><span>▣</span>@branchName</a>
+        <a class="customer-auth-brand" href="@homeUrl"><span class="customer-auth-brand-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer-fill"></use></svg></span>@branchName</a>
         <span class="customer-kicker">Đăng nhập khách hàng</span>
         <h1>Vào tài khoản để đặt in nhanh hơn</h1>
         <p>Đăng nhập bằng Gmail/email hoặc tên đăng nhập để tạo đơn in, theo dõi đơn hàng, xem ví và cập nhật hồ sơ tại @branchName.</p>
         <div class="customer-auth-pills">
-            <span>Tạo đơn in</span>
-            <span>Theo dõi trạng thái</span>
-            <span>Thanh toán theo đơn</span>
+            <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg>Tạo đơn in</span>
+            <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clipboard-check"></use></svg>Theo dõi trạng thái</span>
+            <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg>Thanh toán theo đơn</span>
         </div>
     </div>
 
@@ -50,7 +50,7 @@
                 <input type="hidden" name="provider" value="Google" />
                 <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
                 <button class="customer-google-button" type="submit">
-                    <span>G</span>
+                    <span class="customer-google-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-google"></use></svg></span>
                     Tiếp tục với Google/Gmail
                 </button>
             </form>
@@ -90,7 +90,7 @@
                 </label>
             </div>
 
-            <button class="customer-primary-action w-100" type="submit">Đăng nhập khách hàng</button>
+            <button class="customer-primary-action w-100" type="submit"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-box-arrow-in-right"></use></svg>Đăng nhập khách hàng</button>
         </form>
 
         <a class="customer-auth-alt" href="@registerUrl">Chưa có tài khoản? Tạo tài khoản khách hàng</a>

@@ -14,8 +14,8 @@
             <h1>Đặt mua văn phòng phẩm</h1>
             <p>Chọn số lượng sản phẩm cần mua. Hệ thống kiểm tra tồn kho và tạo đơn để cơ sở chuẩn bị cùng tài liệu in của bạn.</p>
             <div class="cu-actions">
-                <a class="btn btn-outline-secondary" asp-action="Orders" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Lịch sử đơn hàng</a>
-                <a class="btn btn-outline-secondary" asp-controller="Dashboard" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Tổng quan</a>
+                <a class="btn btn-outline-secondary" asp-action="Orders" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clock-history"></use></svg>Lịch sử đơn hàng</a>
+                <a class="btn btn-outline-secondary" asp-controller="Dashboard" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-speedometer2"></use></svg>Tổng quan</a>
             </div>
         </div>
         <aside class="cu-hero-card">
@@ -35,7 +35,7 @@
                 {
                     <article class="cu-product-card">
                         <div>
-                            <span class="cu-product-icon">SP</span>
+                            <span class="cu-product-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span>
                             <h2>@Model.Items[i].Name</h2>
                             <p>@Model.Items[i].Price.ToString("N0") đ · Tồn kho: @Model.Items[i].StockQuantity</p>
                         </div>
@@ -66,8 +66,8 @@
             </div>
 
             <div class="cu-actions mt-3">
-                <button class="btn btn-primary" type="submit">Tạo đơn sản phẩm</button>
-                <a class="btn btn-outline-secondary" asp-action="Orders" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Lịch sử đơn hàng</a>
+                <button class="btn btn-primary" type="submit"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-check"></use></svg>Tạo đơn sản phẩm</button>
+                <a class="btn btn-outline-secondary" asp-action="Orders" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clock-history"></use></svg>Lịch sử đơn hàng</a>
             </div>
         </form>
     </section>

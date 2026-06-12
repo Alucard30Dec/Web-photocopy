@@ -58,7 +58,7 @@
             </div>
 
             <iframe
-                src="@Url.Action("PreviewFile", new { id = Model.UploadedFileId })"
+                src="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs/PreviewFile/{Model.UploadedFileId}")"
                 title="Xem trước file đơn in @Model.Id"
                 class="cu-preview-frame"
                 loading="lazy">

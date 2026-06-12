@@ -34,53 +34,53 @@
             <p>Gửi file, chọn cấu hình in và theo dõi trạng thái xử lý tại cơ sở. Trang này chỉ giữ các chức năng cần dùng nhanh; thông tin tổng quan nằm trong Dashboard.</p>
 
             <div class="bh-trust-row" aria-label="Thông tin nhanh">
-                <span>PDF, DOCX, PPTX</span>
-                <span>Thanh toán theo từng đơn</span>
-                <span>Nhận tại cơ sở</span>
+                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-file-earmark-richtext"></use></svg>PDF, DOCX, PPTX</span>
+                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg>Thanh toán theo từng đơn</span>
+                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-shop"></use></svg>Nhận tại cơ sở</span>
             </div>
 
             <div class="bh-hero-actions">
-                <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)">Tạo đơn in</a>
-                <a class="bh-btn bh-btn-secondary" href="@RequireLogin(printJobsUrl)">Theo dõi đơn</a>
-                <a class="bh-btn bh-btn-soft" href="#customerPriceQuick">Xem bảng giá</a>
+                <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg>Tạo đơn in</a>
+                <a class="bh-btn bh-btn-secondary" href="@RequireLogin(printJobsUrl)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clipboard-check"></use></svg>Theo dõi đơn</a>
+                <a class="bh-btn bh-btn-soft" href="#customerPriceQuick"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-tags"></use></svg>Xem bảng giá</a>
             </div>
         </div>
 
         <aside class="bh-start-card" aria-label="Bắt đầu tạo đơn">
-            <div class="bh-start-icon" aria-hidden="true">↑</div>
+            <div class="bh-start-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-rocket-takeoff"></use></svg></div>
             <span class="bh-kicker">Bắt đầu nhanh</span>
             <h2>Tạo yêu cầu in</h2>
             <p>Chọn file ở bước tiếp theo, nhập số trang, số bản, màu sắc và ghi chú nếu cần.</p>
             <div class="bh-start-options">
-                <span>A4 / A3</span>
-                <span>1 mặt / 2 mặt</span>
-                <span>Đen trắng / màu</span>
+                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-aspect-ratio"></use></svg>A4 / A3</span>
+                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-layout-split"></use></svg>1 mặt / 2 mặt</span>
+                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-palette"></use></svg>Đen trắng / màu</span>
             </div>
-            <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)">Mở form tạo đơn</a>
+            <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-right-circle"></use></svg>Mở form tạo đơn</a>
         </aside>
     </section>
 
     <section class="bh-action-strip" aria-label="Thao tác nhanh">
         <a class="bh-action-card" href="@RequireLogin(printCreateUrl)">
-            <span class="bh-action-icon is-blue" aria-hidden="true">P</span>
+            <span class="bh-action-icon is-blue" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg></span>
             <strong>Tạo đơn in</strong>
             <small>Upload file và gửi yêu cầu in mới.</small>
         </a>
 
         <a class="bh-action-card" href="@RequireLogin(printJobsUrl)">
-            <span class="bh-action-icon is-green" aria-hidden="true">O</span>
+            <span class="bh-action-icon is-green" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-list-check"></use></svg></span>
             <strong>Đơn của tôi</strong>
             <small>Theo dõi trạng thái đơn đang xử lý.</small>
         </a>
 
         <a class="bh-action-card" href="@RequireLogin(productsUrl)">
-            <span class="bh-action-icon is-purple" aria-hidden="true">S</span>
+            <span class="bh-action-icon is-purple" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span>
             <strong>Sản phẩm</strong>
             <small>Mua giấy, bút, bìa và vật tư.</small>
         </a>
 
         <a class="bh-action-card" href="@RequireLogin(supportCreateUrl)">
-            <span class="bh-action-icon is-rose" aria-hidden="true">D</span>
+            <span class="bh-action-icon is-rose" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-life-preserver"></use></svg></span>
             <strong>Dịch vụ hỗ trợ</strong>
             <small>Scan, đóng gáy, ép plastic.</small>
         </a>
@@ -165,7 +165,7 @@
                 <div class="bh-empty-state bh-empty-state-inline">
                     <strong>Bạn chưa có đơn in nào</strong>
                     <span>Tạo đơn in đầu tiên bằng cách gửi file và chọn cấu hình in.</span>
-                    <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)">Tạo đơn in</a>
+                    <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg>Tạo đơn in</a>
                 </div>
             }
 

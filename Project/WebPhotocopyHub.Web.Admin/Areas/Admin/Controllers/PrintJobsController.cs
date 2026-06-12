@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using WebPhotocopyHub.Application.Common;
@@ -18,15 +19,18 @@ public class PrintJobsController : Controller
 {
     private readonly IPrintJobService _printJobService;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IOfficePreviewService _officePreviewService;
     private readonly IAuditLogService _auditLogService;
 
     public PrintJobsController(
         IPrintJobService printJobService,
         IFileStorageService fileStorageService,
+        IOfficePreviewService officePreviewService,
         IAuditLogService auditLogService)
     {
         _printJobService = printJobService;
         _fileStorageService = fileStorageService;
+        _officePreviewService = officePreviewService;
         _auditLogService = auditLogService;
     }
 
@@ -135,10 +139,15 @@ public class PrintJobsController : Controller
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         }, cancellationToken);
 
+        var safeFileName = Path.GetFileName(metadata.OriginalFileName);
+        if (IsOfficeFile(safeFileName))
+        {
+            await using var sourceStream = await _fileStorageService.OpenReadAsync(metadata.Id, cancellationToken);
+            return await BuildOfficePreviewFileResultAsync(sourceStream, safeFileName, cancellationToken);
+        }
+
         var stream = await _fileStorageService.OpenReadAsync(metadata.Id, cancellationToken);
-        Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
-        Response.Headers["Content-Security-Policy"] = "frame-ancestors 'self';";
-        Response.Headers["Content-Disposition"] = $"inline; filename*=UTF-8''{Uri.EscapeDataString(metadata.OriginalFileName)}";
+        ApplyInlinePreviewHeaders(safeFileName);
         return File(stream, metadata.ContentType);
     }
 
@@ -170,5 +179,69 @@ public class PrintJobsController : Controller
 
         var stream = await _fileStorageService.OpenReadAsync(metadata.Id, cancellationToken);
         return File(stream, metadata.ContentType, metadata.OriginalFileName);
+    }
+
+    private async Task<IActionResult> BuildOfficePreviewFileResultAsync(
+        Stream sourceStream,
+        string safeFileName,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // ChatGPT 2026-06-12: admin can inspect Office print files in iframe by converting them to PDF preview.
+            var preview = await _officePreviewService.ConvertToPdfAsync(
+                sourceStream,
+                safeFileName,
+                cancellationToken);
+
+            ApplyInlinePreviewHeaders(Path.ChangeExtension(safeFileName, ".pdf"));
+            return File(preview.PdfBytes, "application/pdf");
+        }
+        catch (OfficePreviewUnavailableException ex)
+        {
+            return BuildOfficePreviewTextError(StatusCodes.Status503ServiceUnavailable, ex.Message);
+        }
+        catch (TimeoutException)
+        {
+            return BuildOfficePreviewTextError(
+                StatusCodes.Status504GatewayTimeout,
+                "Quá thời gian chuyển đổi file Office. Hãy thử lại hoặc tải file gốc.");
+        }
+        catch (InvalidDataException ex)
+        {
+            return BuildOfficePreviewTextError(StatusCodes.Status400BadRequest, ex.Message);
+        }
+        catch (Exception)
+        {
+            return BuildOfficePreviewTextError(
+                StatusCodes.Status500InternalServerError,
+                "Không thể tạo bản xem trước file Office. Hãy tải file gốc để kiểm tra.");
+        }
+    }
+
+    private bool IsOfficeFile(string fileName)
+    {
+        return _officePreviewService.IsSupportedExtension(Path.GetExtension(fileName).ToLowerInvariant());
+    }
+
+    private void ApplyInlinePreviewHeaders(string safeFileName)
+    {
+        Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+        Response.Headers["Content-Security-Policy"] = "frame-ancestors 'self';";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        Response.Headers["Cache-Control"] = "private, no-store";
+        Response.Headers["Content-Disposition"] = $"inline; filename*=UTF-8''{Uri.EscapeDataString(safeFileName)}";
+    }
+
+    private ContentResult BuildOfficePreviewTextError(int statusCode, string message)
+    {
+        Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+        Response.Headers["Content-Security-Policy"] = "frame-ancestors 'self';";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        Response.Headers["Cache-Control"] = "private, no-store";
+
+        var result = Content(message, "text/plain; charset=utf-8");
+        result.StatusCode = statusCode;
+        return result;
     }
 }
