@@ -17,10 +17,6 @@ public class CreatePrintJobViewModel
 
     public List<int?> UploadPageCounts { get; set; } = new();
 
-    public List<int?> UploadPageFroms { get; set; } = new();
-
-    public List<int?> UploadPageTos { get; set; } = new();
-
     [Required(ErrorMessage = "Vui lòng chọn khổ giấy")]
     [Display(Name = "Khổ giấy")]
     public PaperSize PaperSize { get; set; } = PaperSize.A4;

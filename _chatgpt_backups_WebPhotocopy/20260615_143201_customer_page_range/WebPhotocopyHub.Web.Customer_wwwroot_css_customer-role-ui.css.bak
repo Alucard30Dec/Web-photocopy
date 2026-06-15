@@ -1431,7 +1431,7 @@ overflow: visible;
 
 .customer-shell--unified .upload-file-card {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) auto;
+    grid-template-columns: minmax(0, 1fr) 105px auto;
     gap: .65rem;
     align-items: center;
     padding: .7rem;
@@ -1493,78 +1493,24 @@ overflow: visible;
     border-radius: 14px;
 }
 
-.customer-shell--unified .upload-file-card__page-settings {
-    display: grid;
-    gap: .38rem;
-    min-width: 0;
-}
-
-.customer-shell--unified .file-page-total {
-    display: flex;
-    gap: .45rem;
-    align-items: center;
-    justify-content: space-between;
-    color: var(--cu-muted);
-    font-size: .68rem;
-    font-weight: 850;
-}
-
-.customer-shell--unified .file-page-total strong {
-    color: var(--cu-text);
-    font-size: .74rem;
-}
-
-.customer-shell--unified .file-page-total strong[data-status="loading"] {
-    color: #9a6700;
-}
-
-.customer-shell--unified .file-page-total strong[data-status="error"] {
-    color: #be123c;
-}
-
-.customer-shell--unified .file-page-range {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: .35rem;
-    align-items: end;
-}
-
-.customer-shell--unified .file-page-range label,
+.customer-shell--unified .upload-file-card__pages,
 .customer-shell--unified .existing-file-card__actions label {
     display: grid;
     gap: .2rem;
     margin: 0;
 }
 
-.customer-shell--unified .file-page-range label span,
+.customer-shell--unified .upload-file-card__pages span,
 .customer-shell--unified .existing-file-card__actions label span {
     color: var(--cu-muted);
     font-size: .66rem;
     font-weight: 850;
 }
 
-.customer-shell--unified .file-page-range__separator {
-    padding-bottom: .45rem;
-    color: var(--cu-muted);
-    font-weight: 900;
-}
-
 .customer-shell--unified .file-page-input {
     min-height: 34px;
     padding: .35rem .48rem;
     font-size: .76rem;
-}
-
-.customer-shell--unified .file-page-input.is-invalid {
-    border-color: #e11d48;
-    box-shadow: 0 0 0 2px rgba(225, 29, 72, .1);
-}
-
-.customer-shell--unified .file-range-error {
-    color: #be123c;
-    font-size: .68rem;
-    font-weight: 750;
-    line-height: 1.35;
 }
 
 .customer-shell--unified .upload-file-card__actions {

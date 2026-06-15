@@ -29,16 +29,16 @@
 
     <div class="print-workspace print-workspace--create">
         <div class="print-form-shell">
-            <form asp-action="Create" method="post" enctype="multipart/form-data" id="printJobForm" asp-route-branchSlug="@branchSlug" data-page-count-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/ReadUploadPageCount")" data-office-preview-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/PreviewOfficeUpload")" novalidate>
+            <form asp-action="Create" method="post" enctype="multipart/form-data" id="printJobForm" asp-route-branchSlug="@branchSlug" data-office-preview-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/PreviewOfficeUpload")" novalidate>
                 <input asp-for="IdempotencyKey" type="hidden" />
-                <div asp-validation-summary="All" class="alert alert-danger print-validation-summary" role="alert"></div>
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger print-validation-summary" role="alert"></div>
 
                 <section class="form-step print-source-step">
                     <div class="step-heading">
                         <div class="step-label"><span class="step-dot" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-file-earmark-arrow-up"></use></svg></span><span>1. Chọn tài liệu</span></div>
                         <span class="step-badge">Tối đa 5 file</span>
                     </div>
-                    <p class="step-description">Kéo thả hoặc chọn nhiều file mới từ thiết bị. Hệ thống đọc số trang ngay sau khi chọn file; sau đó bạn chọn phạm vi từ trang nào đến trang nào trước khi xem trước hoặc gửi đơn.</p>
+                    <p class="step-description">Kéo thả hoặc chọn nhiều file mới từ thiết bị. Nhấn “Xem trước” để mở PDF, ảnh hoặc bản PDF chuyển đổi từ Word, Excel và PowerPoint.</p>
 
                     <div class="document-source-grid document-source-grid--upload-only">
                         <div class="document-source-main">
@@ -55,7 +55,7 @@
                             <div class="upload-queue" id="uploadQueue" aria-live="polite">
                                 <div class="upload-queue-empty" id="uploadQueueEmpty">
                                     <strong>Chưa có file mới</strong>
-                                    <span>File bạn chọn sẽ xuất hiện tại đây để đọc số trang, chọn phạm vi in và xem trước.</span>
+                                    <span>File bạn chọn sẽ xuất hiện tại đây để kiểm tra tên, dung lượng, số trang và xem trước.</span>
                                 </div>
                             </div>
 
@@ -175,7 +175,7 @@
 
                 <div class="print-submit-bar">
                     <div>
-                        <strong>Kiểm tra file và phạm vi trang trước khi gửi</strong>
+                        <strong>Kiểm tra file và số trang trước khi gửi</strong>
                         <span>Tiệm xác nhận từng tài liệu trước khi trừ tiền ví.</span>
                     </div>
                     <div class="print-submit-actions">
@@ -214,7 +214,7 @@
 
             <div class="summary-note">
                 <strong>Lưu ý nghiệp vụ</strong>
-                <span>Số trang được đọc tự động ngay khi chọn file. Phạm vi mặc định là toàn bộ tài liệu; bạn có thể đổi “Từ trang” và “Đến trang”, nhưng không được vượt quá tổng số trang.</span>
+                <span>PDF được hệ thống đọc số trang khi gửi. Ảnh tính là 1 trang. Với Word, Excel và PowerPoint, hãy nhập số trang sau khi mở file kiểm tra bố cục in.</span>
             </div>
         </aside>
     </div>

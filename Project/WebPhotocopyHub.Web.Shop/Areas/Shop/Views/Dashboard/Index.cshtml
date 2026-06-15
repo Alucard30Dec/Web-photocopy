@@ -2,138 +2,217 @@
 @{
     ViewData["Title"] = "Dashboard vận hành";
     var branchSlug = ViewContext.RouteData.Values["branchSlug"]?.ToString();
+
+    var pendingTopUp = Convert.ToInt32(ViewBag.PendingTopUp ?? 0);
+    var pendingAdminTopUp = Convert.ToInt32(ViewBag.PendingAdminTopUp ?? 0);
+    var printQueue = Convert.ToInt32(ViewBag.PrintQueue ?? 0);
+    var productOrdersWaiting = Convert.ToInt32(ViewBag.ProductOrdersWaiting ?? 0);
+    var supportOrdersWaiting = Convert.ToInt32(ViewBag.SupportOrdersWaiting ?? 0);
+    var lowStockProducts = Convert.ToInt32(ViewBag.LowStockProducts ?? 0);
+
+    var actionableQueue = pendingTopUp + printQueue + productOrdersWaiting + supportOrdersWaiting;
+    var queueMaximum = Math.Max(1, new[] { pendingTopUp, printQueue, productOrdersWaiting, supportOrdersWaiting }.Max());
+    var pendingTopUpWidth = Convert.ToInt32(Math.Round(pendingTopUp * 100d / queueMaximum));
+    var printQueueWidth = Convert.ToInt32(Math.Round(printQueue * 100d / queueMaximum));
+    var productOrdersWidth = Convert.ToInt32(Math.Round(productOrdersWaiting * 100d / queueMaximum));
+    var supportOrdersWidth = Convert.ToInt32(Math.Round(supportOrdersWaiting * 100d / queueMaximum));
 }
 
-<section class="page-hero mb-3">
-    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
-        <div>
-            <span class="dashboard-kicker">Shop workspace</span>
-            <h3 class="mb-2 mt-2">Dashboard vận hành tiệm photocopy</h3>
-            <p class="mb-0">Theo dõi nhanh các hàng chờ xử lý để vận hành tiệm mượt và đúng SLA.</p>
-        </div>
-        <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-primary" asp-area="Shop" asp-controller="PrintJobs" asp-action="Index" asp-route-branchSlug="@branchSlug">Xử lý đơn in</a>
-            <a class="btn btn-outline-secondary" asp-area="Shop" asp-controller="TopUpRequests" asp-action="CounterTopUp" asp-route-branchSlug="@branchSlug">Nạp tại quầy</a>
-        </div>
-    </div>
-</section>
-
-<div class="row g-3 mb-3">
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-label">Top-up chờ kiểm tra</div>
-            <div class="stat-value">@ViewBag.PendingTopUp</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-label">Top-up chờ Admin bước 2</div>
-            <div class="stat-value">@ViewBag.PendingAdminTopUp</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-label">Hàng chờ in</div>
-            <div class="stat-value">@ViewBag.PrintQueue</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-label">Đơn văn phòng phẩm chờ xử lý</div>
-            <div class="stat-value">@ViewBag.ProductOrdersWaiting</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-label">Đơn dịch vụ hỗ trợ chờ xử lý</div>
-            <div class="stat-value">@ViewBag.SupportOrdersWaiting</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-card">
-            <div class="stat-label">Sản phẩm sắp hết (<=10)</div>
-            <div class="stat-value">@ViewBag.LowStockProducts</div>
-        </div>
-    </div>
-</div>
-
-<div class="workspace-grid">
-    <section class="workspace-panel">
-        <div class="workspace-panel-header">
-            <div>
-                <span class="panel-eyebrow">Hàng chờ hôm nay</span>
-                <h4>Luồng việc tại quầy</h4>
+<div class="shop-dashboard">
+    <section class="shop-dashboard-hero">
+        <div class="shop-dashboard-hero-copy">
+            <div class="shop-dashboard-eyebrow">
+                <span class="shop-dashboard-live-dot" aria-hidden="true"></span>
+                Trung tâm vận hành
+            </div>
+            <h1>Kiểm soát công việc tại quầy trong một màn hình</h1>
+            <p>Theo dõi đơn in, giao dịch nạp tiền, đơn dịch vụ và cảnh báo tồn kho theo mức độ cần xử lý.</p>
+            <div class="shop-dashboard-hero-meta">
+                <span>Ngày @DateTime.Now.ToString("dd/MM/yyyy")</span>
+                <span>@actionableQueue công việc đang chờ</span>
+                <span>@lowStockProducts cảnh báo tồn kho</span>
             </div>
         </div>
-
-        <div class="queue-board">
-            <a class="queue-lane" asp-area="Shop" asp-controller="TopUpRequests" asp-action="Index" asp-route-branchSlug="@branchSlug">
-                <span>Duyệt nạp bước 1</span>
-                <strong>@ViewBag.PendingTopUp</strong>
-                <small>Kiểm tra chứng từ khách gửi</small>
+        <div class="shop-dashboard-hero-actions">
+            <a class="shop-dashboard-primary-action" asp-area="Shop" asp-controller="PrintJobs" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg>
+                <span><strong>Xử lý đơn in</strong><small>@printQueue đơn đang trong hàng chờ</small></span>
+                <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
             </a>
-            <a class="queue-lane queue-lane-hot" asp-area="Shop" asp-controller="PrintJobs" asp-action="Index" asp-route-branchSlug="@branchSlug">
-                <span>Hàng chờ in</span>
-                <strong>@ViewBag.PrintQueue</strong>
-                <small>Nhận file và cập nhật trạng thái</small>
-            </a>
-            <a class="queue-lane" asp-area="Shop" asp-controller="ProductOrders" asp-action="Index" asp-route-branchSlug="@branchSlug">
-                <span>Văn phòng phẩm</span>
-                <strong>@ViewBag.ProductOrdersWaiting</strong>
-                <small>Soạn hàng kèm đơn in</small>
-            </a>
-            <a class="queue-lane" asp-area="Shop" asp-controller="SupportOrders" asp-action="Index" asp-route-branchSlug="@branchSlug">
-                <span>Dịch vụ hỗ trợ</span>
-                <strong>@ViewBag.SupportOrdersWaiting</strong>
-                <small>Scan, ép plastic, đóng gáy</small>
+            <a class="shop-dashboard-secondary-action" asp-area="Shop" asp-controller="TopUpRequests" asp-action="CounterTopUp" asp-route-branchSlug="@branchSlug">
+                <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-counter"></use></svg>
+                <span><strong>Nạp tiền tại quầy</strong><small>Tạo giao dịch và cập nhật ví</small></span>
             </a>
         </div>
     </section>
 
-    <aside class="workspace-panel">
-        <span class="panel-eyebrow">Thao tác quầy</span>
-        <h4>Ưu tiên ca hiện tại</h4>
-        <div class="quick-action-stack">
-            <a asp-area="Shop" asp-controller="TopUpRequests" asp-action="CounterTopUp" asp-route-branchSlug="@branchSlug">Nạp tiền tại quầy</a>
-            <a asp-area="Shop" asp-controller="Inventory" asp-action="Index" asp-route-branchSlug="@branchSlug">Kiểm tra tồn kho</a>
-            <a asp-area="Shop" asp-controller="TopUpRequests" asp-action="Index" asp-route-branchSlug="@branchSlug">Duyệt top-up online</a>
-        </div>
-    </aside>
-</div>
+    <section class="shop-kpi-grid" aria-label="Các chỉ số vận hành">
+        <a class="shop-kpi-card is-sky" asp-area="Shop" asp-controller="TopUpRequests" asp-action="Index" asp-route-branchSlug="@branchSlug">
+            <span class="shop-kpi-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-wallet-check"></use></svg></span>
+            <span class="shop-kpi-copy"><small>Top-up chờ kiểm tra</small><strong>@pendingTopUp</strong><em>Cần shop duyệt bước 1</em></span>
+            <span class="shop-kpi-link">Mở danh sách <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg></span>
+        </a>
+        <a class="shop-kpi-card is-violet" asp-area="Shop" asp-controller="TopUpRequests" asp-action="Index" asp-route-branchSlug="@branchSlug">
+            <span class="shop-kpi-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-wallet-check"></use></svg></span>
+            <span class="shop-kpi-copy"><small>Chờ Admin bước 2</small><strong>@pendingAdminTopUp</strong><em>Đã qua kiểm tra tại shop</em></span>
+            <span class="shop-kpi-link">Theo dõi <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg></span>
+        </a>
+        <a class="shop-kpi-card is-primary" asp-area="Shop" asp-controller="PrintJobs" asp-action="Index" asp-route-branchSlug="@branchSlug">
+            <span class="shop-kpi-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg></span>
+            <span class="shop-kpi-copy"><small>Hàng chờ in</small><strong>@printQueue</strong><em>Đơn cần tiếp nhận và xử lý</em></span>
+            <span class="shop-kpi-link">Xử lý ngay <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg></span>
+        </a>
+        <a class="shop-kpi-card is-amber" asp-area="Shop" asp-controller="ProductOrders" asp-action="Index" asp-route-branchSlug="@branchSlug">
+            <span class="shop-kpi-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-package"></use></svg></span>
+            <span class="shop-kpi-copy"><small>Đơn văn phòng phẩm</small><strong>@productOrdersWaiting</strong><em>Đang chờ soạn và bàn giao</em></span>
+            <span class="shop-kpi-link">Mở đơn hàng <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg></span>
+        </a>
+        <a class="shop-kpi-card is-green" asp-area="Shop" asp-controller="SupportOrders" asp-action="Index" asp-route-branchSlug="@branchSlug">
+            <span class="shop-kpi-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-service"></use></svg></span>
+            <span class="shop-kpi-copy"><small>Dịch vụ hỗ trợ</small><strong>@supportOrdersWaiting</strong><em>Scan, đóng gáy, ép plastic</em></span>
+            <span class="shop-kpi-link">Mở dịch vụ <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg></span>
+        </a>
+        <a class="shop-kpi-card is-rose" asp-area="Shop" asp-controller="Inventory" asp-action="Index" asp-route-branchSlug="@branchSlug">
+            <span class="shop-kpi-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-alert"></use></svg></span>
+            <span class="shop-kpi-copy"><small>Sản phẩm sắp hết</small><strong>@lowStockProducts</strong><em>Ngưỡng cảnh báo từ 10 trở xuống</em></span>
+            <span class="shop-kpi-link">Kiểm tra kho <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg></span>
+        </a>
+    </section>
 
-<div class="card mt-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Danh sách cảnh báo tồn kho</span>
-        <a class="btn btn-sm btn-outline-secondary" asp-area="Shop" asp-controller="Inventory" asp-action="Index" asp-route-branchSlug="@branchSlug">Mở tồn kho</a>
+    <div class="shop-dashboard-layout">
+        <section class="shop-dashboard-card shop-workload-card">
+            <div class="shop-dashboard-card-head">
+                <div>
+                    <span class="shop-dashboard-section-label">Tải công việc</span>
+                    <h2>Hàng chờ cần xử lý</h2>
+                    <p>So sánh trực quan số lượng công việc đang mở tại quầy.</p>
+                </div>
+                <span class="shop-dashboard-total"><strong>@actionableQueue</strong> tổng việc</span>
+            </div>
+
+            <div class="shop-workload-list">
+                <a class="shop-workload-row is-sky" asp-area="Shop" asp-controller="TopUpRequests" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                    <span class="shop-workload-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-wallet-check"></use></svg></span>
+                    <span class="shop-workload-copy"><strong>Duyệt nạp tiền bước 1</strong><small>Kiểm tra chứng từ khách hàng gửi</small></span>
+                    <span class="shop-workload-visual"><i style="--queue-width: @(pendingTopUpWidth)%"></i></span>
+                    <span class="shop-workload-count">@pendingTopUp</span>
+                    <svg class="shop-icon shop-workload-chevron" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                </a>
+                <a class="shop-workload-row is-primary" asp-area="Shop" asp-controller="PrintJobs" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                    <span class="shop-workload-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg></span>
+                    <span class="shop-workload-copy"><strong>Hàng chờ in</strong><small>Nhận file, xác nhận và cập nhật tiến độ</small></span>
+                    <span class="shop-workload-visual"><i style="--queue-width: @(printQueueWidth)%"></i></span>
+                    <span class="shop-workload-count">@printQueue</span>
+                    <svg class="shop-icon shop-workload-chevron" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                </a>
+                <a class="shop-workload-row is-amber" asp-area="Shop" asp-controller="ProductOrders" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                    <span class="shop-workload-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-package"></use></svg></span>
+                    <span class="shop-workload-copy"><strong>Đơn văn phòng phẩm</strong><small>Soạn sản phẩm và chuẩn bị bàn giao</small></span>
+                    <span class="shop-workload-visual"><i style="--queue-width: @(productOrdersWidth)%"></i></span>
+                    <span class="shop-workload-count">@productOrdersWaiting</span>
+                    <svg class="shop-icon shop-workload-chevron" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                </a>
+                <a class="shop-workload-row is-green" asp-area="Shop" asp-controller="SupportOrders" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                    <span class="shop-workload-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-service"></use></svg></span>
+                    <span class="shop-workload-copy"><strong>Đơn dịch vụ hỗ trợ</strong><small>Scan, ép plastic và đóng gáy</small></span>
+                    <span class="shop-workload-visual"><i style="--queue-width: @(supportOrdersWidth)%"></i></span>
+                    <span class="shop-workload-count">@supportOrdersWaiting</span>
+                    <svg class="shop-icon shop-workload-chevron" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                </a>
+            </div>
+        </section>
+
+        <aside class="shop-dashboard-side">
+            <section class="shop-dashboard-card shop-priority-card">
+                <div class="shop-dashboard-card-head compact">
+                    <div>
+                        <span class="shop-dashboard-section-label">Thao tác nhanh</span>
+                        <h2>Ưu tiên ca hiện tại</h2>
+                    </div>
+                </div>
+                <div class="shop-priority-list">
+                    <a asp-area="Shop" asp-controller="PrintJobs" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                        <span><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg></span>
+                        <div><strong>Xử lý đơn in</strong><small>@printQueue đơn đang chờ</small></div>
+                        <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                    </a>
+                    <a asp-area="Shop" asp-controller="TopUpRequests" asp-action="CounterTopUp" asp-route-branchSlug="@branchSlug">
+                        <span><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-counter"></use></svg></span>
+                        <div><strong>Nạp tiền tại quầy</strong><small>Tạo giao dịch trực tiếp</small></div>
+                        <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                    </a>
+                    <a asp-area="Shop" asp-controller="Inventory" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                        <span><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-inventory"></use></svg></span>
+                        <div><strong>Kiểm tra tồn kho</strong><small>@lowStockProducts sản phẩm cần chú ý</small></div>
+                        <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                    </a>
+                </div>
+            </section>
+
+            <section class="shop-dashboard-card shop-health-card">
+                <div class="shop-health-head">
+                    <span class="shop-dashboard-section-label">Trạng thái vận hành</span>
+                    <span class="shop-health-badge @(lowStockProducts > 0 ? "needs-attention" : "stable")">
+                        <i aria-hidden="true"></i>
+                        @(lowStockProducts > 0 ? "Cần theo dõi" : "Ổn định")
+                    </span>
+                </div>
+                <div class="shop-health-metrics">
+                    <div><span>Công việc shop xử lý</span><strong>@actionableQueue</strong></div>
+                    <div><span>Đang chờ Admin</span><strong>@pendingAdminTopUp</strong></div>
+                    <div><span>Cảnh báo kho</span><strong>@lowStockProducts</strong></div>
+                </div>
+            </section>
+        </aside>
     </div>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>Sản phẩm</th>
-                <th>Tồn kho</th>
-                <th>Giá</th>
-            </tr>
-            </thead>
-            <tbody>
-            @if (Model.Count == 0)
-            {
-                <tr>
-                    <td colspan="3" class="text-center text-muted py-4">Không có sản phẩm nào sắp hết.</td>
-                </tr>
-            }
-            else
-            {
-                @foreach (var item in Model)
-                {
+
+    <section class="shop-dashboard-card shop-stock-card">
+        <div class="shop-dashboard-card-head shop-stock-head">
+            <div>
+                <span class="shop-dashboard-section-label">Tồn kho</span>
+                <h2>Sản phẩm cần bổ sung</h2>
+                <p>Danh sách được sắp theo số lượng tồn thấp nhất.</p>
+            </div>
+            <a class="shop-dashboard-outline-button" asp-area="Shop" asp-controller="Inventory" asp-action="Index" asp-route-branchSlug="@branchSlug">
+                Mở quản lý tồn kho
+                <svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+            </a>
+        </div>
+
+        @if (Model.Count == 0)
+        {
+            <div class="shop-stock-empty">
+                <span><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-inventory"></use></svg></span>
+                <div><strong>Tồn kho đang ở mức an toàn</strong><small>Không có sản phẩm nào nằm trong ngưỡng cảnh báo.</small></div>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive shop-dashboard-table-wrap">
+                <table class="table shop-dashboard-table align-middle">
+                    <thead>
                     <tr>
-                        <td>@item.Name</td>
-                        <td>@item.StockQuantity</td>
-                        <td>@item.Price.ToString("N0")</td>
+                        <th>Sản phẩm</th>
+                        <th class="text-center">Số lượng tồn</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Giá bán</th>
                     </tr>
-                }
-            }
-            </tbody>
-        </table>
-    </div>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var stockState = item.StockQuantity <= 0 ? "Hết hàng" : item.StockQuantity <= 5 ? "Rất thấp" : "Sắp hết";
+                        var stockClass = item.StockQuantity <= 0 ? "out" : item.StockQuantity <= 5 ? "critical" : "warning";
+                        <tr>
+                            <td><strong>@item.Name</strong></td>
+                            <td class="text-center"><span class="shop-stock-quantity">@item.StockQuantity</span></td>
+                            <td><span class="shop-stock-status @stockClass"><i aria-hidden="true"></i>@stockState</span></td>
+                            <td class="text-end"><strong>@item.Price.ToString("N0") đ</strong></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
 </div>

@@ -9,7 +9,6 @@
     var maxFiles = 5;
     var maxFileSize = 20 * 1024 * 1024;
     var maxBatchSize = 100 * 1024 * 1024;
-    var pageCountUrl = form.dataset.pageCountUrl || "";
     var officePreviewUrl = form.dataset.officePreviewUrl || "";
     var antiForgeryToken = form.querySelector('input[name="__RequestVerificationToken"]');
     var allowedExtensions = ["pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx", "ppt", "pptx"];
@@ -63,17 +62,8 @@
 
     var selectedUploadFiles = [];
     var uploadPageCounts = new Map();
-    var uploadPageFroms = new Map();
-    var uploadPageTos = new Map();
-    var uploadPageStatuses = new Map();
-    var uploadPageErrors = new Map();
-    var pageCountRequests = new Map();
     var activeObjectUrl = null;
-    var activePreviewKey = null;
-    var officePreviewCache = new Map();
-    var officePreviewRequests = new Map();
-    var officeWarmupQueue = [];
-    var officeWarmupActive = false;
+    var activePreviewAbortController = null;
 
     function extensionOf(fileName) {
         var pieces = String(fileName || "").toLowerCase().split(".");
@@ -173,193 +163,6 @@
         return "";
     }
 
-    function findUploadCard(file) {
-        if (!uploadQueue) {
-            return null;
-        }
-
-        var key = fileKey(file);
-        return Array.prototype.slice.call(uploadQueue.querySelectorAll("[data-upload-card-key]")).find(function (card) {
-            return card.dataset.uploadCardKey === key;
-        }) || null;
-    }
-
-    function readPageNumber(value) {
-        var number = Number(value);
-        return Number.isInteger(number) ? number : 0;
-    }
-
-    function setDetectedPageCount(file, pageCount) {
-        var totalPages = readPageNumber(pageCount);
-        if (totalPages < 1 || totalPages > 10000) {
-            setPageReadError(file, "Số trang đọc được không hợp lệ.");
-            return;
-        }
-
-        var key = fileKey(file);
-        uploadPageCounts.set(key, totalPages.toString());
-        uploadPageStatuses.set(key, "ready");
-        uploadPageErrors.delete(key);
-
-        var currentFrom = readPageNumber(uploadPageFroms.get(key) || "0");
-        var currentTo = readPageNumber(uploadPageTos.get(key) || "0");
-        uploadPageFroms.set(key, currentFrom >= 1 && currentFrom <= totalPages ? currentFrom.toString() : "1");
-        uploadPageTos.set(key, currentTo >= 1 && currentTo <= totalPages ? currentTo.toString() : totalPages.toString());
-
-        applyUploadPageState(file);
-        updateSummary();
-    }
-
-    function setPageReadLoading(file) {
-        var key = fileKey(file);
-        uploadPageStatuses.set(key, "loading");
-        uploadPageErrors.delete(key);
-        applyUploadPageState(file);
-        updateSummary();
-    }
-
-    function setPageReadError(file, message) {
-        var key = fileKey(file);
-        uploadPageStatuses.set(key, "error");
-        uploadPageCounts.delete(key);
-        uploadPageErrors.set(key, message || "Không đọc được số trang.");
-        applyUploadPageState(file);
-        updateSummary();
-    }
-
-    function setRangeError(card, fromInput, toInput, message, invalidTarget) {
-        var errorElement = card ? card.querySelector(".file-range-error") : null;
-        var fromInvalid = invalidTarget === "from" || invalidTarget === "both";
-        var toInvalid = invalidTarget === "to" || invalidTarget === "both";
-
-        if (fromInput) {
-            fromInput.classList.toggle("is-invalid", Boolean(message) && fromInvalid);
-            fromInput.setCustomValidity(Boolean(message) && fromInvalid ? message : "");
-        }
-        if (toInput) {
-            toInput.classList.toggle("is-invalid", Boolean(message) && toInvalid);
-            toInput.setCustomValidity(Boolean(message) && toInvalid ? message : "");
-        }
-        if (errorElement) {
-            errorElement.textContent = message || "";
-            errorElement.hidden = !message;
-        }
-    }
-
-    function validateUploadPageRange(file, focusInvalid) {
-        var key = fileKey(file);
-        var status = uploadPageStatuses.get(key) || "loading";
-        var totalPages = readPageNumber(uploadPageCounts.get(key) || "0");
-        var card = findUploadCard(file);
-        var fromInput = card ? card.querySelector('[data-page-role="from"]') : null;
-        var toInput = card ? card.querySelector('[data-page-role="to"]') : null;
-
-        if (status !== "ready" || totalPages < 1) {
-            setRangeError(card, fromInput, toInput, "", "");
-            return false;
-        }
-
-        var fromValue = fromInput ? fromInput.value : (uploadPageFroms.get(key) || "");
-        var toValue = toInput ? toInput.value : (uploadPageTos.get(key) || "");
-        var pageFrom = readPageNumber(fromValue);
-        var pageTo = readPageNumber(toValue);
-        var message = "";
-        var invalidTarget = "";
-
-        if (pageFrom < 1 || pageFrom > totalPages) {
-            message = "Trang bắt đầu phải từ 1 đến " + totalPages + ".";
-            invalidTarget = "from";
-        } else if (pageTo < 1 || pageTo > totalPages) {
-            message = "Trang kết thúc phải từ 1 đến " + totalPages + ".";
-            invalidTarget = "to";
-        } else if (pageFrom > pageTo) {
-            message = "Trang bắt đầu không được lớn hơn trang kết thúc.";
-            invalidTarget = "both";
-        }
-
-        uploadPageFroms.set(key, fromValue);
-        uploadPageTos.set(key, toValue);
-        setRangeError(card, fromInput, toInput, message, invalidTarget);
-
-        if (message && focusInvalid) {
-            var focusTarget = invalidTarget === "to" ? toInput : fromInput;
-            if (focusTarget) {
-                focusTarget.focus();
-            }
-        }
-
-        return !message;
-    }
-
-    function applyUploadPageState(file) {
-        var card = findUploadCard(file);
-        if (!card) {
-            return;
-        }
-
-        var key = fileKey(file);
-        var status = uploadPageStatuses.get(key) || "loading";
-        var totalPages = readPageNumber(uploadPageCounts.get(key) || "0");
-        var totalLabel = card.querySelector("[data-page-total-label]");
-        var totalInput = card.querySelector("[data-page-total-input]");
-        var fromInput = card.querySelector('[data-page-role="from"]');
-        var toInput = card.querySelector('[data-page-role="to"]');
-        var meta = card.querySelector("[data-file-meta]");
-
-        if (totalInput) {
-            totalInput.value = totalPages > 0 ? totalPages.toString() : "";
-        }
-
-        if (totalLabel) {
-            totalLabel.dataset.status = status;
-            totalLabel.textContent = status === "ready"
-                ? totalPages + " trang"
-                : status === "error"
-                    ? "Không đọc được"
-                    : "Đang đọc...";
-        }
-
-        if (meta) {
-            meta.textContent = status === "ready"
-                ? formatSize(file.size) + " • " + totalPages + " trang"
-                : status === "error"
-                    ? formatSize(file.size) + " • " + (uploadPageErrors.get(key) || "không đọc được số trang")
-                    : formatSize(file.size) + " • đang đọc số trang";
-        }
-
-        [fromInput, toInput].forEach(function (input) {
-            if (input) {
-                input.disabled = status !== "ready";
-                input.max = totalPages > 0 ? totalPages.toString() : "10000";
-            }
-        });
-
-        if (fromInput && document.activeElement !== fromInput) {
-            fromInput.value = uploadPageFroms.get(key) || "";
-        }
-        if (toInput && document.activeElement !== toInput) {
-            toInput.value = uploadPageTos.get(key) || "";
-        }
-
-        validateUploadPageRange(file, false);
-    }
-
-    function updateSubmitAvailability() {
-        if (!submitButton) {
-            return;
-        }
-
-        var canSubmit = totalSelectedCount() > 0 && totalSelectedCount() <= maxFiles;
-        selectedUploadFiles.forEach(function (file) {
-            var status = uploadPageStatuses.get(fileKey(file)) || "loading";
-            if (status !== "ready" || !validateUploadPageRange(file, false)) {
-                canSubmit = false;
-            }
-        });
-
-        submitButton.disabled = !canSubmit;
-    }
-
     function addFiles(fileList) {
         clearClientError();
         var incoming = Array.prototype.slice.call(fileList || []);
@@ -389,17 +192,9 @@
 
             selectedUploadFiles.push(file);
             existingKeys.add(fileKey(file));
-            setPageReadLoading(file);
 
-            var kind = previewKindOf(file.name);
-            if (kind === "image") {
-                setDetectedPageCount(file, 1);
-            }
-            if (kind === "pdf") {
-                queuePdfPageCount(file);
-            }
-            if (kind === "office") {
-                queueOfficePreviewWarmup(file);
+            if (imageExtensions.indexOf(extensionOf(file.name)) >= 0) {
+                uploadPageCounts.set(fileKey(file), "1");
             }
         }
 
@@ -414,14 +209,7 @@
             return;
         }
 
-        var removedKey = fileKey(removed);
-        uploadPageCounts.delete(removedKey);
-        uploadPageFroms.delete(removedKey);
-        uploadPageTos.delete(removedKey);
-        uploadPageStatuses.delete(removedKey);
-        uploadPageErrors.delete(removedKey);
-        disposePageCountRequestForFile(removed);
-        disposeOfficePreviewForFile(removed);
+        uploadPageCounts.delete(fileKey(removed));
         selectedUploadFiles.splice(index, 1);
         synchronizeFileInput();
         renderUploadQueue();
@@ -431,9 +219,9 @@
 
     function createUploadCard(file, index) {
         var extension = extensionOf(file.name);
+        var kind = previewKindOf(file.name);
         var card = document.createElement("article");
         card.className = "upload-file-card";
-        card.dataset.uploadCardKey = fileKey(file);
 
         var identity = document.createElement("div");
         identity.className = "upload-file-card__identity";
@@ -450,87 +238,38 @@
         name.title = file.name;
 
         var meta = document.createElement("small");
-        meta.dataset.fileMeta = "true";
-        meta.textContent = formatSize(file.size) + " • đang đọc số trang";
+        meta.textContent = formatSize(file.size) + (kind === "office" ? " • cần nhập số trang" : kind === "image" ? " • 1 trang" : " • tự đọc số trang PDF");
 
         text.appendChild(name);
         text.appendChild(meta);
         identity.appendChild(type);
         identity.appendChild(text);
 
-        var pageSettings = document.createElement("div");
-        pageSettings.className = "upload-file-card__page-settings";
-
-        var pageTotal = document.createElement("div");
-        pageTotal.className = "file-page-total";
-        var pageTotalTitle = document.createElement("span");
-        pageTotalTitle.textContent = "Tổng số trang";
-        var pageTotalValue = document.createElement("strong");
-        pageTotalValue.dataset.pageTotalLabel = "true";
-        pageTotalValue.dataset.status = "loading";
-        pageTotalValue.textContent = "Đang đọc...";
-        pageTotal.appendChild(pageTotalTitle);
-        pageTotal.appendChild(pageTotalValue);
-
-        var totalInput = document.createElement("input");
-        totalInput.type = "hidden";
-        totalInput.name = "UploadPageCounts";
-        totalInput.dataset.pageTotalInput = "true";
-
-        var range = document.createElement("div");
-        range.className = "file-page-range";
-
-        function createRangeInput(role, fieldName, labelText) {
-            var label = document.createElement("label");
-            var title = document.createElement("span");
-            title.textContent = labelText;
-            var input = document.createElement("input");
-            input.type = "number";
-            input.name = fieldName;
-            input.min = "1";
-            input.max = "10000";
-            input.step = "1";
-            input.inputMode = "numeric";
-            input.className = "form-control form-control-sm file-page-input";
-            input.dataset.pageRole = role;
-            input.disabled = true;
-            input.addEventListener("input", function () {
-                var key = fileKey(file);
-                if (role === "from") {
-                    uploadPageFroms.set(key, input.value);
-                } else {
-                    uploadPageTos.set(key, input.value);
-                }
-                validateUploadPageRange(file, false);
-                updateSummary();
-            });
-            input.addEventListener("blur", function () {
-                validateUploadPageRange(file, false);
-                updateSubmitAvailability();
-            });
-            label.appendChild(title);
-            label.appendChild(input);
-            return label;
+        var pageLabel = document.createElement("label");
+        pageLabel.className = "upload-file-card__pages";
+        var pageTitle = document.createElement("span");
+        pageTitle.textContent = "Số trang";
+        var pageInput = document.createElement("input");
+        pageInput.type = "number";
+        pageInput.name = "UploadPageCounts";
+        pageInput.min = "1";
+        pageInput.max = "10000";
+        pageInput.inputMode = "numeric";
+        pageInput.className = "form-control form-control-sm file-page-input";
+        pageInput.dataset.uploadKey = fileKey(file);
+        pageInput.dataset.pageKind = kind;
+        pageInput.value = uploadPageCounts.get(fileKey(file)) || "";
+        pageInput.placeholder = kind === "pdf" ? "Tự nhận" : kind === "image" ? "1" : "Bắt buộc";
+        if (kind === "image") {
+            pageInput.value = "1";
+            pageInput.readOnly = true;
         }
-
-        var fromLabel = createRangeInput("from", "UploadPageFroms", "Từ trang");
-        var separator = document.createElement("span");
-        separator.className = "file-page-range__separator";
-        separator.textContent = "–";
-        var toLabel = createRangeInput("to", "UploadPageTos", "Đến trang");
-        range.appendChild(fromLabel);
-        range.appendChild(separator);
-        range.appendChild(toLabel);
-
-        var rangeError = document.createElement("div");
-        rangeError.className = "file-range-error";
-        rangeError.setAttribute("role", "alert");
-        rangeError.hidden = true;
-
-        pageSettings.appendChild(pageTotal);
-        pageSettings.appendChild(totalInput);
-        pageSettings.appendChild(range);
-        pageSettings.appendChild(rangeError);
+        pageInput.addEventListener("input", function () {
+            uploadPageCounts.set(fileKey(file), pageInput.value);
+            updateSummary();
+        });
+        pageLabel.appendChild(pageTitle);
+        pageLabel.appendChild(pageInput);
 
         var actions = document.createElement("div");
         actions.className = "upload-file-card__actions";
@@ -542,7 +281,7 @@
         previewButton.setAttribute("aria-haspopup", "dialog");
         previewButton.setAttribute("aria-controls", "documentPreviewDialog");
         previewButton.addEventListener("click", function () {
-            showLocalPreview(file, previewButton);
+            showLocalPreview(file, pageInput, previewButton);
         });
 
         var removeButton = document.createElement("button");
@@ -557,7 +296,7 @@
         actions.appendChild(removeButton);
 
         card.appendChild(identity);
-        card.appendChild(pageSettings);
+        card.appendChild(pageLabel);
         card.appendChild(actions);
         return card;
     }
@@ -577,7 +316,6 @@
 
         selectedUploadFiles.forEach(function (file, index) {
             uploadQueue.appendChild(createUploadCard(file, index));
-            applyUploadPageState(file);
         });
     }
 
@@ -588,15 +326,47 @@
         }
     }
 
-    function revokeOfficePreviewEntry(entry) {
-        if (entry && entry.objectUrl) {
-            URL.revokeObjectURL(entry.objectUrl);
+    function openPreviewDialog() {
+        if (!previewDialog) {
+            return;
         }
+
+        if (typeof previewDialog.showModal === "function") {
+            if (!previewDialog.open) {
+                previewDialog.showModal();
+            }
+        } else {
+            previewDialog.setAttribute("open", "");
+            previewDialog.classList.add("is-open");
+        }
+
+        document.documentElement.classList.add("preview-dialog-open");
     }
 
-    function clearPreviewSurface() {
-        revokeActiveObjectUrl();
+    function closePreviewDialog() {
+        if (!previewDialog) {
+            resetPreview();
+            return;
+        }
 
+        if (previewDialog.open && typeof previewDialog.close === "function") {
+            previewDialog.close();
+            return;
+        }
+
+        previewDialog.removeAttribute("open");
+        previewDialog.classList.remove("is-open");
+        document.documentElement.classList.remove("preview-dialog-open");
+        resetPreview();
+    }
+
+    function resetPreview() {
+        if (activePreviewAbortController) {
+            activePreviewAbortController.abort();
+            activePreviewAbortController = null;
+        }
+
+        revokeActiveObjectUrl();
         if (previewFrame) {
             previewFrame.hidden = true;
             previewFrame.removeAttribute("src");
@@ -620,46 +390,9 @@
         }
     }
 
-    function openPreviewDialog() {
-        if (!previewDialog) {
-            return;
-        }
-
-        if (typeof previewDialog.showModal === "function") {
-            if (!previewDialog.open) {
-                previewDialog.showModal();
-            }
-        } else {
-            previewDialog.setAttribute("open", "");
-            previewDialog.classList.add("is-open");
-        }
-
-        document.documentElement.classList.add("preview-dialog-open");
-    }
-
-    function closePreviewDialog() {
-        activePreviewKey = null;
-
-        if (!previewDialog) {
-            clearPreviewSurface();
-            return;
-        }
-
-        if (previewDialog.open && typeof previewDialog.close === "function") {
-            previewDialog.close();
-            return;
-        }
-
-        previewDialog.removeAttribute("open");
-        previewDialog.classList.remove("is-open");
-        document.documentElement.classList.remove("preview-dialog-open");
-        clearPreviewSurface();
-    }
-
-    function showPreviewSource(kind, sourceUrl, fileName, fileMeta, downloadUrl, revokeOnClose) {
-        clearPreviewSurface();
-
-        if (revokeOnClose) {
+    function showPreviewSource(kind, sourceUrl, fileName, fileMeta, downloadUrl, isObjectUrl) {
+        resetPreview();
+        if (isObjectUrl) {
             activeObjectUrl = sourceUrl;
         }
 
@@ -702,7 +435,7 @@
     }
 
     function showPreviewFallback(fileName, fileMeta, message) {
-        clearPreviewSurface();
+        resetPreview();
 
         if (previewFileName) {
             previewFileName.textContent = fileName;
@@ -760,103 +493,32 @@
         }
     }
 
-    function updateOfficePageCount(file, pageCount) {
-        setDetectedPageCount(file, pageCount);
-    }
-
-    async function readPageCountError(response) {
-        var fallbackMessage = "Không thể đọc số trang của file.";
-        try {
-            var payload = await response.json();
-            return payload && payload.message ? payload.message : fallbackMessage;
-        } catch (error) {
-            return fallbackMessage + " (HTTP " + response.status + ")";
-        }
-    }
-
-    function createPageCountRequest(file) {
-        var key = fileKey(file);
-        var existingRequest = pageCountRequests.get(key);
-        if (existingRequest) {
-            return existingRequest.promise;
+    async function showOfficePreview(file, pageInput, previewButton) {
+        if (!officePreviewUrl) {
+            showPreviewFallback(
+                file.name,
+                formatSize(file.size),
+                "Chưa cấu hình endpoint chuyển đổi Office sang PDF."
+            );
+            return;
         }
 
-        if (!pageCountUrl) {
-            return Promise.reject(new Error("Chưa cấu hình endpoint đọc số trang."));
-        }
+        showPreviewFallback(
+            file.name,
+            formatSize(file.size),
+            "Đang chuyển đổi tài liệu Office sang PDF để xem trước..."
+        );
 
-        var requestController = typeof AbortController !== "undefined" ? new AbortController() : null;
-        var requestData = new FormData();
-        requestData.append("file", file, file.name);
-        if (antiForgeryToken && antiForgeryToken.value) {
-            requestData.append("__RequestVerificationToken", antiForgeryToken.value);
-        }
-
-        var requestPromise = (async function () {
-            var response = await fetch(pageCountUrl, {
-                method: "POST",
-                body: requestData,
-                credentials: "same-origin",
-                signal: requestController ? requestController.signal : undefined
-            });
-
-            if (!response.ok) {
-                throw new Error(await readPageCountError(response));
-            }
-
-            var payload = await response.json();
-            var pageCount = payload ? readPageNumber(payload.pageCount) : 0;
-            if (pageCount < 1 || pageCount > 10000) {
-                throw new Error("Số trang máy chủ trả về không hợp lệ.");
-            }
-
-            return pageCount;
-        })();
-
-        pageCountRequests.set(key, { promise: requestPromise, controller: requestController });
-        var clearRequest = function () {
-            var currentRequest = pageCountRequests.get(key);
-            if (currentRequest && currentRequest.promise === requestPromise) {
-                pageCountRequests.delete(key);
-            }
-        };
-        requestPromise.then(clearRequest, clearRequest);
-        return requestPromise;
-    }
-
-    function queuePdfPageCount(file) {
-        setPageReadLoading(file);
-        createPageCountRequest(file)
-            .then(function (pageCount) {
-                setDetectedPageCount(file, pageCount);
-            })
-            .catch(function (error) {
-                if (error && error.name === "AbortError") {
-                    return;
-                }
-                setPageReadError(file, error && error.message ? error.message : "Không đọc được số trang PDF.");
-            });
-    }
-
-    function disposePageCountRequestForFile(file) {
-        var key = fileKey(file);
-        var request = pageCountRequests.get(key);
-        if (request && request.controller) {
-            request.controller.abort();
-        }
-        pageCountRequests.delete(key);
-    }
-
-    function createOfficePreviewRequest(file) {
-        var key = fileKey(file);
-        var existingRequest = officePreviewRequests.get(key);
-        if (existingRequest) {
-            return existingRequest.promise;
+        var originalButtonText = previewButton ? previewButton.textContent : "";
+        if (previewButton) {
+            previewButton.disabled = true;
+            previewButton.textContent = "Đang chuyển...";
         }
 
         var requestController = typeof AbortController !== "undefined"
             ? new AbortController()
             : null;
+        activePreviewAbortController = requestController;
 
         var requestData = new FormData();
         requestData.append("file", file, file.name);
@@ -864,7 +526,7 @@
             requestData.append("__RequestVerificationToken", antiForgeryToken.value);
         }
 
-        var requestPromise = (async function () {
+        try {
             var response = await fetch(officePreviewUrl, {
                 method: "POST",
                 body: requestData,
@@ -878,208 +540,29 @@
 
             var responseContentType = (response.headers.get("content-type") || "").toLowerCase();
             if (responseContentType.indexOf("application/pdf") < 0) {
-                throw new Error("Máy chủ không trả về PDF hợp lệ cho bản xem trước Office.");
+                throw new Error(
+                    "Máy chủ không trả về PDF hợp lệ cho bản xem trước Office."
+                );
             }
 
             var pageCount = parseInt(response.headers.get("X-Preview-Page-Count") || "0", 10);
-            if (Number.isNaN(pageCount) || pageCount < 1 || pageCount > 10000) {
-                throw new Error("Không đọc được số trang của file Office sau khi chuyển đổi.");
-            }
             var pdfBlob = await response.blob();
 
             if (!pdfBlob || pdfBlob.size <= 0) {
                 throw new Error("Bản xem trước PDF không có dữ liệu.");
             }
 
-            var entry = {
-                objectUrl: URL.createObjectURL(pdfBlob),
-                pageCount: Number.isNaN(pageCount) ? 0 : pageCount,
-                byteSize: pdfBlob.size
-            };
-
-            var previousEntry = officePreviewCache.get(key);
-            if (previousEntry) {
-                revokeOfficePreviewEntry(previousEntry);
+            if (activePreviewAbortController === requestController) {
+                activePreviewAbortController = null;
             }
 
-            officePreviewCache.set(key, entry);
-            return entry;
-        })();
+            var objectUrl = URL.createObjectURL(pdfBlob);
+            showPreviewSource("pdf", objectUrl, file.name, formatSize(file.size), "", true);
 
-        officePreviewRequests.set(key, {
-            promise: requestPromise,
-            controller: requestController
-        });
-
-        var clearRequest = function () {
-            var currentRequest = officePreviewRequests.get(key);
-            if (currentRequest && currentRequest.promise === requestPromise) {
-                officePreviewRequests.delete(key);
-            }
-        };
-
-        requestPromise.then(clearRequest, clearRequest);
-        return requestPromise;
-    }
-
-    function queueOfficePreviewWarmup(file) {
-        if (!officePreviewUrl || previewKindOf(file.name) !== "office") {
-            return;
-        }
-
-        var key = fileKey(file);
-        if (officePreviewCache.has(key) || officePreviewRequests.has(key)) {
-            return;
-        }
-
-        var alreadyQueued = officeWarmupQueue.some(function (queuedFile) {
-            return fileKey(queuedFile) === key;
-        });
-
-        if (!alreadyQueued) {
-            officeWarmupQueue.push(file);
-        }
-
-        runOfficePreviewWarmup();
-    }
-
-    function runOfficePreviewWarmup() {
-        if (officeWarmupActive || officeWarmupQueue.length === 0) {
-            return;
-        }
-
-        var file = officeWarmupQueue.shift();
-        var key = fileKey(file);
-        var isStillSelected = selectedUploadFiles.some(function (selectedFile) {
-            return fileKey(selectedFile) === key;
-        });
-
-        if (!isStillSelected || officePreviewCache.has(key)) {
-            runOfficePreviewWarmup();
-            return;
-        }
-
-        officeWarmupActive = true;
-
-        createOfficePreviewRequest(file)
-            .then(function (entry) {
-                updateOfficePageCount(file, entry.pageCount);
-            })
-            .catch(function (error) {
-                if (!error || error.name !== "AbortError") {
-                    console.warn("Office preview warmup failed.", error);
-                    setPageReadError(
-                        file,
-                        error && error.message ? error.message : "Không đọc được số trang file Office."
-                    );
-                }
-            })
-            .finally(function () {
-                officeWarmupActive = false;
-                runOfficePreviewWarmup();
-            });
-    }
-
-    function disposeOfficePreviewForFile(file) {
-        var key = fileKey(file);
-        officeWarmupQueue = officeWarmupQueue.filter(function (queuedFile) {
-            return fileKey(queuedFile) !== key;
-        });
-
-        var request = officePreviewRequests.get(key);
-        if (request && request.controller) {
-            request.controller.abort();
-        }
-        officePreviewRequests.delete(key);
-
-        var cachedEntry = officePreviewCache.get(key);
-        if (cachedEntry) {
-            revokeOfficePreviewEntry(cachedEntry);
-            officePreviewCache.delete(key);
-        }
-
-        if (activePreviewKey === key) {
-            closePreviewDialog();
-        }
-    }
-
-    function disposeAllPreviewResources() {
-        pageCountRequests.forEach(function (request) {
-            if (request.controller) {
-                request.controller.abort();
-            }
-        });
-        pageCountRequests.clear();
-
-        officePreviewRequests.forEach(function (request) {
-            if (request.controller) {
-                request.controller.abort();
-            }
-        });
-        officePreviewRequests.clear();
-
-        officePreviewCache.forEach(revokeOfficePreviewEntry);
-        officePreviewCache.clear();
-        officeWarmupQueue = [];
-
-        revokeActiveObjectUrl();
-    }
-
-    async function showOfficePreview(file, previewButton) {
-        if (!officePreviewUrl) {
-            showPreviewFallback(
-                file.name,
-                formatSize(file.size),
-                "Chưa cấu hình endpoint chuyển đổi Office sang PDF."
-            );
-            return;
-        }
-
-        var key = fileKey(file);
-        activePreviewKey = key;
-
-        var cachedEntry = officePreviewCache.get(key);
-        if (cachedEntry) {
-            updateOfficePageCount(file, cachedEntry.pageCount);
-            showPreviewSource(
-                "pdf",
-                cachedEntry.objectUrl,
-                file.name,
-                formatSize(file.size),
-                "",
-                false
-            );
-            return;
-        }
-
-        showPreviewFallback(
-            file.name,
-            formatSize(file.size),
-            officePreviewRequests.has(key)
-                ? "Bản xem trước đang được chuẩn bị. Bạn có thể đóng cửa sổ; quá trình vẫn tiếp tục."
-                : "Đang chuyển đổi tài liệu Office sang PDF để xem trước..."
-        );
-
-        var originalButtonText = previewButton ? previewButton.textContent : "";
-        if (previewButton) {
-            previewButton.disabled = true;
-            previewButton.textContent = "Đang chuẩn bị...";
-        }
-
-        try {
-            setPageReadLoading(file);
-            var entry = await createOfficePreviewRequest(file);
-            updateOfficePageCount(file, entry.pageCount);
-
-            if (activePreviewKey === key && previewDialog && previewDialog.open) {
-                showPreviewSource(
-                    "pdf",
-                    entry.objectUrl,
-                    file.name,
-                    formatSize(file.size),
-                    "",
-                    false
-                );
+            if (pageInput && pageCount > 0) {
+                pageInput.value = pageCount.toString();
+                uploadPageCounts.set(fileKey(file), pageInput.value);
+                updateSummary();
             }
         } catch (error) {
             if (error && error.name === "AbortError") {
@@ -1087,20 +570,18 @@
             }
 
             console.error("Office preview failed.", error);
-            setPageReadError(
-                file,
-                error && error.message ? error.message : "Không đọc được số trang file Office."
-            );
 
-            if (activePreviewKey === key && previewDialog && previewDialog.open) {
-                showPreviewFallback(
-                    file.name,
-                    formatSize(file.size),
-                    error && error.message
-                        ? error.message
-                        : "Không thể tạo bản xem trước file Office."
-                );
+            if (activePreviewAbortController === requestController) {
+                activePreviewAbortController = null;
             }
+
+            showPreviewFallback(
+                file.name,
+                formatSize(file.size),
+                error && error.message
+                    ? error.message
+                    : "Không thể tạo bản xem trước file Office."
+            );
         } finally {
             if (previewButton) {
                 previewButton.disabled = false;
@@ -1109,11 +590,11 @@
         }
     }
 
-    function showLocalPreview(file, previewButton) {
+    function showLocalPreview(file, pageInput, previewButton) {
         var kind = previewKindOf(file.name);
 
         if (kind === "office") {
-            showOfficePreview(file, previewButton);
+            showOfficePreview(file, pageInput, previewButton);
             return;
         }
 
@@ -1178,13 +659,13 @@
         });
 
         selectedUploadFiles.forEach(function (file) {
-            var key = fileKey(file);
-            var status = uploadPageStatuses.get(key) || "loading";
-            var totalPages = readPageNumber(uploadPageCounts.get(key) || "0");
-            var pageFrom = readPageNumber(uploadPageFroms.get(key) || "0");
-            var pageTo = readPageNumber(uploadPageTos.get(key) || "0");
-            if (status === "ready" && totalPages > 0 && pageFrom >= 1 && pageTo <= totalPages && pageFrom <= pageTo) {
-                knownPages += pageTo - pageFrom + 1;
+            var kind = previewKindOf(file.name);
+            var pages = toPositiveNumber(uploadPageCounts.get(fileKey(file)) || "0");
+            if (kind === "image") {
+                pages = 1;
+            }
+            if (pages > 0) {
+                knownPages += pages;
             } else {
                 unknownFiles++;
             }
@@ -1232,8 +713,6 @@
         if (summary.delivery) {
             summary.delivery.textContent = getSelectedLabel(controls.deliveryMethod);
         }
-
-        updateSubmitAvailability();
     }
 
     function activatePreset(button) {
@@ -1271,31 +750,41 @@
             return false;
         }
 
-        var invalidFile = null;
-        var invalidMessage = "";
-        selectedUploadFiles.some(function (file) {
-            var key = fileKey(file);
-            var status = uploadPageStatuses.get(key) || "loading";
-            if (status === "loading") {
-                invalidFile = file;
-                invalidMessage = "Hệ thống đang đọc số trang của file “" + file.name + "”. Vui lòng chờ hoàn tất.";
-                return true;
-            }
-            if (status === "error") {
-                invalidFile = file;
-                invalidMessage = "Không thể đọc số trang của file “" + file.name + "”: " + (uploadPageErrors.get(key) || "lỗi không xác định");
-                return true;
-            }
-            if (!validateUploadPageRange(file, true)) {
-                invalidFile = file;
-                invalidMessage = "Vui lòng sửa phạm vi trang của file “" + file.name + "”.";
+        var missingPageFile = "";
+        selectedExistingCards().some(function (card) {
+            var kind = card.dataset.previewKind || "office";
+            var pageInput = card.querySelector(".file-page-input");
+            if (kind === "office" && toPositiveNumber(pageInput ? pageInput.value : "0") === 0) {
+                missingPageFile = card.dataset.fileName || "file Office";
+                if (pageInput) {
+                    pageInput.focus();
+                }
                 return true;
             }
             return false;
         });
 
-        if (invalidFile) {
-            showClientError(invalidMessage);
+        if (!missingPageFile) {
+            selectedUploadFiles.some(function (file) {
+                if (officeExtensions.indexOf(extensionOf(file.name)) >= 0 && toPositiveNumber(uploadPageCounts.get(fileKey(file)) || "0") === 0) {
+                    missingPageFile = file.name;
+                    var pageInput = null;
+                    if (uploadQueue) {
+                        pageInput = Array.prototype.slice.call(uploadQueue.querySelectorAll("[data-upload-key]")).find(function (input) {
+                            return input.dataset.uploadKey === fileKey(file);
+                        }) || null;
+                    }
+                    if (pageInput) {
+                        pageInput.focus();
+                    }
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        if (missingPageFile) {
+            showClientError("Vui lòng nhập số trang thực tế của file “" + missingPageFile + "”.");
             return false;
         }
 
@@ -1391,9 +880,8 @@
         });
 
         previewDialog.addEventListener("close", function () {
-            activePreviewKey = null;
             document.documentElement.classList.remove("preview-dialog-open");
-            clearPreviewSurface();
+            resetPreview();
         });
     }
 
@@ -1434,7 +922,7 @@
         }
     });
 
-    window.addEventListener("beforeunload", disposeAllPreviewResources);
+    window.addEventListener("beforeunload", revokeActiveObjectUrl);
 
     renderUploadQueue();
     updateDeliveryVisibility();

@@ -79,8 +79,6 @@ public class PrintJobsController : Controller
         model.UploadFiles ??= new List<IFormFile>();
         model.ExistingFilePageCounts ??= new Dictionary<Guid, int?>();
         model.UploadPageCounts ??= new List<int?>();
-        model.UploadPageFroms ??= new List<int?>();
-        model.UploadPageTos ??= new List<int?>();
         model.ExistingFiles = await _fileStorageService.GetFilesByOwnerAsync(userId, cancellationToken);
 
         var existingIds = model.ExistingFileIds
@@ -139,13 +137,7 @@ public class PrintJobsController : Controller
                     continue;
                 }
 
-                preparedFiles.Add(new PreparedPrintFile(
-                    metadata.Id,
-                    metadata.OriginalFileName,
-                    totalPages.Value,
-                    1,
-                    totalPages.Value,
-                    totalPages.Value));
+                preparedFiles.Add(new PreparedPrintFile(metadata.Id, metadata.OriginalFileName, totalPages.Value));
             }
 
             long batchUploadSize = 0;
@@ -156,12 +148,6 @@ public class PrintJobsController : Controller
                 var extension = Path.GetExtension(safeFileName).ToLowerInvariant();
                 var manualPageCount = index < model.UploadPageCounts.Count
                     ? model.UploadPageCounts[index]
-                    : null;
-                var pageFrom = index < model.UploadPageFroms.Count
-                    ? model.UploadPageFroms[index]
-                    : null;
-                var pageTo = index < model.UploadPageTos.Count
-                    ? model.UploadPageTos[index]
                     : null;
 
                 if (string.IsNullOrWhiteSpace(safeFileName) || !AllowedExtensions.Contains(extension))
@@ -197,26 +183,11 @@ public class PrintJobsController : Controller
                     continue;
                 }
 
-                if (!TryValidateUploadPageRange(
-                        index,
-                        safeFileName,
-                        totalPages.Value,
-                        pageFrom,
-                        pageTo,
-                        out var selectedPageCount))
-                {
-                    await memory.DisposeAsync();
-                    continue;
-                }
-
                 bufferedUploads.Add(new BufferedUpload(
                     safeFileName,
                     ResolveContentType(safeFileName, uploadFile.ContentType),
                     uploadFile.Length,
                     totalPages.Value,
-                    pageFrom!.Value,
-                    pageTo!.Value,
-                    selectedPageCount,
                     memory));
             }
 
@@ -241,10 +212,7 @@ public class PrintJobsController : Controller
                 preparedFiles.Add(new PreparedPrintFile(
                     uploaded.Id,
                     uploaded.OriginalFileName,
-                    bufferedUpload.DocumentPageCount,
-                    bufferedUpload.PageFrom,
-                    bufferedUpload.PageTo,
-                    bufferedUpload.SelectedPageCount));
+                    bufferedUpload.TotalPages));
             }
 
             for (var index = 0; index < preparedFiles.Count; index++)
@@ -259,12 +227,8 @@ public class PrintJobsController : Controller
                     ColorMode = model.ColorMode,
                     IsPhoto = model.IsPhoto,
                     Copies = model.Copies,
-                    TotalPages = item.SelectedPageCount,
-                    Notes = BuildPrintJobNotes(
-                        model.Notes,
-                        item.PageFrom,
-                        item.PageTo,
-                        item.DocumentPageCount),
+                    TotalPages = item.TotalPages,
+                    Notes = model.Notes,
                     IdempotencyKey = BuildItemIdempotencyKey(model.IdempotencyKey, index),
                     DeliveryMethod = model.DeliveryMethod,
                     DeliveryAddress = model.DeliveryAddress
@@ -347,59 +311,6 @@ public class PrintJobsController : Controller
         return File(stream, contentType, enableRangeProcessing: true);
     }
 
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [RequestSizeLimit(MaxOfficePreviewRequestSizeBytes)]
-    [RequestFormLimits(MultipartBodyLengthLimit = MaxOfficePreviewRequestSizeBytes)]
-    public IActionResult ReadUploadPageCount(IFormFile? file)
-    {
-        if (file is null || file.Length <= 0)
-        {
-            return BadRequest(new { message = "Vui lòng chọn file cần đọc số trang." });
-        }
-
-        var safeFileName = Path.GetFileName(file.FileName);
-        var extension = Path.GetExtension(safeFileName).ToLowerInvariant();
-
-        if (string.IsNullOrWhiteSpace(safeFileName) || !AllowedExtensions.Contains(extension))
-        {
-            return BadRequest(new { message = "Định dạng file không được hỗ trợ." });
-        }
-
-        if (file.Length > MaxFileSizeBytes)
-        {
-            return StatusCode(StatusCodes.Status413PayloadTooLarge, new
-            {
-                message = "File vượt quá giới hạn 20 MB."
-            });
-        }
-
-        if (ImageExtensions.Contains(extension))
-        {
-            return Json(new { pageCount = 1 });
-        }
-
-        if (!string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase))
-        {
-            return BadRequest(new
-            {
-                message = "File Office được đọc số trang qua tiến trình chuẩn bị bản xem trước."
-            });
-        }
-
-        using var stream = file.OpenReadStream();
-        var pageCount = _fileStorageService.TryGetPdfPageCount(stream);
-        if (!IsValidPageCount(pageCount))
-        {
-            return BadRequest(new
-            {
-                message = "Không đọc được số trang PDF. Hãy kiểm tra lại file hoặc xuất lại PDF."
-            });
-        }
-
-        return Json(new { pageCount = pageCount!.Value });
-    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -619,79 +530,6 @@ public class PrintJobsController : Controller
         return result;
     }
 
-    private bool TryValidateUploadPageRange(
-        int index,
-        string fileName,
-        int documentPageCount,
-        int? pageFrom,
-        int? pageTo,
-        out int selectedPageCount)
-    {
-        selectedPageCount = 0;
-        var isValid = true;
-
-        if (pageFrom is null || pageFrom < 1 || pageFrom > documentPageCount)
-        {
-            ModelState.AddModelError(
-                $"UploadPageFroms[{index}]",
-                $"Trang bắt đầu của file {fileName} phải từ 1 đến {documentPageCount}.");
-            isValid = false;
-        }
-
-        if (pageTo is null || pageTo < 1 || pageTo > documentPageCount)
-        {
-            ModelState.AddModelError(
-                $"UploadPageTos[{index}]",
-                $"Trang kết thúc của file {fileName} phải từ 1 đến {documentPageCount}.");
-            isValid = false;
-        }
-
-        if (isValid && pageFrom > pageTo)
-        {
-            ModelState.AddModelError(
-                $"UploadPageTos[{index}]",
-                $"Trang bắt đầu của file {fileName} không được lớn hơn trang kết thúc.");
-            isValid = false;
-        }
-
-        if (isValid)
-        {
-            selectedPageCount = pageTo!.Value - pageFrom!.Value + 1;
-        }
-
-        return isValid;
-    }
-
-    private static string BuildPrintJobNotes(
-        string? userNotes,
-        int pageFrom,
-        int pageTo,
-        int documentPageCount)
-    {
-        const int maxLength = 500;
-        var rangeNote = $"Phạm vi in: trang {pageFrom}-{pageTo}/{documentPageCount}.";
-        var normalizedUserNotes = userNotes?.Trim();
-
-        if (string.IsNullOrWhiteSpace(normalizedUserNotes))
-        {
-            return rangeNote;
-        }
-
-        var separator = Environment.NewLine;
-        var availableLength = maxLength - rangeNote.Length - separator.Length;
-        if (availableLength <= 0)
-        {
-            return rangeNote[..Math.Min(rangeNote.Length, maxLength)];
-        }
-
-        if (normalizedUserNotes.Length > availableLength)
-        {
-            normalizedUserNotes = normalizedUserNotes[..availableLength];
-        }
-
-        return $"{rangeNote}{separator}{normalizedUserNotes}";
-    }
-
     private static bool IsValidPageCount(int? value)
     {
         return value is >= 1 and <= MaxPagesPerFile;
@@ -730,21 +568,12 @@ public class PrintJobsController : Controller
         return string.IsNullOrWhiteSpace(branchSlug) ? null : new { branchSlug };
     }
 
-    private sealed record PreparedPrintFile(
-        Guid FileId,
-        string FileName,
-        int DocumentPageCount,
-        int PageFrom,
-        int PageTo,
-        int SelectedPageCount);
+    private sealed record PreparedPrintFile(Guid FileId, string FileName, int TotalPages);
 
     private sealed record BufferedUpload(
         string FileName,
         string ContentType,
         long Size,
-        int DocumentPageCount,
-        int PageFrom,
-        int PageTo,
-        int SelectedPageCount,
+        int TotalPages,
         MemoryStream Content);
 }
