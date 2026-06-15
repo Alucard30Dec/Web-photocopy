@@ -1,0 +1,120 @@
+@model AdminInventoryViewModel
+@{
+    ViewData["Title"] = "Kiểm soát tồn kho toàn hệ thống";
+    var lowStockCount = Model.Products.Count(x => x.IsActive && x.StockQuantity <= 10);
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Inventory governance</span>
+        <h1>Kiểm soát tồn kho toàn hệ thống</h1>
+        <p>Điều chỉnh tồn có lý do bắt buộc, ngăn tồn âm và truy vết đầy đủ người thực hiện.</p>
+        <div class="system-hero-meta">
+            <span class="system-soft-chip">@Model.Products.Count sản phẩm</span>
+            <span class="system-health-chip @(lowStockCount > 0 ? "is-warning" : "is-success")"><span></span>@lowStockCount sắp hết</span>
+            <span class="system-soft-chip">@Model.RecentMovements.Count biến động gần nhất</span>
+        </div>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="ProductOrders" asp-action="Index">Xem đơn văn phòng phẩm</a>
+        <a class="btn btn-primary" asp-area="Admin" asp-controller="Products" asp-action="Index">Quản lý sản phẩm</a>
+    </div>
+</section>
+
+
+<div class="system-dashboard-grid mt-3">
+    <section class="system-panel system-panel-span-2">
+        <div class="system-panel-header">
+            <div>
+                <span class="system-panel-kicker">Current stock</span>
+                <h2>Tồn kho hiện tại và điều chỉnh</h2>
+            </div>
+            <span class="system-panel-note">Không cho phép số lượng sau điều chỉnh âm</span>
+        </div>
+
+        <div class="table-responsive system-table-wrap">
+            <table class="table system-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Giá</th>
+                        <th class="text-center">Tồn hiện tại</th>
+                        <th style="min-width:360px">Điều chỉnh có audit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in Model.Products)
+                    {
+                        var stockClass = product.StockQuantity <= 0 ? "is-danger" : product.StockQuantity <= 10 ? "is-warning" : "is-success";
+                        <tr>
+                            <td><strong>@product.Name</strong><small class="d-block text-muted">@product.Id</small></td>
+                            <td><span class="system-access-badge @(product.IsActive ? "is-protected" : "is-public")">@(product.IsActive ? "Đang bán" : "Ngừng bán")</span></td>
+                            <td class="text-end">@product.Price.ToString("N0") đ</td>
+                            <td class="text-center"><span class="system-stock-badge @stockClass">@product.StockQuantity</span></td>
+                            <td>
+                                <form asp-action="AdjustStock" method="post" class="system-stock-form">
+                                    <input type="hidden" name="ProductId" value="@product.Id" />
+                                    <input type="number" name="QuantityDelta" min="-1000000" max="1000000" class="form-control form-control-sm" placeholder="+/- số lượng" required />
+                                    <input type="text" name="Note" maxlength="500" class="form-control form-control-sm" placeholder="Lý do bắt buộc" required />
+                                    <button class="btn btn-sm btn-primary" type="submit">Cập nhật</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <aside class="system-panel">
+        <div class="system-panel-header">
+            <div>
+                <span class="system-panel-kicker">Stock controls</span>
+                <h2>Quy tắc kiểm soát</h2>
+            </div>
+        </div>
+        <div class="system-guidance-list">
+            <div><strong>Nhập số dương</strong><small>Tăng tồn và ghi loại biến động Restock.</small></div>
+            <div><strong>Nhập số âm</strong><small>Giảm tồn thủ công nhưng không thể làm tồn kho âm.</small></div>
+            <div><strong>Lý do bắt buộc</strong><small>Được lưu cùng lịch sử biến động và audit admin.</small></div>
+            <div><strong>Đơn hàng tự trừ</strong><small>Biến động do đơn hàng được phân biệt riêng.</small></div>
+        </div>
+    </aside>
+</div>
+
+<section class="system-panel mt-3">
+    <div class="system-panel-header">
+        <div>
+            <span class="system-panel-kicker">Movement history</span>
+            <h2>Lịch sử biến động tồn kho</h2>
+        </div>
+        <span class="system-panel-note">150 bản ghi gần nhất</span>
+    </div>
+    <div class="table-responsive system-table-wrap">
+        <table class="table system-table align-middle">
+            <thead><tr><th>Thời gian</th><th>Sản phẩm</th><th>Loại</th><th>Thay đổi</th><th>Trước → Sau</th><th>Người thực hiện</th><th>Ghi chú</th></tr></thead>
+            <tbody>
+                @if (Model.RecentMovements.Count == 0)
+                {
+                    <tr><td colspan="7"><div class="system-empty-state">Chưa có lịch sử biến động kho.</div></td></tr>
+                }
+                else
+                {
+                    @foreach (var movement in Model.RecentMovements)
+                    {
+                        <tr>
+                            <td>@movement.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            <td><strong>@(movement.Product?.Name ?? movement.ProductId.ToString())</strong></td>
+                            <td>@movement.MovementType.GetDisplayName()</td>
+                            <td><strong class="@(movement.QuantityChanged >= 0 ? "text-success" : "text-danger")">@(movement.QuantityChanged >= 0 ? "+" : string.Empty)@movement.QuantityChanged</strong></td>
+                            <td>@movement.StockBefore → @movement.StockAfter</td>
+                            <td>@(movement.ActorUser?.Email ?? movement.ActorUserId)</td>
+                            <td>@(movement.Note ?? "-")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

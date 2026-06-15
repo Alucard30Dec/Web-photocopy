@@ -1,34 +1,119 @@
+@using WebPhotocopyHub.Domain.Constants
 @model List<ApplicationUser>
 @{
-    ViewData["Title"] = "Quản lý users";
+    ViewData["Title"] = "Tài khoản và phân quyền";
+    var roleMap = ViewBag.RoleMap as Dictionary<string, string> ?? new Dictionary<string, string>();
+    var availableRoles = ViewBag.AvailableRoles as string[] ?? Array.Empty<string>();
+    var currentUserId = User.GetUserId();
+    var activeCount = Model.Count(x => x.IsActive);
+    var adminCount = Model.Count(x => roleMap.TryGetValue(x.Id, out var role) && role == RoleConstants.Admin);
 }
 
-<div class="table-responsive">
-    <table class="table table-striped bg-white">
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Họ tên</th>
-                <th>SĐT</th>
-                <th>Số dư</th>
-                <th>Active</th>
-                <th>Ngày tạo</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var user in Model)
-        {
-            <tr>
-                <td>@user.Email</td>
-                <td>@user.FullName</td>
-                <td>@user.PhoneNumber</td>
-                <td>@user.CurrentBalance.ToString("N0")</td>
-                <td>@(user.IsActive ? "Yes" : "No")</td>
-                <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                <td><a class="btn btn-sm btn-outline-primary" asp-action="AdjustBalance" asp-route-userId="@user.Id">Điều chỉnh ví</a></td>
-            </tr>
-        }
-        </tbody>
-    </table>
-</div>
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Identity & access governance</span>
+        <h1>Tài khoản và phân quyền hệ thống</h1>
+        <p>Quản lý trạng thái tài khoản, vai trò Admin/Shop/Customer và điều chỉnh ví bằng luồng có kiểm soát.</p>
+        <div class="system-hero-meta">
+            <span class="system-soft-chip">@Model.Count tài khoản</span>
+            <span class="system-soft-chip">@activeCount đang hoạt động</span>
+            <span class="system-health-chip @(adminCount > 0 ? "is-success" : "is-danger")"><span></span>@adminCount quản trị viên</span>
+        </div>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index" asp-route-entityName="ApplicationUser">Audit tài khoản</a>
+        <a class="btn btn-primary" asp-area="Admin" asp-controller="WalletTransactions" asp-action="Index">Theo dõi giao dịch ví</a>
+    </div>
+</section>
+
+
+<section class="system-panel mt-3">
+    <div class="system-panel-header">
+        <div>
+            <span class="system-panel-kicker">Users & roles</span>
+            <h2>Danh sách tài khoản toàn hệ thống</h2>
+        </div>
+        <span class="system-panel-note">Không cho tự khóa hoặc tự hạ quyền Admin</span>
+    </div>
+
+    <div class="table-responsive system-table-wrap">
+        <table class="table system-table align-middle">
+            <thead>
+                <tr>
+                    <th>Người dùng</th>
+                    <th>Liên hệ</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Số dư</th>
+                    <th>Ngày tạo</th>
+                    <th style="min-width:260px">Quản trị</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="7"><div class="system-empty-state">Chưa có tài khoản.</div></td></tr>
+                }
+                else
+                {
+                    @foreach (var user in Model)
+                    {
+                        var roleName = roleMap.TryGetValue(user.Id, out var mappedRole) && !string.IsNullOrWhiteSpace(mappedRole)
+                            ? mappedRole
+                            : "Chưa gán role";
+                        var isCurrentUser = string.Equals(currentUserId, user.Id, StringComparison.Ordinal);
+
+                        <tr>
+                            <td>
+                                <div class="system-user-cell">
+                                    <span class="system-user-avatar">@((string.IsNullOrWhiteSpace(user.FullName) ? user.Email : user.FullName)?.Substring(0, 1).ToUpperInvariant())</span>
+                                    <div>
+                                        <strong>@(string.IsNullOrWhiteSpace(user.FullName) ? "Chưa cập nhật họ tên" : user.FullName)</strong>
+                                        <small>@user.Id</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <strong>@user.Email</strong>
+                                <small class="d-block text-muted">@(user.PhoneNumber ?? "Chưa có số điện thoại")</small>
+                            </td>
+                            <td>
+                                <form asp-action="SetRole" method="post" class="system-role-form">
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <select name="roleName" class="form-select form-select-sm" disabled="@isCurrentUser" aria-label="Vai trò của @user.Email">
+                                        @foreach (var role in availableRoles)
+                                        {
+                                            <option value="@role" selected="@(string.Equals(role, roleName, StringComparison.Ordinal))">@role</option>
+                                        }
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary" type="submit" disabled="@isCurrentUser">Lưu role</button>
+                                </form>
+                                @if (isCurrentUser)
+                                {
+                                    <small class="text-muted">Tài khoản đang đăng nhập</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="system-access-badge @(user.IsActive ? "is-protected" : "is-public")">@(user.IsActive ? "Đang hoạt động" : "Đã khóa")</span>
+                                <small class="d-block text-muted mt-1">Email: @(user.EmailConfirmed ? "đã xác minh" : "chưa xác minh")</small>
+                            </td>
+                            <td class="text-end"><strong>@user.CurrentBalance.ToString("N0") đ</strong></td>
+                            <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <div class="system-action-stack">
+                                    <a class="btn btn-sm btn-outline-primary" asp-action="AdjustBalance" asp-route-userId="@user.Id">Điều chỉnh ví</a>
+                                    <form asp-action="ToggleActive" method="post">
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button class="btn btn-sm @(user.IsActive ? "btn-outline-danger" : "btn-outline-success")" type="submit" disabled="@isCurrentUser">
+                                            @(user.IsActive ? "Khóa tài khoản" : "Mở tài khoản")
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

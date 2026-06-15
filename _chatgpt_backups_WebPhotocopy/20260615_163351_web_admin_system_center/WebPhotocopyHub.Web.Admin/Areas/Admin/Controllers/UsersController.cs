@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using WebPhotocopyHub.Application.Common;
 using WebPhotocopyHub.Application.Contracts;
@@ -8,8 +8,8 @@ using WebPhotocopyHub.Application.DTOs;
 using WebPhotocopyHub.Domain.Constants;
 using WebPhotocopyHub.Domain.Entities;
 using WebPhotocopyHub.Domain.Enums;
-using WebPhotocopyHub.Web.Admin.Models;
 using WebPhotocopyHub.Web.Extensions;
+using WebPhotocopyHub.Web.Admin.Models;
 
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
@@ -123,30 +123,12 @@ public class UsersController : Controller
 
         if (string.Equals(User.GetUserId(), userId, StringComparison.Ordinal))
         {
-            TempData["Error"] = "Không thể tự khóa tài khoản quản trị đang đăng nhập.";
+            TempData["Error"] = "Không thể tự khóa tài khoản của chính bạn.";
             return RedirectToAction(nameof(Index));
-        }
-
-        if (user.IsActive && await _userManager.IsInRoleAsync(user, RoleConstants.Admin))
-        {
-            var activeAdmins = (await _userManager.GetUsersInRoleAsync(RoleConstants.Admin))
-                .Count(x => x.IsActive);
-
-            if (activeAdmins <= 1)
-            {
-                TempData["Error"] = "Không thể khóa quản trị viên hoạt động cuối cùng của hệ thống.";
-                return RedirectToAction(nameof(Index));
-            }
         }
 
         user.IsActive = !user.IsActive;
-        var updateResult = await _userManager.UpdateAsync(user);
-
-        if (!updateResult.Succeeded)
-        {
-            TempData["Error"] = string.Join("; ", updateResult.Errors.Select(x => x.Description));
-            return RedirectToAction(nameof(Index));
-        }
+        await _userManager.UpdateAsync(user);
 
         await _auditLogService.WriteAsync(new AuditLogEntryDto
         {
@@ -166,8 +148,7 @@ public class UsersController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetRole(string userId, string roleName, CancellationToken cancellationToken)
     {
-        var allowedRoles = new[] { RoleConstants.Customer, RoleConstants.ShopOperator, RoleConstants.Admin };
-        if (!allowedRoles.Contains(roleName, StringComparer.Ordinal))
+        if (!new[] { RoleConstants.Customer, RoleConstants.ShopOperator, RoleConstants.Admin }.Contains(roleName))
         {
             TempData["Error"] = "Role không hợp lệ.";
             return RedirectToAction(nameof(Index));
@@ -179,13 +160,6 @@ public class UsersController : Controller
             return NotFound();
         }
 
-        if (string.Equals(User.GetUserId(), userId, StringComparison.Ordinal)
-            && !string.Equals(roleName, RoleConstants.Admin, StringComparison.Ordinal))
-        {
-            TempData["Error"] = "Không thể tự hạ quyền tài khoản quản trị đang đăng nhập.";
-            return RedirectToAction(nameof(Index));
-        }
-
         if (!await _roleManager.RoleExistsAsync(roleName))
         {
             TempData["Error"] = "Role chưa tồn tại trong hệ thống.";
@@ -193,45 +167,17 @@ public class UsersController : Controller
         }
 
         var currentRoles = await _userManager.GetRolesAsync(user);
-        if (currentRoles.Contains(RoleConstants.Admin, StringComparer.Ordinal)
-            && !string.Equals(roleName, RoleConstants.Admin, StringComparison.Ordinal)
-            && user.IsActive)
-        {
-            var activeAdmins = (await _userManager.GetUsersInRoleAsync(RoleConstants.Admin))
-                .Count(x => x.IsActive);
+        var removableRoles = currentRoles.Where(x =>
+            x == RoleConstants.Customer ||
+            x == RoleConstants.ShopOperator ||
+            x == RoleConstants.Admin).ToList();
 
-            if (activeAdmins <= 1)
-            {
-                TempData["Error"] = "Không thể hạ quyền quản trị viên hoạt động cuối cùng của hệ thống.";
-                return RedirectToAction(nameof(Index));
-            }
+        if (removableRoles.Any())
+        {
+            await _userManager.RemoveFromRolesAsync(user, removableRoles);
         }
 
-        if (!currentRoles.Contains(roleName, StringComparer.Ordinal))
-        {
-            var addResult = await _userManager.AddToRoleAsync(user, roleName);
-            if (!addResult.Succeeded)
-            {
-                TempData["Error"] = string.Join("; ", addResult.Errors.Select(x => x.Description));
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
-        var removableRoles = currentRoles
-            .Where(x => allowedRoles.Contains(x, StringComparer.Ordinal)
-                        && !string.Equals(x, roleName, StringComparison.Ordinal))
-            .ToList();
-
-        if (removableRoles.Count > 0)
-        {
-            var removeResult = await _userManager.RemoveFromRolesAsync(user, removableRoles);
-            if (!removeResult.Succeeded)
-            {
-                TempData["Error"] = "Đã thêm role mới nhưng chưa xóa hết role cũ: "
-                                    + string.Join("; ", removeResult.Errors.Select(x => x.Description));
-                return RedirectToAction(nameof(Index));
-            }
-        }
+        await _userManager.AddToRoleAsync(user, roleName);
 
         await _auditLogService.WriteAsync(new AuditLogEntryDto
         {
@@ -239,7 +185,7 @@ public class UsersController : Controller
             Action = "SetUserRole",
             EntityName = nameof(ApplicationUser),
             EntityId = user.Id,
-            Details = $"PreviousRoles: {string.Join(",", currentRoles)}; NewRole: {roleName}",
+            Details = $"Role: {roleName}",
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         }, cancellationToken);
 

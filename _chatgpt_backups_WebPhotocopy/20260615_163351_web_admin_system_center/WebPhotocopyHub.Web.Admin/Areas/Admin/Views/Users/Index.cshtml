@@ -1,0 +1,34 @@
+@model List<ApplicationUser>
+@{
+    ViewData["Title"] = "Quản lý users";
+}
+
+<div class="table-responsive">
+    <table class="table table-striped bg-white">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Họ tên</th>
+                <th>SĐT</th>
+                <th>Số dư</th>
+                <th>Active</th>
+                <th>Ngày tạo</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.Email</td>
+                <td>@user.FullName</td>
+                <td>@user.PhoneNumber</td>
+                <td>@user.CurrentBalance.ToString("N0")</td>
+                <td>@(user.IsActive ? "Yes" : "No")</td>
+                <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td><a class="btn btn-sm btn-outline-primary" asp-action="AdjustBalance" asp-route-userId="@user.Id">Điều chỉnh ví</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

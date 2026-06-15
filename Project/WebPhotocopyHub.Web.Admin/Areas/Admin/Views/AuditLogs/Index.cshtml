@@ -1,39 +1,186 @@
-@model List<AuditLog>
+@model AuditLogIndexViewModel
 @{
-    ViewData["Title"] = "Audit logs";
+    ViewData["Title"] = "Audit và activity tracking";
 }
 
-<div class="table-responsive">
-    <table class="table table-striped bg-white">
-        <thead>
-            <tr>
-                <th>Thời gian</th>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Entity</th>
-                <th>EntityId</th>
-                <th>Details</th>
-                <th>IP</th>
-                <th>Hash</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var log in Model)
-        {
-            <tr>
-                <td>@log.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                <td>@log.ActorUserId</td>
-                <td>@log.Action</td>
-                <td>@log.EntityName</td>
-                <td>@log.EntityId</td>
-                <td>@log.Details</td>
-                <td>@log.IpAddress</td>
-                <td class="small font-monospace">@(
-                    string.IsNullOrWhiteSpace(log.RecordHash)
-                        ? "-"
-                        : (log.RecordHash!.Length > 12 ? log.RecordHash[..12] : log.RecordHash))</td>
-            </tr>
-        }
-        </tbody>
-    </table>
-</div>
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Audit trail</span>
+        <h1>Nhật ký hoạt động toàn hệ thống</h1>
+        <p>Tra cứu thao tác nghiệp vụ theo action, entity, actor, IP, khoảng thời gian và nội dung chi tiết.</p>
+        <div class="system-hero-meta">
+            <span class="system-soft-chip">@Model.TotalCount kết quả</span>
+            <span class="system-soft-chip">Hiển thị tối đa 1.000 bản ghi gần nhất</span>
+        </div>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">Giám sát hệ thống</a>
+    </div>
+</section>
+
+<section class="system-panel">
+    <form method="get" class="system-filter-grid">
+        <div class="system-filter-field system-filter-wide">
+            <label for="query">Tìm kiếm toàn văn</label>
+            <input id="query" name="query" value="@Model.Query" class="form-control" placeholder="Action, entity, ID, actor, details hoặc IP" />
+        </div>
+        <div class="system-filter-field">
+            <label for="actionName">Action</label>
+            <select id="actionName" name="actionName" class="form-select">
+                <option value="">Tất cả action</option>
+                @foreach (var action in Model.AvailableActions)
+                {
+                    if (string.Equals(action, Model.ActionName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="@action" selected>@action</option>
+                    }
+                    else
+                    {
+                        <option value="@action">@action</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="system-filter-field">
+            <label for="entityName">Entity</label>
+            <select id="entityName" name="entityName" class="form-select">
+                <option value="">Tất cả entity</option>
+                @foreach (var entity in Model.AvailableEntities)
+                {
+                    if (string.Equals(entity, Model.EntityName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="@entity" selected>@entity</option>
+                    }
+                    else
+                    {
+                        <option value="@entity">@entity</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="system-filter-field">
+            <label for="actorUserId">Actor User ID</label>
+            <input id="actorUserId" name="actorUserId" value="@Model.ActorUserId" class="form-control" placeholder="Identity user id" />
+        </div>
+        <div class="system-filter-field">
+            <label for="fromDate">Từ ngày</label>
+            <input id="fromDate" type="date" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+        </div>
+        <div class="system-filter-field">
+            <label for="toDate">Đến ngày</label>
+            <input id="toDate" type="date" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+        </div>
+        <div class="system-filter-field">
+            <label for="pageSize">Số dòng</label>
+            <select id="pageSize" name="pageSize" class="form-select">
+                @foreach (var size in new[] { 20, 50, 100 })
+                {
+                    if (size == Model.PageSize)
+                    {
+                        <option value="@size" selected>@size</option>
+                    }
+                    else
+                    {
+                        <option value="@size">@size</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="system-filter-actions">
+            <button type="submit" class="btn btn-primary">Áp dụng bộ lọc</button>
+            <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">Xóa lọc</a>
+        </div>
+    </form>
+</section>
+
+<section class="system-panel mt-3">
+    <div class="system-panel-header">
+        <div>
+            <span class="system-panel-kicker">Activity records</span>
+            <h2>Kết quả truy vết</h2>
+        </div>
+        <span class="system-panel-note">Trang @Model.Page / @Model.TotalPages</span>
+    </div>
+
+    <div class="table-responsive system-table-wrap">
+        <table class="table system-table align-middle">
+            <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Actor / IP</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Chi tiết</th>
+                    <th>Hash chain</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6"><div class="system-empty-state">Không có bản ghi phù hợp với bộ lọc.</div></td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var log in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-nowrap">
+                                <strong>@log.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</strong>
+                                <small class="d-block text-muted">@log.CreatedAt.ToLocalTime().ToString("HH:mm:ss")</small>
+                            </td>
+                            <td>
+                                <code title="@log.ActorUserId">@(string.IsNullOrWhiteSpace(log.ActorUserId) ? "System" : log.ActorUserId)</code>
+                                <small class="d-block text-muted">IP: @(log.IpAddress ?? "-")</small>
+                            </td>
+                            <td><span class="system-action-badge">@log.Action</span></td>
+                            <td>
+                                <strong>@log.EntityName</strong>
+                                <small class="d-block text-muted text-break">@(log.EntityId ?? "-")</small>
+                            </td>
+                            <td class="system-details-cell">@(log.Details ?? "-")</td>
+                            <td>
+                                <code title="@log.RecordHash">
+                                    @(string.IsNullOrWhiteSpace(log.RecordHash)
+                                        ? "-"
+                                        : log.RecordHash!.Length > 16
+                                            ? log.RecordHash[..16]
+                                            : log.RecordHash)
+                                </code>
+                                <small class="d-block text-muted" title="@log.PreviousHash">Prev hash đã lưu</small>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="system-pagination" aria-label="Phân trang audit log">
+            <a class="btn btn-sm btn-outline-secondary @(Model.Page <= 1 ? "disabled" : string.Empty)"
+               asp-route-query="@Model.Query"
+               asp-route-actionName="@Model.ActionName"
+               asp-route-entityName="@Model.EntityName"
+               asp-route-actorUserId="@Model.ActorUserId"
+               asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+               asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+               asp-route-pageSize="@Model.PageSize"
+               asp-route-page="@(Model.Page - 1)">Trang trước</a>
+
+            <span>Trang <strong>@Model.Page</strong> / @Model.TotalPages</span>
+
+            <a class="btn btn-sm btn-outline-secondary @(Model.Page >= Model.TotalPages ? "disabled" : string.Empty)"
+               asp-route-query="@Model.Query"
+               asp-route-actionName="@Model.ActionName"
+               asp-route-entityName="@Model.EntityName"
+               asp-route-actorUserId="@Model.ActorUserId"
+               asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+               asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+               asp-route-pageSize="@Model.PageSize"
+               asp-route-page="@(Model.Page + 1)">Trang sau</a>
+        </nav>
+    }
+</section>

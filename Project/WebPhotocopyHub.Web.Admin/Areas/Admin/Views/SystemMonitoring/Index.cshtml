@@ -1,0 +1,212 @@
+@model SystemMonitoringViewModel
+@{
+    ViewData["Title"] = "Giám sát API và hệ thống";
+    var healthClass = string.Equals(Model.OverallHealthStatus, "Healthy", StringComparison.OrdinalIgnoreCase)
+        ? "is-success"
+        : string.Equals(Model.OverallHealthStatus, "Degraded", StringComparison.OrdinalIgnoreCase)
+            ? "is-warning"
+            : "is-danger";
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">API governance & observability</span>
+        <h1>Trung tâm giám sát hệ thống</h1>
+        <p>Kiểm tra health checks, tài nguyên tiến trình, endpoint API, yêu cầu xác thực và chuỗi hoạt động audit.</p>
+        <div class="system-hero-meta">
+            <span class="system-health-chip @healthClass"><span></span>@Model.OverallHealthStatus</span>
+            <span class="system-soft-chip">@Model.ApiEndpoints.Count endpoints được theo dõi</span>
+            <span class="system-soft-chip">Môi trường @Model.EnvironmentName</span>
+        </div>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-primary" href="/healthz/ready" target="_blank" rel="noopener">Kiểm tra readiness</a>
+        @if (Model.SwaggerEnabled)
+        {
+            <a class="btn btn-outline-secondary" href="/swagger" target="_blank" rel="noopener">Mở Swagger</a>
+        }
+        <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">Làm mới dữ liệu</a>
+    </div>
+</section>
+
+<section class="system-runtime-grid">
+    <div class="system-runtime-card">
+        <span>Uptime</span>
+        <strong>@($"{(int)Model.Uptime.TotalDays}d {Model.Uptime.Hours:00}h {Model.Uptime.Minutes:00}m")</strong>
+        <small>Process #@Model.ProcessId</small>
+    </div>
+    <div class="system-runtime-card">
+        <span>Working set</span>
+        <strong>@Model.WorkingSetMb.ToString("N2") MB</strong>
+        <small>Managed: @Model.ManagedMemoryMb.ToString("N2") MB</small>
+    </div>
+    <div class="system-runtime-card">
+        <span>GC heap</span>
+        <strong>@Model.GcHeapMb.ToString("N2") MB</strong>
+        <small>.NET @Model.RuntimeVersion</small>
+    </div>
+    <div class="system-runtime-card">
+        <span>Thread pool</span>
+        <strong>@Model.AvailableWorkerThreads / @Model.MaxWorkerThreads</strong>
+        <small>@Model.ThreadCount process threads</small>
+    </div>
+    <div class="system-runtime-card">
+        <span>CPU environment</span>
+        <strong>@Model.ProcessorCount cores</strong>
+        <small>CPU time: @Model.TotalProcessorTime</small>
+    </div>
+    <div class="system-runtime-card">
+        <span>Audit 24 giờ</span>
+        <strong>@Model.ActivityLast24Hours</strong>
+        <small class="@(Model.IsAuditChainValid ? "is-success" : "is-danger")">
+            Chuỗi hash: @(Model.IsAuditChainValid ? "hợp lệ" : "cần kiểm tra")
+        </small>
+    </div>
+</section>
+
+<div class="system-dashboard-grid mt-3">
+    <section class="system-panel system-panel-span-2">
+        <div class="system-panel-header">
+            <div>
+                <span class="system-panel-kicker">Health checks</span>
+                <h2>Khả dụng của ứng dụng và phụ thuộc</h2>
+            </div>
+            <span class="system-panel-note">Máy chủ: @Model.MachineName</span>
+        </div>
+
+        <div class="system-health-grid">
+            @foreach (var item in Model.HealthChecks)
+            {
+                var itemClass = string.Equals(item.Status, "Healthy", StringComparison.OrdinalIgnoreCase)
+                    ? "is-success"
+                    : string.Equals(item.Status, "Degraded", StringComparison.OrdinalIgnoreCase)
+                        ? "is-warning"
+                        : "is-danger";
+
+                <div class="system-health-card @itemClass">
+                    <div>
+                        <span>@item.Name</span>
+                        <strong>@item.Status</strong>
+                    </div>
+                    <b>@item.DurationMilliseconds.ToString("N1") ms</b>
+                    <small>@(item.Description ?? "Không có mô tả bổ sung.")</small>
+                </div>
+            }
+        </div>
+    </section>
+
+    <aside class="system-panel">
+        <div class="system-panel-header">
+            <div>
+                <span class="system-panel-kicker">Quy tắc an toàn</span>
+                <h2>Phạm vi kiểm soát</h2>
+            </div>
+        </div>
+        <div class="system-guidance-list">
+            <div>
+                <strong>Role Admin</strong>
+                <small>Trang này và toàn bộ controller mới chỉ cho phép role Admin.</small>
+            </div>
+            <div>
+                <strong>API inventory</strong>
+                <small>Hiển thị route và metadata; không hiển thị secret hoặc connection string.</small>
+            </div>
+            <div>
+                <strong>Không bật/tắt API từ UI</strong>
+                <small>Thay đổi pipeline phải được review và triển khai qua cấu hình/code host.</small>
+            </div>
+            <div>
+                <strong>Audit hiện có</strong>
+                <small>Theo dõi thao tác nghiệp vụ đã gọi IAuditLogService.</small>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<section class="system-panel mt-3">
+    <div class="system-panel-header">
+        <div>
+            <span class="system-panel-kicker">Endpoint inventory</span>
+            <h2>Kiểm soát API và health endpoint</h2>
+        </div>
+        <span class="system-panel-note">@Model.ApiEndpoints.Count endpoint</span>
+    </div>
+
+    <div class="table-responsive system-table-wrap">
+        <table class="table system-table align-middle">
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    <th>Route</th>
+                    <th>Controller / action</th>
+                    <th>Truy cập</th>
+                    <th>Authorization</th>
+                    <th>Rate limit</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.ApiEndpoints.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6"><div class="system-empty-state">Không tìm thấy endpoint API/health trong EndpointDataSource.</div></td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var endpoint in Model.ApiEndpoints)
+                    {
+                        <tr>
+                            <td><span class="system-method-badge">@endpoint.Methods</span></td>
+                            <td><code>@endpoint.Route</code></td>
+                            <td>
+                                <strong>@endpoint.Controller</strong>
+                                <small class="d-block text-muted">@endpoint.Action</small>
+                            </td>
+                            <td>
+                                <span class="system-access-badge @(endpoint.IsAnonymous ? "is-public" : "is-protected")">
+                                    @endpoint.AccessMode
+                                </span>
+                            </td>
+                            <td><small>@endpoint.AuthorizationDetails</small></td>
+                            <td><small>@endpoint.RateLimitMode</small></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="system-panel mt-3">
+    <div class="system-panel-header">
+        <div>
+            <span class="system-panel-kicker">Recent audit activity</span>
+            <h2>Hoạt động nghiệp vụ gần đây</h2>
+        </div>
+        <a class="btn btn-sm btn-outline-primary" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">Mở bộ lọc audit</a>
+    </div>
+
+    <div class="system-activity-list">
+        @if (Model.RecentActivities.Count == 0)
+        {
+            <div class="system-empty-state">Chưa có hoạt động được ghi audit.</div>
+        }
+        else
+        {
+            @foreach (var item in Model.RecentActivities)
+            {
+                <a class="system-activity-item" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index" asp-route-query="@item.Action">
+                    <span class="system-activity-dot"></span>
+                    <div>
+                        <strong>@item.Action</strong>
+                        <small>@item.EntityName · @(item.EntityId ?? "-")</small>
+                    </div>
+                    <div class="system-activity-meta">
+                        <span>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</span>
+                        <small>@(item.ActorUserId ?? "System") · @(item.IpAddress ?? "No IP")</small>
+                    </div>
+                </a>
+            }
+        }
+    </div>
+</section>

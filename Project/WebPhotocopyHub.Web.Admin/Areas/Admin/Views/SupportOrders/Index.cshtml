@@ -1,0 +1,99 @@
+@model List<SupportServiceOrder>
+@{
+    ViewData["Title"] = "Đơn dịch vụ hỗ trợ toàn hệ thống";
+    var pendingCount = Model.Count(x => x.Status == OrderStatus.Submitted || x.Status == OrderStatus.Processing);
+    var allowedStatuses = new[] { OrderStatus.Submitted, OrderStatus.Processing, OrderStatus.Completed, OrderStatus.Cancelled };
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Service operations</span>
+        <h1>Đơn dịch vụ hỗ trợ toàn hệ thống</h1>
+        <p>Kiểm soát yêu cầu scan, ép plastic, đóng gáy và các dịch vụ hỗ trợ từ lúc gửi đến khi hoàn tất.</p>
+        <div class="system-hero-meta">
+            <span class="system-soft-chip">@Model.Count tổng đơn</span>
+            <span class="system-health-chip @(pendingCount > 0 ? "is-warning" : "is-success")"><span></span>@pendingCount cần xử lý</span>
+        </div>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-primary" asp-area="Admin" asp-controller="SupportServices" asp-action="Index">Quản lý danh mục dịch vụ</a>
+    </div>
+</section>
+
+
+<section class="system-panel mt-3">
+    <div class="system-panel-header">
+        <div>
+            <span class="system-panel-kicker">Support orders</span>
+            <h2>Danh sách và điều phối trạng thái</h2>
+        </div>
+        <span class="system-panel-note">Cập nhật được ghi trong audit log</span>
+    </div>
+
+    <div class="table-responsive system-table-wrap">
+        <table class="table system-table align-middle">
+            <thead>
+                <tr>
+                    <th>Đơn / thời gian</th>
+                    <th>Khách hàng</th>
+                    <th>Dịch vụ</th>
+                    <th>Số lượng / cách tính</th>
+                    <th class="text-end">Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th style="min-width:300px">Cập nhật xử lý</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="7"><div class="system-empty-state">Chưa có đơn dịch vụ hỗ trợ.</div></td></tr>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <strong class="system-mono">@(item.Id.ToString("N")[..8])</strong>
+                                <small class="d-block text-muted">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                            </td>
+                            <td>
+                                <strong>@(item.User?.FullName ?? "Chưa có tên")</strong>
+                                <small class="d-block text-muted">@(item.User?.Email ?? item.UserId)</small>
+                            </td>
+                            <td>
+                                <strong>@(item.SupportService?.Name ?? "Dịch vụ")</strong>
+                                <small class="d-block text-muted">@(item.Notes ?? "Không có ghi chú khách hàng")</small>
+                            </td>
+                            <td>
+                                <strong>@item.Quantity</strong>
+                                <small class="d-block text-muted">@(item.SupportService is null ? "-" : item.SupportService.FeeType.GetDisplayName())</small>
+                            </td>
+                            <td class="text-end"><strong>@item.TotalAmount.ToString("N0") đ</strong></td>
+                            <td>
+                                <span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span>
+                                @if (!string.IsNullOrWhiteSpace(item.ProcessNote))
+                                {
+                                    <small class="d-block text-muted mt-1">@item.ProcessNote</small>
+                                }
+                            </td>
+                            <td>
+                                <form asp-action="UpdateStatus" method="post" class="system-inline-form">
+                                    <input type="hidden" name="OrderId" value="@item.Id" />
+                                    <select name="Status" class="form-select form-select-sm" aria-label="Trạng thái đơn">
+                                        @foreach (var status in allowedStatuses)
+                                        {
+                                            <option value="@status" selected="@(status == item.Status)">@status.GetDisplayName()</option>
+                                        }
+                                    </select>
+                                    <input name="Note" class="form-control form-control-sm" maxlength="500" value="@item.ProcessNote" placeholder="Ghi chú xử lý" />
+                                    <button class="btn btn-sm btn-primary" type="submit">Lưu</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

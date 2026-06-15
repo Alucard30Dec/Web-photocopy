@@ -112,35 +112,126 @@
     </div>
 
     <div class="shop-function-bar">
-        <nav class="shop-function-grid" aria-label="Chức năng quản trị cơ sở">
-            <a class="shop-function-link @(IsActive("Dashboard") ? "active" : string.Empty)" href="@ShopUrl("Dashboard")">
-                <span class="shop-function-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-dashboard"></use></svg></span>
-                <span><strong>Dashboard</strong><small>Tổng quan vận hành</small></span>
-            </a>
-            <a class="shop-function-link @(IsActive("TopUpRequests", "Index") ? "active" : string.Empty)" href="@ShopUrl("TopUpRequests")">
-                <span class="shop-function-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-wallet-check"></use></svg></span>
-                <span><strong>Duyệt nạp tiền</strong><small>Kiểm tra giao dịch</small></span>
-            </a>
-            <a class="shop-function-link @(IsActive("TopUpRequests", "CounterTopUp") ? "active" : string.Empty)" href="@ShopUrl("TopUpRequests", "CounterTopUp")">
-                <span class="shop-function-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-counter"></use></svg></span>
-                <span><strong>Nạp tại quầy</strong><small>Cộng ví trực tiếp</small></span>
-            </a>
-            <a class="shop-function-link @(IsActive("PrintJobs") ? "active" : string.Empty)" href="@ShopUrl("PrintJobs")">
-                <span class="shop-function-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg></span>
-                <span><strong>Hàng chờ in</strong><small>Xử lý đơn in</small></span>
-            </a>
-            <a class="shop-function-link @(IsActive("ProductOrders") ? "active" : string.Empty)" href="@ShopUrl("ProductOrders")">
-                <span class="shop-function-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-package"></use></svg></span>
-                <span><strong>Văn phòng phẩm</strong><small>Quản lý đơn hàng</small></span>
-            </a>
-            <a class="shop-function-link @(IsActive("SupportOrders") ? "active" : string.Empty)" href="@ShopUrl("SupportOrders")">
-                <span class="shop-function-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-service"></use></svg></span>
-                <span><strong>Dịch vụ hỗ trợ</strong><small>Scan, gáy, ép plastic</small></span>
-            </a>
-            <a class="shop-function-link @(IsActive("Inventory") ? "active" : string.Empty)" href="@ShopUrl("Inventory")">
-                <span class="shop-function-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-inventory"></use></svg></span>
-                <span><strong>Quản lý tồn kho</strong><small>Nhập, xuất, cảnh báo</small></span>
-            </a>
+        <nav class="shop-function-groups" aria-label="Nhóm chức năng quản trị cơ sở">
+            <div class="shop-function-group dropdown @(IsActive("Dashboard") ? "is-active" : string.Empty)">
+                <button class="shop-function-group-toggle dropdown-toggle" type="button" id="shop-nav-overview" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
+                    <span class="shop-function-group-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-dashboard"></use></svg></span>
+                    <span class="shop-function-group-copy"><strong>Tổng quan</strong><small>Điều hành chung</small></span>
+                    <svg class="shop-icon shop-function-group-chevron" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                </button>
+                <ul class="dropdown-menu shop-function-menu" aria-labelledby="shop-nav-overview">
+                    <li>
+                        <div class="shop-function-menu-head">
+                            <strong>Tổng quan cơ sở</strong>
+                            <small>Theo dõi nhanh hoạt động và truy cập trang khách hàng.</small>
+                        </div>
+                    </li>
+                    <li>
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("Dashboard") ? "active" : string.Empty)" href="@ShopUrl("Dashboard")">
+                            <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-dashboard"></use></svg></span>
+                            <span class="shop-function-menu-copy"><strong>Dashboard</strong><small>Tổng quan vận hành và cảnh báo</small></span>
+                            <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item shop-function-menu-item" href="@branchHomeUrl">
+                            <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-home"></use></svg></span>
+                            <span class="shop-function-menu-copy"><strong>Trang cơ sở</strong><small>Mở giao diện dành cho khách hàng</small></span>
+                            <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="shop-function-group dropdown @(IsActive("TopUpRequests") ? "is-active" : string.Empty)">
+                <button class="shop-function-group-toggle dropdown-toggle" type="button" id="shop-nav-finance" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
+                    <span class="shop-function-group-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-wallet-check"></use></svg></span>
+                    <span class="shop-function-group-copy"><strong>Tài chính</strong><small>Nạp tiền và ví</small></span>
+                    <svg class="shop-icon shop-function-group-chevron" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                </button>
+                <ul class="dropdown-menu shop-function-menu" aria-labelledby="shop-nav-finance">
+                    <li>
+                        <div class="shop-function-menu-head">
+                            <strong>Giao dịch khách hàng</strong>
+                            <small>Kiểm tra yêu cầu online và xử lý giao dịch trực tiếp tại quầy.</small>
+                        </div>
+                    </li>
+                    <li>
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("TopUpRequests", "Index") ? "active" : string.Empty)" href="@ShopUrl("TopUpRequests")">
+                            <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-wallet-check"></use></svg></span>
+                            <span class="shop-function-menu-copy"><strong>Duyệt nạp tiền</strong><small>Kiểm tra chứng từ và giao dịch</small></span>
+                            <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("TopUpRequests", "CounterTopUp") ? "active" : string.Empty)" href="@ShopUrl("TopUpRequests", "CounterTopUp")">
+                            <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-counter"></use></svg></span>
+                            <span class="shop-function-menu-copy"><strong>Nạp tiền tại quầy</strong><small>Cộng ví trực tiếp cho khách hàng</small></span>
+                            <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="shop-function-group dropdown @((IsActive("PrintJobs") || IsActive("SupportOrders")) ? "is-active" : string.Empty)">
+                <button class="shop-function-group-toggle dropdown-toggle" type="button" id="shop-nav-services" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
+                    <span class="shop-function-group-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg></span>
+                    <span class="shop-function-group-copy"><strong>Xử lý đơn</strong><small>In ấn và hỗ trợ</small></span>
+                    <svg class="shop-icon shop-function-group-chevron" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shop-function-menu" aria-labelledby="shop-nav-services">
+                    <li>
+                        <div class="shop-function-menu-head">
+                            <strong>Đơn dịch vụ</strong>
+                            <small>Tiếp nhận, xử lý và cập nhật trạng thái các yêu cầu tại cơ sở.</small>
+                        </div>
+                    </li>
+                    <li>
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("PrintJobs") ? "active" : string.Empty)" href="@ShopUrl("PrintJobs")">
+                            <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg></span>
+                            <span class="shop-function-menu-copy"><strong>Hàng chờ in</strong><small>Nhận file và xử lý đơn in</small></span>
+                            <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("SupportOrders") ? "active" : string.Empty)" href="@ShopUrl("SupportOrders")">
+                            <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-service"></use></svg></span>
+                            <span class="shop-function-menu-copy"><strong>Dịch vụ hỗ trợ</strong><small>Scan, đóng gáy và ép plastic</small></span>
+                            <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="shop-function-group dropdown @((IsActive("ProductOrders") || IsActive("Inventory")) ? "is-active" : string.Empty)">
+                <button class="shop-function-group-toggle dropdown-toggle" type="button" id="shop-nav-goods" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
+                    <span class="shop-function-group-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-package"></use></svg></span>
+                    <span class="shop-function-group-copy"><strong>Hàng hóa &amp; kho</strong><small>Đơn hàng, tồn kho</small></span>
+                    <svg class="shop-icon shop-function-group-chevron" aria-hidden="true"><use href="#shop-icon-chevron"></use></svg>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shop-function-menu" aria-labelledby="shop-nav-goods">
+                    <li>
+                        <div class="shop-function-menu-head">
+                            <strong>Hàng hóa và tồn kho</strong>
+                            <small>Quản lý đơn văn phòng phẩm, số lượng tồn và cảnh báo nhập hàng.</small>
+                        </div>
+                    </li>
+                    <li>
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("ProductOrders") ? "active" : string.Empty)" href="@ShopUrl("ProductOrders")">
+                            <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-package"></use></svg></span>
+                            <span class="shop-function-menu-copy"><strong>Đơn văn phòng phẩm</strong><small>Chuẩn bị và bàn giao đơn hàng</small></span>
+                            <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("Inventory") ? "active" : string.Empty)" href="@ShopUrl("Inventory")">
+                            <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-inventory"></use></svg></span>
+                            <span class="shop-function-menu-copy"><strong>Quản lý tồn kho</strong><small>Nhập, xuất và theo dõi cảnh báo</small></span>
+                            <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </nav>
     </div>
 </header>
