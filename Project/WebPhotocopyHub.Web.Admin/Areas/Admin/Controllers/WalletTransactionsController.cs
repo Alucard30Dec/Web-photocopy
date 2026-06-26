@@ -7,7 +7,7 @@ using WebPhotocopyHub.Report;
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = RoleConstants.Admin)]
+[Authorize]
 public class WalletTransactionsController : Controller
 {
     private readonly IWalletService _walletService;

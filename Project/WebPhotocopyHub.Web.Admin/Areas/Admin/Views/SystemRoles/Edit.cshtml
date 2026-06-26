@@ -1,0 +1,77 @@
+@model SystemRoleEditViewModel
+@{
+    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.RoleId)
+        ? "Tạo vai trò"
+        : "Cập nhật vai trò";
+    var isCreate = string.IsNullOrWhiteSpace(Model.RoleId);
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Role definition</span>
+        <h1>@(isCreate ? "Tạo vai trò hệ thống" : "Cập nhật vai trò hệ thống")</h1>
+        <p>Vai trò có thể gán cho nhiều tài khoản và nhận quyền theo từng chức năng.</p>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+        @if (!isCreate)
+        {
+            <a class="btn btn-outline-primary"
+               asp-area="Admin"
+               asp-controller="SystemPermissions"
+               asp-action="Index"
+               asp-route-roleId="@Model.RoleId">Mở ma trận quyền</a>
+        }
+    </div>
+</section>
+
+<section class="system-panel mt-3">
+    <form asp-action="@(isCreate ? "Create" : "Edit")" method="post" class="system-form-grid">
+        <input asp-for="RoleId" type="hidden" />
+        <input asp-for="IsSystemRole" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger system-validation-summary"></div>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <label asp-for="RoleName" class="form-label"></label>
+                <input asp-for="RoleName"
+                       class="form-control"
+                       readonly="@Model.IsSystemRole" />
+                <span asp-validation-for="RoleName" class="text-danger"></span>
+                <small class="form-text text-muted">Tên kỹ thuật dùng khi Identity lưu quan hệ người dùng–role.</small>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="DisplayName" class="form-label"></label>
+                <input asp-for="DisplayName" class="form-control" />
+                <span asp-validation-for="DisplayName" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label class="form-check">
+                    <input asp-for="IsActive"
+                           class="form-check-input"
+                           disabled="@Model.IsSystemRole" />
+                    <span class="form-check-label">Vai trò đang hoạt động</span>
+                </label>
+                @if (Model.IsSystemRole)
+                {
+                    <input asp-for="IsActive" type="hidden" />
+                    <small class="text-muted">Role hệ thống không thể bị vô hiệu hóa.</small>
+                }
+            </div>
+        </div>
+
+        <div class="system-form-actions">
+            <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+            <button class="btn btn-primary" type="submit">Lưu vai trò</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

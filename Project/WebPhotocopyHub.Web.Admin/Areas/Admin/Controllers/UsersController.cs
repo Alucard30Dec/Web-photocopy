@@ -5,16 +5,18 @@ using Microsoft.AspNetCore.RateLimiting;
 using WebPhotocopyHub.Application.Common;
 using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Application.DTOs;
+using WebPhotocopyHub.Application.Security;
 using WebPhotocopyHub.Domain.Constants;
 using WebPhotocopyHub.Domain.Entities;
 using WebPhotocopyHub.Domain.Enums;
+using WebPhotocopyHub.Web.Admin.Authorization;
 using WebPhotocopyHub.Web.Admin.Models;
 using WebPhotocopyHub.Web.Extensions;
 
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = RoleConstants.Admin)]
+[Authorize]
 public class UsersController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
@@ -22,33 +24,445 @@ public class UsersController : Controller
     private readonly IWalletService _walletService;
     private readonly IAuditLogService _auditLogService;
     private readonly IAdminUserQueryService _adminUserQueryService;
+    private readonly ISystemAdministrationService _systemAdministrationService;
 
     public UsersController(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
         IWalletService walletService,
         IAuditLogService auditLogService,
-        IAdminUserQueryService adminUserQueryService)
+        IAdminUserQueryService adminUserQueryService,
+        ISystemAdministrationService systemAdministrationService)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _walletService = walletService;
         _auditLogService = auditLogService;
         _adminUserQueryService = adminUserQueryService;
+        _systemAdministrationService = systemAdministrationService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(
+        CancellationToken cancellationToken)
     {
         var users = await _adminUserQueryService.ListUsersAsync(cancellationToken);
-        var roleMap = await _adminUserQueryService.GetPrimaryRoleMapAsync(users, cancellationToken);
+        var userRoleMap = new Dictionary<string, IReadOnlyList<string>>(
+            StringComparer.Ordinal);
 
-        ViewBag.RoleMap = roleMap;
-        ViewBag.AvailableRoles = new[] { RoleConstants.Customer, RoleConstants.ShopOperator, RoleConstants.Admin };
+        foreach (var user in users)
+        {
+            userRoleMap[user.Id] = new List<string>(await _userManager.GetRolesAsync(user));
+        }
+
+        ViewBag.UserRoleMap = userRoleMap;
+        ViewBag.AvailableRoles = await GetAssignableRolesAsync(cancellationToken);
+        ViewBag.CanCreateUsers = await _systemAdministrationService.HasPermissionAsync(
+            User,
+            "Admin",
+            "Users",
+            SystemPermissionActions.Create,
+            cancellationToken)
+            && await CanAssignRolesAsync(cancellationToken);
+        ViewBag.CanEditUsers = await _systemAdministrationService.HasPermissionAsync(
+            User,
+            "Admin",
+            "Users",
+            SystemPermissionActions.Edit,
+            cancellationToken);
+        ViewBag.CanViewRoles = User.IsInRole(RoleConstants.Admin)
+            || await _systemAdministrationService.HasPermissionAsync(
+                User,
+                "Admin",
+                "SystemRoles",
+                SystemPermissionActions.View,
+                cancellationToken);
+        ViewBag.CanViewPermissions = User.IsInRole(RoleConstants.Admin)
+            || await _systemAdministrationService.HasPermissionAsync(
+                User,
+                "Admin",
+                "SystemPermissions",
+                SystemPermissionActions.View,
+                cancellationToken);
         return View(users);
     }
 
     [HttpGet]
+    [SystemPermissionAction(SystemPermissionActions.Create)]
+    public async Task<IActionResult> Create(
+        CancellationToken cancellationToken)
+    {
+        if (!await CanAssignRolesAsync(cancellationToken))
+        {
+            return Forbid();
+        }
+
+        return View(new CreateSystemUserViewModel
+        {
+            AvailableRoles = await GetAssignableRolesAsync(cancellationToken)
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [SystemPermissionAction(SystemPermissionActions.Create)]
+    public async Task<IActionResult> Create(
+        CreateSystemUserViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!await CanAssignRolesAsync(cancellationToken))
+        {
+            return Forbid();
+        }
+
+        model.AvailableRoles = await GetAssignableRolesAsync(cancellationToken);
+        if (model.SelectedRoleIds.Count == 0)
+        {
+            ModelState.AddModelError(
+                nameof(model.SelectedRoleIds),
+                "Hãy chọn ít nhất một vai trò.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var email = model.Email.Trim().ToLowerInvariant();
+        if (await _userManager.FindByEmailAsync(email) is not null)
+        {
+            ModelState.AddModelError(nameof(model.Email), "Email đã tồn tại.");
+            return View(model);
+        }
+
+        var roleNames = await ResolveRoleNamesAsync(
+            model.SelectedRoleIds,
+            cancellationToken);
+        if (roleNames.Count != model.SelectedRoleIds.Distinct().Count())
+        {
+            ModelState.AddModelError(
+                nameof(model.SelectedRoleIds),
+                "Có vai trò không tồn tại hoặc đã bị vô hiệu hóa.");
+            return View(model);
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            FullName = model.FullName.Trim(),
+            PhoneNumber = NormalizeNullable(model.PhoneNumber),
+            Address = NormalizeNullable(model.Address),
+            IsActive = model.IsActive,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var createResult = await _userManager.CreateAsync(user, model.Password);
+        if (!createResult.Succeeded)
+        {
+            AddIdentityErrors(createResult);
+            return View(model);
+        }
+
+        var roleResult = await _userManager.AddToRolesAsync(user, roleNames);
+        if (!roleResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(user);
+            AddIdentityErrors(roleResult);
+            return View(model);
+        }
+
+        await WriteUserAuditAsync(
+            "CreateSystemUser",
+            user.Id,
+            $"Email={user.Email}; Roles={string.Join(",", roleNames)}; Active={user.IsActive}",
+            cancellationToken);
+
+        TempData["Success"] = "Đã tạo tài khoản và gán vai trò.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    [SystemPermissionAction(SystemPermissionActions.Edit)]
+    public async Task<IActionResult> Edit(
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (!await CanManageTargetIdentityAsync(user))
+        {
+            return Forbid();
+        }
+
+        var canAssignRoles = await CanAssignRolesAsync(cancellationToken);
+        ViewBag.CanAssignRoles = canAssignRoles;
+        var currentRoleNames = await _userManager.GetRolesAsync(user);
+        var roleIds = new List<string>();
+        foreach (var roleName in currentRoleNames)
+        {
+            var role = await _roleManager.FindByNameAsync(roleName);
+            if (role is not null)
+            {
+                roleIds.Add(role.Id);
+            }
+        }
+
+        return View(new EditSystemUserViewModel
+        {
+            UserId = user.Id,
+            Email = user.Email ?? string.Empty,
+            FullName = user.FullName,
+            PhoneNumber = user.PhoneNumber,
+            Address = user.Address,
+            IsActive = user.IsActive,
+            SelectedRoleIds = roleIds,
+            AvailableRoles = await GetAssignableRolesAsync(cancellationToken)
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [SystemPermissionAction(SystemPermissionActions.Edit)]
+    public async Task<IActionResult> Edit(
+        EditSystemUserViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var canAssignRoles = await CanAssignRolesAsync(cancellationToken);
+        ViewBag.CanAssignRoles = canAssignRoles;
+        model.AvailableRoles = await GetAssignableRolesAsync(cancellationToken);
+
+        if (canAssignRoles && model.SelectedRoleIds.Count == 0)
+        {
+            ModelState.AddModelError(
+                nameof(model.SelectedRoleIds),
+                "Hãy chọn ít nhất một vai trò.");
+        }
+
+        var user = await _userManager.FindByIdAsync(model.UserId);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (!await CanManageTargetIdentityAsync(user))
+        {
+            return Forbid();
+        }
+
+        var currentUserId = User.GetUserId();
+        if (string.Equals(currentUserId, user.Id, StringComparison.Ordinal)
+            && !model.IsActive)
+        {
+            ModelState.AddModelError(
+                nameof(model.IsActive),
+                "Không thể tự khóa tài khoản đang đăng nhập.");
+        }
+
+        var currentRoles = await _userManager.GetRolesAsync(user);
+        var selectedRoleNames = currentRoles.ToList();
+        if (canAssignRoles)
+        {
+            selectedRoleNames = await ResolveRoleNamesAsync(
+                model.SelectedRoleIds,
+                cancellationToken);
+            if (selectedRoleNames.Count != model.SelectedRoleIds.Distinct().Count())
+            {
+                ModelState.AddModelError(
+                    nameof(model.SelectedRoleIds),
+                    "Có vai trò không tồn tại hoặc đã bị vô hiệu hóa.");
+            }
+        }
+
+        if (string.Equals(currentUserId, user.Id, StringComparison.Ordinal)
+            && !new HashSet<string>(currentRoles, StringComparer.Ordinal)
+                .SetEquals(selectedRoleNames))
+        {
+            ModelState.AddModelError(
+                nameof(model.SelectedRoleIds),
+                "Không thể thay đổi vai trò của chính tài khoản đang đăng nhập.");
+        }
+
+        var removesAdmin = currentRoles.Contains(
+                RoleConstants.Admin,
+                StringComparer.Ordinal)
+            && !selectedRoleNames.Contains(
+                RoleConstants.Admin,
+                StringComparer.Ordinal);
+
+        if (string.Equals(currentUserId, user.Id, StringComparison.Ordinal)
+            && removesAdmin)
+        {
+            ModelState.AddModelError(
+                nameof(model.SelectedRoleIds),
+                "Không thể tự thu hồi role Admin của tài khoản đang đăng nhập.");
+        }
+
+        if ((removesAdmin || !model.IsActive)
+            && currentRoles.Contains(RoleConstants.Admin, StringComparer.Ordinal)
+            && user.IsActive)
+        {
+            var activeAdmins = (await _userManager
+                    .GetUsersInRoleAsync(RoleConstants.Admin))
+                .Count(x => x.IsActive);
+
+            if (activeAdmins <= 1)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Không thể khóa hoặc hạ quyền quản trị viên hoạt động cuối cùng.");
+            }
+        }
+
+        var normalizedEmail = model.Email.Trim().ToLowerInvariant();
+        var duplicateUser = await _userManager.FindByEmailAsync(normalizedEmail);
+        if (duplicateUser is not null
+            && !string.Equals(
+                duplicateUser.Id,
+                user.Id,
+                StringComparison.Ordinal))
+        {
+            ModelState.AddModelError(nameof(model.Email), "Email đã tồn tại.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var previousRoles = currentRoles.ToList();
+        user.Email = normalizedEmail;
+        user.UserName = normalizedEmail;
+        user.NormalizedEmail = _userManager.NormalizeEmail(normalizedEmail);
+        user.NormalizedUserName = _userManager.NormalizeName(normalizedEmail);
+        user.FullName = model.FullName.Trim();
+        user.PhoneNumber = NormalizeNullable(model.PhoneNumber);
+        user.Address = NormalizeNullable(model.Address);
+        user.IsActive = model.IsActive;
+
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            AddIdentityErrors(updateResult);
+            return View(model);
+        }
+
+        var rolesToAdd = selectedRoleNames
+            .Except(currentRoles, StringComparer.Ordinal)
+            .ToList();
+        var rolesToRemove = currentRoles
+            .Except(selectedRoleNames, StringComparer.Ordinal)
+            .ToList();
+
+        if (rolesToAdd.Count > 0)
+        {
+            var addResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
+            if (!addResult.Succeeded)
+            {
+                AddIdentityErrors(addResult);
+                return View(model);
+            }
+        }
+
+        if (rolesToRemove.Count > 0)
+        {
+            var removeResult = await _userManager.RemoveFromRolesAsync(
+                user,
+                rolesToRemove);
+            if (!removeResult.Succeeded)
+            {
+                AddIdentityErrors(removeResult);
+                return View(model);
+            }
+        }
+
+        await _userManager.UpdateSecurityStampAsync(user);
+        await WriteUserAuditAsync(
+            "UpdateSystemUser",
+            user.Id,
+            $"Email={user.Email}; PreviousRoles={string.Join(",", previousRoles)}; Roles={string.Join(",", selectedRoleNames)}; Active={user.IsActive}",
+            cancellationToken);
+
+        TempData["Success"] = "Đã cập nhật tài khoản và vai trò.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    [SystemPermissionAction(SystemPermissionActions.Edit)]
+    public async Task<IActionResult> ResetPassword(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (!await CanManageTargetIdentityAsync(user))
+        {
+            return Forbid();
+        }
+
+        return View(new ResetSystemUserPasswordViewModel
+        {
+            UserId = user.Id,
+            UserDisplay = $"{user.FullName} ({user.Email})"
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [SystemPermissionAction(SystemPermissionActions.Edit)]
+    public async Task<IActionResult> ResetPassword(
+        ResetSystemUserPasswordViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userManager.FindByIdAsync(model.UserId);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (!await CanManageTargetIdentityAsync(user))
+        {
+            return Forbid();
+        }
+
+        model.UserDisplay = $"{user.FullName} ({user.Email})";
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(
+            user,
+            token,
+            model.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            AddIdentityErrors(result);
+            return View(model);
+        }
+
+        await _userManager.UpdateSecurityStampAsync(user);
+        await WriteUserAuditAsync(
+            "ResetSystemUserPassword",
+            user.Id,
+            $"Email={user.Email}",
+            cancellationToken);
+
+        TempData["Success"] = "Đã đặt lại mật khẩu tài khoản.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    [SystemPermissionAction(SystemPermissionActions.Edit)]
     public async Task<IActionResult> AdjustBalance(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
@@ -64,7 +478,10 @@ public class UsersController : Controller
     [HttpPost]
     [EnableRateLimiting("money")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AdjustBalance(ManualAdjustBalanceViewModel model, CancellationToken cancellationToken)
+    [SystemPermissionAction(SystemPermissionActions.Edit)]
+    public async Task<IActionResult> AdjustBalance(
+        ManualAdjustBalanceViewModel model,
+        CancellationToken cancellationToken)
     {
         var user = await _userManager.FindByIdAsync(model.UserId);
         if (user is null)
@@ -73,7 +490,6 @@ public class UsersController : Controller
         }
 
         ViewBag.TargetUser = user;
-
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -91,15 +507,11 @@ public class UsersController : Controller
                 PerformedByAdminId = User.GetUserId()
             }, cancellationToken);
 
-            await _auditLogService.WriteAsync(new AuditLogEntryDto
-            {
-                ActorUserId = User.GetUserId(),
-                Action = "ManualAdjustBalance",
-                EntityName = nameof(ApplicationUser),
-                EntityId = model.UserId,
-                Details = $"Amount: {model.Amount}; Note: {model.Note}",
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            }, cancellationToken);
+            await WriteUserAuditAsync(
+                "ManualAdjustBalance",
+                model.UserId,
+                $"Amount={model.Amount}; Note={model.Note}",
+                cancellationToken);
 
             TempData["Success"] = "Điều chỉnh số dư thành công.";
             return RedirectToAction(nameof(Index));
@@ -113,7 +525,10 @@ public class UsersController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ToggleActive(string userId, CancellationToken cancellationToken)
+    [SystemPermissionAction(SystemPermissionActions.Edit)]
+    public async Task<IActionResult> ToggleActive(
+        string userId,
+        CancellationToken cancellationToken)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
@@ -121,55 +536,86 @@ public class UsersController : Controller
             return NotFound();
         }
 
+        if (!await CanManageTargetIdentityAsync(user))
+        {
+            return Forbid();
+        }
+
         if (string.Equals(User.GetUserId(), userId, StringComparison.Ordinal))
         {
-            TempData["Error"] = "Không thể tự khóa tài khoản quản trị đang đăng nhập.";
+            TempData["Error"] =
+                "Không thể tự khóa tài khoản quản trị đang đăng nhập.";
             return RedirectToAction(nameof(Index));
         }
 
-        if (user.IsActive && await _userManager.IsInRoleAsync(user, RoleConstants.Admin))
+        if (user.IsActive
+            && await _userManager.IsInRoleAsync(user, RoleConstants.Admin))
         {
-            var activeAdmins = (await _userManager.GetUsersInRoleAsync(RoleConstants.Admin))
+            var activeAdmins = (await _userManager
+                    .GetUsersInRoleAsync(RoleConstants.Admin))
                 .Count(x => x.IsActive);
 
             if (activeAdmins <= 1)
             {
-                TempData["Error"] = "Không thể khóa quản trị viên hoạt động cuối cùng của hệ thống.";
+                TempData["Error"] =
+                    "Không thể khóa quản trị viên hoạt động cuối cùng.";
                 return RedirectToAction(nameof(Index));
             }
         }
 
         user.IsActive = !user.IsActive;
         var updateResult = await _userManager.UpdateAsync(user);
-
         if (!updateResult.Succeeded)
         {
-            TempData["Error"] = string.Join("; ", updateResult.Errors.Select(x => x.Description));
+            TempData["Error"] = string.Join(
+                "; ",
+                updateResult.Errors.Select(x => x.Description));
             return RedirectToAction(nameof(Index));
         }
 
-        await _auditLogService.WriteAsync(new AuditLogEntryDto
-        {
-            ActorUserId = User.GetUserId(),
-            Action = "ToggleUserActive",
-            EntityName = nameof(ApplicationUser),
-            EntityId = user.Id,
-            Details = $"IsActive: {user.IsActive}",
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        }, cancellationToken);
+        await _userManager.UpdateSecurityStampAsync(user);
+        await WriteUserAuditAsync(
+            "ToggleUserActive",
+            user.Id,
+            $"IsActive={user.IsActive}",
+            cancellationToken);
 
-        TempData["Success"] = user.IsActive ? "Đã mở khóa tài khoản." : "Đã khóa tài khoản.";
+        TempData["Success"] = user.IsActive
+            ? "Đã mở khóa tài khoản."
+            : "Đã khóa tài khoản.";
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SetRole(string userId, string roleName, CancellationToken cancellationToken)
+    [SystemPermissionAction(SystemPermissionActions.Edit)]
+    public async Task<IActionResult> SetRole(
+        string userId,
+        string roleName,
+        CancellationToken cancellationToken)
     {
-        var allowedRoles = new[] { RoleConstants.Customer, RoleConstants.ShopOperator, RoleConstants.Admin };
-        if (!allowedRoles.Contains(roleName, StringComparer.Ordinal))
+        if (!await CanAssignRolesAsync(cancellationToken))
         {
-            TempData["Error"] = "Role không hợp lệ.";
+            return Forbid();
+        }
+
+        if (!User.IsInRole(RoleConstants.Admin)
+            && string.Equals(roleName, RoleConstants.Admin, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
+        var role = await _roleManager.FindByNameAsync(roleName);
+        if (role is null)
+        {
+            TempData["Error"] = "Role không tồn tại.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var activeRoles = await GetAssignableRolesAsync(cancellationToken);
+        if (!activeRoles.Any(x => x.RoleId == role.Id))
+        {
+            TempData["Error"] = "Role đã bị vô hiệu hóa.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -179,71 +625,133 @@ public class UsersController : Controller
             return NotFound();
         }
 
-        if (string.Equals(User.GetUserId(), userId, StringComparison.Ordinal)
-            && !string.Equals(roleName, RoleConstants.Admin, StringComparison.Ordinal))
+        if (!await CanManageTargetIdentityAsync(user))
         {
-            TempData["Error"] = "Không thể tự hạ quyền tài khoản quản trị đang đăng nhập.";
-            return RedirectToAction(nameof(Index));
+            return Forbid();
         }
 
-        if (!await _roleManager.RoleExistsAsync(roleName))
+        if (string.Equals(User.GetUserId(), userId, StringComparison.Ordinal))
         {
-            TempData["Error"] = "Role chưa tồn tại trong hệ thống.";
+            TempData["Error"] = "Không thể thay đổi vai trò của chính tài khoản đang đăng nhập.";
             return RedirectToAction(nameof(Index));
         }
 
         var currentRoles = await _userManager.GetRolesAsync(user);
-        if (currentRoles.Contains(RoleConstants.Admin, StringComparer.Ordinal)
-            && !string.Equals(roleName, RoleConstants.Admin, StringComparison.Ordinal)
-            && user.IsActive)
-        {
-            var activeAdmins = (await _userManager.GetUsersInRoleAsync(RoleConstants.Admin))
-                .Count(x => x.IsActive);
-
-            if (activeAdmins <= 1)
-            {
-                TempData["Error"] = "Không thể hạ quyền quản trị viên hoạt động cuối cùng của hệ thống.";
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
         if (!currentRoles.Contains(roleName, StringComparer.Ordinal))
         {
             var addResult = await _userManager.AddToRoleAsync(user, roleName);
             if (!addResult.Succeeded)
             {
-                TempData["Error"] = string.Join("; ", addResult.Errors.Select(x => x.Description));
+                TempData["Error"] = string.Join(
+                    "; ",
+                    addResult.Errors.Select(x => x.Description));
                 return RedirectToAction(nameof(Index));
             }
         }
 
-        var removableRoles = currentRoles
-            .Where(x => allowedRoles.Contains(x, StringComparer.Ordinal)
-                        && !string.Equals(x, roleName, StringComparison.Ordinal))
-            .ToList();
+        await WriteUserAuditAsync(
+            "AddUserRole",
+            user.Id,
+            $"Role={roleName}",
+            cancellationToken);
 
-        if (removableRoles.Count > 0)
+        TempData["Success"] = "Đã bổ sung role cho tài khoản.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<IReadOnlyList<SystemRoleListItemDto>> GetAssignableRolesAsync(
+        CancellationToken cancellationToken)
+    {
+        var roles = (await _systemAdministrationService
+                .GetRolesAsync(cancellationToken))
+            .Where(x => x.IsActive);
+
+        if (!User.IsInRole(RoleConstants.Admin))
         {
-            var removeResult = await _userManager.RemoveFromRolesAsync(user, removableRoles);
-            if (!removeResult.Succeeded)
-            {
-                TempData["Error"] = "Đã thêm role mới nhưng chưa xóa hết role cũ: "
-                                    + string.Join("; ", removeResult.Errors.Select(x => x.Description));
-                return RedirectToAction(nameof(Index));
-            }
+            roles = roles.Where(x => !string.Equals(
+                x.RoleName,
+                RoleConstants.Admin,
+                StringComparison.Ordinal));
         }
 
-        await _auditLogService.WriteAsync(new AuditLogEntryDto
+        return roles
+            .OrderBy(x => x.DisplayName)
+            .ToList();
+    }
+
+    private async Task<List<string>> ResolveRoleNamesAsync(
+        IEnumerable<string> roleIds,
+        CancellationToken cancellationToken)
+    {
+        var activeRoles = await GetAssignableRolesAsync(cancellationToken);
+        var activeMap = activeRoles.ToDictionary(
+            x => x.RoleId,
+            x => x.RoleName,
+            StringComparer.Ordinal);
+
+        return roleIds
+            .Distinct(StringComparer.Ordinal)
+            .Where(activeMap.ContainsKey)
+            .Select(x => activeMap[x])
+            .ToList();
+    }
+
+    private async Task<bool> CanAssignRolesAsync(
+        CancellationToken cancellationToken)
+    {
+        if (User.IsInRole(RoleConstants.Admin))
+        {
+            return true;
+        }
+
+        return await _systemAdministrationService.HasPermissionAsync(
+            User,
+            "Admin",
+            "SystemRoles",
+            SystemPermissionActions.Edit,
+            cancellationToken);
+    }
+
+    private async Task<bool> CanManageTargetIdentityAsync(
+        ApplicationUser targetUser)
+    {
+        if (User.IsInRole(RoleConstants.Admin))
+        {
+            return true;
+        }
+
+        return !await _userManager.IsInRoleAsync(
+            targetUser,
+            RoleConstants.Admin);
+    }
+
+    private void AddIdentityErrors(IdentityResult result)
+    {
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+    }
+
+    private Task WriteUserAuditAsync(
+        string action,
+        string userId,
+        string details,
+        CancellationToken cancellationToken)
+    {
+        return _auditLogService.WriteAsync(new AuditLogEntryDto
         {
             ActorUserId = User.GetUserId(),
-            Action = "SetUserRole",
+            Action = action,
             EntityName = nameof(ApplicationUser),
-            EntityId = user.Id,
-            Details = $"PreviousRoles: {string.Join(",", currentRoles)}; NewRole: {roleName}",
+            EntityId = userId,
+            Details = details,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         }, cancellationToken);
+    }
 
-        TempData["Success"] = "Cập nhật role người dùng thành công.";
-        return RedirectToAction(nameof(Index));
+    private static string? NormalizeNullable(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

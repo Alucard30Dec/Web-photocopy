@@ -1,0 +1,69 @@
+@{
+    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+}
+
+@model List<UploadedFileMetadata>
+@{
+    ViewData["Title"] = "File đã upload";
+}
+
+<section class="cu-page">
+    <section class="cu-hero">
+        <div>
+            <span class="cu-kicker">Uploaded files</span>
+            <h1>File đã upload</h1>
+            <p>Quản lý các file bạn đã gửi lên hệ thống để tái sử dụng cho đơn in mới hoặc tải lại khi cần.</p>
+            <div class="cu-actions">
+                <a class="btn btn-primary" asp-action="Create" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Upload trong đơn in mới</a>
+                <a class="btn btn-outline-secondary" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Đơn in của tôi</a>
+            </div>
+        </div>
+        <aside class="cu-hero-card">
+            <span class="cu-card-label">Tổng file</span>
+            <strong>@Model.Count</strong>
+            <small>Chỉ bạn và nhân sự có quyền xử lý đơn mới được truy cập file.</small>
+        </aside>
+    </section>
+
+    <section class="cu-card">
+        <div class="cu-table-wrap">
+            <table class="table cu-table">
+                <thead>
+                    <tr>
+                        <th>Tên file</th>
+                        <th>Dung lượng</th>
+                        <th>Loại</th>
+                        <th>Ngày upload</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5">
+                            <div class="cu-empty">
+                                <strong>Chưa có file nào.</strong>
+                                <span>File sẽ xuất hiện ở đây sau khi bạn tạo đơn in.</span>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">@item.OriginalFileName</td>
+                        <td>@(item.Size / 1024) KB</td>
+                        <td>@item.ContentType</td>
+                        <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="PreviewFile" asp-route-id="@item.Id" target="_blank" rel="noopener" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Xem trước</a>
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="DownloadFile" asp-route-id="@item.Id" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Tải xuống</a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>

@@ -6,7 +6,7 @@ using WebPhotocopyHub.Domain.Constants;
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = RoleConstants.Admin)]
+[Authorize]
 public class ReconciliationController : Controller
 {
     private readonly IWalletReconciliationService _walletReconciliationService;

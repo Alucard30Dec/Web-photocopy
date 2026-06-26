@@ -1,0 +1,38 @@
+@model BranchFeaturesViewModel
+@{
+    ViewData["Title"] = "Chức năng cơ sở";
+}
+
+<section class="branch-admin-page">
+    <div class="branch-admin-heading">
+        <div>
+            <span class="branch-admin-eyebrow">FEATURE CONTROL</span>
+            <h1>Chức năng của @Model.BranchName</h1>
+            <p>Chức năng bị tắt sẽ không xuất hiện trên menu và truy cập trực tiếp cũng bị từ chối.</p>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+    </div>
+
+    <form asp-action="Features" method="post" class="branch-admin-feature-form">
+        <input asp-for="BranchId" type="hidden" />
+        <input asp-for="BranchName" type="hidden" />
+        <div class="branch-admin-feature-grid">
+            @for (var index = 0; index < Model.Features.Count; index++)
+            {
+                <label class="branch-admin-feature-card">
+                    <input asp-for="Features[index].IsEnabled" />
+                    <input asp-for="Features[index].Code" type="hidden" />
+                    <input asp-for="Features[index].Name" type="hidden" />
+                    <input asp-for="Features[index].Description" type="hidden" />
+                    <span>
+                        <strong>@Model.Features[index].Name</strong>
+                        <small>@Model.Features[index].Description</small>
+                    </span>
+                </label>
+            }
+        </div>
+        <div class="branch-admin-form-actions">
+            <button class="btn btn-primary" type="submit">Lưu cấu hình chức năng</button>
+        </div>
+    </form>
+</section>

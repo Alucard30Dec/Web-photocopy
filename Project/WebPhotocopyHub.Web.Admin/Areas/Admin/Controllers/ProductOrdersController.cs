@@ -12,7 +12,7 @@ using WebPhotocopyHub.Web.Extensions;
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = RoleConstants.Admin)]
+[Authorize]
 public sealed class ProductOrdersController : Controller
 {
     private readonly IProductOrderService _productOrderService;

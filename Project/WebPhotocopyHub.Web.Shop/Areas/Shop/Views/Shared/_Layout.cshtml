@@ -1,3 +1,9 @@
+@using System.Security.Claims
+@using WebPhotocopyHub.Application.Branching
+@using WebPhotocopyHub.Application.Contracts
+@using WebPhotocopyHub.Domain.Constants
+@inject IBranchContext BranchContext
+@inject IBranchManagementService BranchManagementService
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -21,6 +27,31 @@
     var branchHomeUrl = string.IsNullOrWhiteSpace(branchSlug) ? "/" : $"/{branchSlug}";
     var displayName = string.IsNullOrWhiteSpace(User.Identity?.Name) ? "Nhân viên vận hành" : User.Identity!.Name!;
     var displayInitial = displayName.Trim().Substring(0, 1).ToUpperInvariant();
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    var isSystemAdmin = User.IsInRole(RoleConstants.Admin);
+    var currentBranchId = BranchContext.BranchId;
+    var enabledFeatures = currentBranchId.HasValue
+        ? await BranchManagementService.GetEnabledFeaturesAsync(currentBranchId.Value)
+        : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    async Task<bool> CanAsync(string featureCode, string permissionCode)
+    {
+        if (!currentBranchId.HasValue || !enabledFeatures.Contains(featureCode))
+        {
+            return false;
+        }
+
+        return isSystemAdmin || await BranchManagementService.UserHasPermissionAsync(currentUserId, currentBranchId.Value, permissionCode);
+    }
+
+    var canDashboard = currentBranchId.HasValue && (isSystemAdmin || await BranchManagementService.UserHasPermissionAsync(currentUserId, currentBranchId.Value, BranchPermissionCodes.DashboardView));
+    var canTopUpView = await CanAsync(BranchFeatureCodes.TopUps, BranchPermissionCodes.TopUpsView);
+    var canTopUpReview = await CanAsync(BranchFeatureCodes.TopUps, BranchPermissionCodes.TopUpsReview);
+    var canCounterTopUp = await CanAsync(BranchFeatureCodes.TopUps, BranchPermissionCodes.CounterTopUp);
+    var canPrintView = await CanAsync(BranchFeatureCodes.PrintOrders, BranchPermissionCodes.PrintJobsView);
+    var canSupportView = await CanAsync(BranchFeatureCodes.SupportServices, BranchPermissionCodes.SupportOrdersView);
+    var canProductView = await CanAsync(BranchFeatureCodes.ProductSales, BranchPermissionCodes.ProductOrdersView);
+    var canInventoryView = await CanAsync(BranchFeatureCodes.Inventory, BranchPermissionCodes.InventoryView);
 
     string ShopUrl(string controllerName, string actionName = "Index")
     {
@@ -113,7 +144,7 @@
 
     <div class="shop-function-bar">
         <nav class="shop-function-groups" aria-label="Nhóm chức năng quản trị cơ sở">
-            <div class="shop-function-group dropdown @(IsActive("Dashboard") ? "is-active" : string.Empty)">
+            <div class="shop-function-group dropdown @(IsActive("Dashboard") ? "is-active" : string.Empty)" hidden="@(!canDashboard)">
                 <button class="shop-function-group-toggle dropdown-toggle" type="button" id="shop-nav-overview" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
                     <span class="shop-function-group-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-dashboard"></use></svg></span>
                     <span class="shop-function-group-copy"><strong>Tổng quan</strong><small>Điều hành chung</small></span>
@@ -143,7 +174,7 @@
                 </ul>
             </div>
 
-            <div class="shop-function-group dropdown @(IsActive("TopUpRequests") ? "is-active" : string.Empty)">
+            <div class="shop-function-group dropdown @(IsActive("TopUpRequests") ? "is-active" : string.Empty)" hidden="@(!(canTopUpView || canCounterTopUp))">
                 <button class="shop-function-group-toggle dropdown-toggle" type="button" id="shop-nav-finance" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
                     <span class="shop-function-group-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-wallet-check"></use></svg></span>
                     <span class="shop-function-group-copy"><strong>Tài chính</strong><small>Nạp tiền và ví</small></span>
@@ -157,14 +188,14 @@
                         </div>
                     </li>
                     <li>
-                        <a class="dropdown-item shop-function-menu-item @(IsActive("TopUpRequests", "Index") ? "active" : string.Empty)" href="@ShopUrl("TopUpRequests")">
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("TopUpRequests", "Index") ? "active" : string.Empty)" href="@ShopUrl("TopUpRequests")" hidden="@(!canTopUpView)">
                             <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-wallet-check"></use></svg></span>
                             <span class="shop-function-menu-copy"><strong>Duyệt nạp tiền</strong><small>Kiểm tra chứng từ và giao dịch</small></span>
                             <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item shop-function-menu-item @(IsActive("TopUpRequests", "CounterTopUp") ? "active" : string.Empty)" href="@ShopUrl("TopUpRequests", "CounterTopUp")">
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("TopUpRequests", "CounterTopUp") ? "active" : string.Empty)" href="@ShopUrl("TopUpRequests", "CounterTopUp")" hidden="@(!canCounterTopUp)">
                             <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-counter"></use></svg></span>
                             <span class="shop-function-menu-copy"><strong>Nạp tiền tại quầy</strong><small>Cộng ví trực tiếp cho khách hàng</small></span>
                             <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
@@ -173,7 +204,7 @@
                 </ul>
             </div>
 
-            <div class="shop-function-group dropdown @((IsActive("PrintJobs") || IsActive("SupportOrders")) ? "is-active" : string.Empty)">
+            <div class="shop-function-group dropdown @((IsActive("PrintJobs") || IsActive("SupportOrders")) ? "is-active" : string.Empty)" hidden="@(!(canPrintView || canSupportView))">
                 <button class="shop-function-group-toggle dropdown-toggle" type="button" id="shop-nav-services" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
                     <span class="shop-function-group-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg></span>
                     <span class="shop-function-group-copy"><strong>Xử lý đơn</strong><small>In ấn và hỗ trợ</small></span>
@@ -187,14 +218,14 @@
                         </div>
                     </li>
                     <li>
-                        <a class="dropdown-item shop-function-menu-item @(IsActive("PrintJobs") ? "active" : string.Empty)" href="@ShopUrl("PrintJobs")">
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("PrintJobs") ? "active" : string.Empty)" href="@ShopUrl("PrintJobs")" hidden="@(!canPrintView)">
                             <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-printer"></use></svg></span>
                             <span class="shop-function-menu-copy"><strong>Hàng chờ in</strong><small>Nhận file và xử lý đơn in</small></span>
                             <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item shop-function-menu-item @(IsActive("SupportOrders") ? "active" : string.Empty)" href="@ShopUrl("SupportOrders")">
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("SupportOrders") ? "active" : string.Empty)" href="@ShopUrl("SupportOrders")" hidden="@(!canSupportView)">
                             <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-service"></use></svg></span>
                             <span class="shop-function-menu-copy"><strong>Dịch vụ hỗ trợ</strong><small>Scan, đóng gáy và ép plastic</small></span>
                             <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
@@ -203,7 +234,7 @@
                 </ul>
             </div>
 
-            <div class="shop-function-group dropdown @((IsActive("ProductOrders") || IsActive("Inventory")) ? "is-active" : string.Empty)">
+            <div class="shop-function-group dropdown @((IsActive("ProductOrders") || IsActive("Inventory")) ? "is-active" : string.Empty)" hidden="@(!(canProductView || canInventoryView))">
                 <button class="shop-function-group-toggle dropdown-toggle" type="button" id="shop-nav-goods" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
                     <span class="shop-function-group-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-package"></use></svg></span>
                     <span class="shop-function-group-copy"><strong>Hàng hóa &amp; kho</strong><small>Đơn hàng, tồn kho</small></span>
@@ -217,14 +248,14 @@
                         </div>
                     </li>
                     <li>
-                        <a class="dropdown-item shop-function-menu-item @(IsActive("ProductOrders") ? "active" : string.Empty)" href="@ShopUrl("ProductOrders")">
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("ProductOrders") ? "active" : string.Empty)" href="@ShopUrl("ProductOrders")" hidden="@(!canProductView)">
                             <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-package"></use></svg></span>
                             <span class="shop-function-menu-copy"><strong>Đơn văn phòng phẩm</strong><small>Chuẩn bị và bàn giao đơn hàng</small></span>
                             <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item shop-function-menu-item @(IsActive("Inventory") ? "active" : string.Empty)" href="@ShopUrl("Inventory")">
+                        <a class="dropdown-item shop-function-menu-item @(IsActive("Inventory") ? "active" : string.Empty)" href="@ShopUrl("Inventory")" hidden="@(!canInventoryView)">
                             <span class="shop-function-menu-icon"><svg class="shop-icon" aria-hidden="true"><use href="#shop-icon-inventory"></use></svg></span>
                             <span class="shop-function-menu-copy"><strong>Quản lý tồn kho</strong><small>Nhập, xuất và theo dõi cảnh báo</small></span>
                             <svg class="shop-icon shop-function-menu-arrow" aria-hidden="true"><use href="#shop-icon-arrow"></use></svg>

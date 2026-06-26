@@ -1,80 +1,22 @@
+using WebPhotocopyHub.Domain.Entities;
+
 namespace WebPhotocopyHub.Web.Models;
 
 public static class ShopBranchCatalog
 {
-    private static readonly IReadOnlyList<ShopBranchLinkViewModel> Branches = new List<ShopBranchLinkViewModel>
+    private static readonly object SyncRoot = new();
+    private static List<ShopBranchLinkViewModel> _branches = BuildFallbackBranches();
+
+    public static IReadOnlyList<ShopBranchLinkViewModel> All
     {
-        new()
+        get
         {
-            Slug = "ToanPhotocopy",
-            Name = "Toàn Photocopy",
-            Address = "Cơ sở photocopy Toàn - cập nhật địa chỉ thật trong phần quản trị",
-            ShortDescription = "Trang cơ sở dành cho khách hàng gửi file, tạo đơn in, xem sản phẩm văn phòng phẩm và theo dõi trạng thái xử lý tại Toàn Photocopy.",
-            PhoneNumber = "Đang cập nhật",
-            OpenHours = "08:00 - 21:00 hằng ngày",
-            CustomerNote = "Bạn có thể upload file trước, ghi chú số bản, in màu/in trắng đen, một mặt/hai mặt và thời gian muốn nhận.",
-            PopularServices = new[]
+            lock (SyncRoot)
             {
-                "In tài liệu A4/A3, in màu và trắng đen",
-                "Photocopy giáo trình, hồ sơ, biểu mẫu",
-                "Đóng gáy, bấm kim, phân tập tài liệu",
-                "Scan tài liệu và hỗ trợ chỉnh file cơ bản"
-            },
-            QuickOptions = new[]
-            {
-                "Upload file online",
-                "Ghi chú yêu cầu in",
-                "Theo dõi trạng thái đơn",
-                "Nhận tài liệu tại tiệm"
-            }
-        },
-        new()
-        {
-            Slug = "141-dien-bien-phu",
-            Name = "WebPhotocopyHub 141 Điện Biên Phủ",
-            Address = "141 Điện Biên Phủ",
-            ShortDescription = "Cơ sở phục vụ khách hàng đặt in, upload file, đặt sản phẩm và theo dõi trạng thái đơn.",
-            PhoneNumber = "Đang cập nhật",
-            OpenHours = "08:00 - 21:00",
-            CustomerNote = "Khách hàng gửi file trước để cơ sở kiểm tra và chuẩn bị đơn nhanh hơn.",
-            PopularServices = new[]
-            {
-                "In và photocopy tài liệu",
-                "Upload file online",
-                "Đóng gáy và hoàn thiện"
-            },
-            QuickOptions = new[]
-            {
-                "Tạo đơn in",
-                "Xem sản phẩm",
-                "Dịch vụ hỗ trợ"
-            }
-        },
-        new()
-        {
-            Slug = "co-so-trung-tam",
-            Name = "WebPhotocopyHub Cơ sở trung tâm",
-            Address = "Khu vực trung tâm",
-            ShortDescription = "Cơ sở phục vụ khách hàng tại khu vực trung tâm, hỗ trợ đặt in, photocopy và đặt sản phẩm.",
-            PhoneNumber = "Đang cập nhật",
-            OpenHours = "08:00 - 21:00",
-            CustomerNote = "Khách hàng có thể gửi file trước, ghi chú yêu cầu và theo dõi trạng thái xử lý trực tuyến.",
-            PopularServices = new[]
-            {
-                "In tài liệu",
-                "Photocopy",
-                "Đặt sản phẩm"
-            },
-            QuickOptions = new[]
-            {
-                "Link khách hàng riêng",
-                "Khu quản trị riêng",
-                "Tách dữ liệu theo cơ sở"
+                return _branches.Select(Clone).ToList();
             }
         }
-    };
-
-    public static IReadOnlyList<ShopBranchLinkViewModel> All => Branches;
+    }
 
     public static ShopBranchLinkViewModel? Find(string? slug)
     {
@@ -83,12 +25,95 @@ public static class ShopBranchCatalog
             return null;
         }
 
-        return Branches.FirstOrDefault(x =>
-            string.Equals(x.Slug, slug, StringComparison.OrdinalIgnoreCase));
+        lock (SyncRoot)
+        {
+            var item = _branches.FirstOrDefault(x =>
+                string.Equals(x.Slug, slug, StringComparison.OrdinalIgnoreCase));
+            return item is null ? null : Clone(item);
+        }
     }
 
     public static bool IsKnownSlug(string? slug)
     {
         return Find(slug) is not null;
+    }
+
+    public static void ReplaceFromEntities(IEnumerable<Branch> branches)
+    {
+        var mapped = branches
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
+            .Select(Map)
+            .ToList();
+
+        lock (SyncRoot)
+        {
+            _branches = mapped.Count > 0 ? mapped : BuildFallbackBranches();
+        }
+    }
+
+    private static ShopBranchLinkViewModel Map(Branch branch)
+    {
+        return new ShopBranchLinkViewModel
+        {
+            Slug = branch.Slug,
+            Name = branch.Name,
+            Address = branch.Address ?? "Đang cập nhật",
+            ShortDescription = branch.ShortDescription ?? $"Cơ sở {branch.Name} phục vụ đặt in, photocopy và các dịch vụ hỗ trợ.",
+            PhoneNumber = branch.PhoneNumber ?? "Đang cập nhật",
+            OpenHours = branch.OpenHours ?? "Đang cập nhật",
+            CustomerNote = branch.CustomerNote ?? "Khách hàng có thể gửi file trước và theo dõi trạng thái xử lý trực tuyến.",
+            PopularServices = SplitLines(branch.PopularServices, new[] { "In và photocopy tài liệu", "Upload file online", "Hoàn thiện tài liệu" }),
+            QuickOptions = SplitLines(branch.QuickOptions, new[] { "Tạo đơn in", "Theo dõi trạng thái", "Liên hệ cơ sở" })
+        };
+    }
+
+    private static IReadOnlyList<string> SplitLines(string? value, IReadOnlyList<string> fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return fallback;
+        }
+
+        return value
+            .Split(new[] { '\r', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static ShopBranchLinkViewModel Clone(ShopBranchLinkViewModel source)
+    {
+        return new ShopBranchLinkViewModel
+        {
+            Slug = source.Slug,
+            Name = source.Name,
+            Address = source.Address,
+            ShortDescription = source.ShortDescription,
+            PhoneNumber = source.PhoneNumber,
+            OpenHours = source.OpenHours,
+            CustomerNote = source.CustomerNote,
+            PopularServices = source.PopularServices.ToArray(),
+            QuickOptions = source.QuickOptions.ToArray()
+        };
+    }
+
+    private static List<ShopBranchLinkViewModel> BuildFallbackBranches()
+    {
+        return new List<ShopBranchLinkViewModel>
+        {
+            new()
+            {
+                Slug = "toanphotocopy",
+                Name = "Toàn Photocopy",
+                Address = "Đang cập nhật",
+                ShortDescription = "Cơ sở photocopy phục vụ gửi file, tạo đơn in và theo dõi trạng thái xử lý.",
+                PhoneNumber = "Đang cập nhật",
+                OpenHours = "08:00 - 21:00 hằng ngày",
+                CustomerNote = "Bạn có thể upload file trước và ghi chú đầy đủ yêu cầu in.",
+                PopularServices = new[] { "In tài liệu A4/A3", "Photocopy", "Đóng gáy", "Scan tài liệu" },
+                QuickOptions = new[] { "Upload file online", "Tạo đơn in", "Theo dõi trạng thái" }
+            }
+        };
     }
 }

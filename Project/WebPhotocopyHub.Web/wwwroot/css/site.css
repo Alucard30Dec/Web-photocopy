@@ -5609,35 +5609,10 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2
 }
 /* === ChatGPT Branch Customer Default UI Refresh End === */
 /* === ChatGPT Branch Auth Function Categories Start === */
-.branch-customer-auth-state {
-    display: grid;
-    gap: 0.25rem;
-    margin: 1rem 0 0;
-    border: 1px solid #dbe8f8;
-    border-radius: 14px;
-    padding: 0.85rem 1rem;
-    background: #f8fbff;
-}
 
-.branch-customer-auth-state strong {
-    color: #10164c;
-    font-weight: 900;
-}
 
-.branch-customer-auth-state span {
-    color: #5d6a86;
-    line-height: 1.55;
-}
 
-.branch-customer-auth-state.is-signed-in {
-    border-color: rgba(24, 200, 116, 0.34);
-    background: #f0fff7;
-}
 
-.branch-customer-auth-state.is-guest {
-    border-color: rgba(8, 107, 242, 0.24);
-    background: #f3f8ff;
-}
 
 .branch-customer-section-head p {
     margin: 0.55rem 0 0;

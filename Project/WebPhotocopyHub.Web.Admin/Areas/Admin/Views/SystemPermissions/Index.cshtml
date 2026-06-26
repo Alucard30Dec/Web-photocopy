@@ -1,0 +1,182 @@
+@model SystemPermissionMatrixViewModel
+@{
+    ViewData["Title"] = "Ma trận phân quyền";
+    var canEditPermissions = ViewBag.CanEditPermissions is true;
+    var canViewRoles = ViewBag.CanViewRoles is true;
+    var canViewFunctions = ViewBag.CanViewFunctions is true;
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Role-based access control</span>
+        <h1>Ma trận phân quyền chức năng</h1>
+        <p>Quyền hiệu lực của tài khoản là hợp của tất cả vai trò đang hoạt động được gán cho tài khoản đó.</p>
+    </div>
+    <div class="system-hero-actions">
+        @if (canViewRoles)
+        {
+            <a class="btn btn-outline-secondary"
+               asp-area="Admin"
+               asp-controller="SystemRoles"
+               asp-action="Index">Quản lý vai trò</a>
+        }
+        @if (canViewFunctions)
+        {
+            <a class="btn btn-outline-primary"
+               asp-area="Admin"
+               asp-controller="SystemFunctions"
+               asp-action="Index">Quản lý chức năng</a>
+        }
+    </div>
+</section>
+
+<section class="system-panel mt-3">
+    <div class="system-panel-header">
+        <div>
+            <span class="system-panel-kicker">Chọn nhóm quyền</span>
+            <h2>Vai trò cần cấu hình</h2>
+        </div>
+    </div>
+    <form asp-action="Index" method="get" class="system-filter-row">
+        <select name="roleId" class="form-select" aria-label="Chọn vai trò">
+            @foreach (var role in Model.AvailableRoles)
+            {
+                <option value="@role.RoleId"
+                        selected="@(role.RoleId == Model.RoleId)">
+                    @role.DisplayName (@role.RoleName)
+                </option>
+            }
+        </select>
+        <button class="btn btn-outline-primary" type="submit">Tải ma trận</button>
+    </form>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.RoleId))
+{
+    <section class="system-panel mt-3">
+        <div class="system-panel-header">
+            <div>
+                <span class="system-panel-kicker">Permission matrix</span>
+                <h2>@Model.RoleDisplayName</h2>
+            </div>
+            @if (Model.IsAdminRole)
+            {
+                <span class="system-access-badge is-protected">Toàn quyền mặc định</span>
+            }
+        </div>
+
+        @if (Model.IsAdminRole)
+        {
+            <div class="alert alert-info">
+                Role Admin luôn có toàn quyền để tránh khóa toàn bộ hệ thống. Ma trận dưới đây chỉ dùng để đối chiếu.
+            </div>
+        }
+
+        <form asp-action="Save" method="post">
+            <input asp-for="RoleId" type="hidden" />
+            <div class="table-responsive system-table-wrap">
+                <table class="table system-table system-permission-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Chức năng</th>
+                            <th class="text-center">Xem</th>
+                            <th class="text-center">Thêm</th>
+                            <th class="text-center">Sửa</th>
+                            <th class="text-center">Xóa</th>
+                            <th class="text-center">Xuất</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var index = 0; index < Model.Permissions.Count; index++)
+                        {
+                            var item = Model.Permissions[index];
+                            <tr class="@(item.Level == 0 ? "system-permission-root" : string.Empty)">
+                                <td>
+                                    <input asp-for="Permissions[index].FunctionId" type="hidden" />
+                                    <input asp-for="Permissions[index].FunctionCode" type="hidden" />
+                                    <div class="system-function-name" style="padding-left:@(item.Level * 22)px">
+                                        @if (item.Level > 0)
+                                        {
+                                            <span class="system-tree-branch" aria-hidden="true">↳</span>
+                                        }
+                                        <div>
+                                            <strong>@item.FunctionName</strong>
+                                            <small>@item.FunctionCode</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    @if (item.SupportsView)
+                                    {
+                                        <input asp-for="Permissions[index].CanView"
+                                               class="form-check-input"
+                                               disabled="@(Model.IsAdminRole || !canEditPermissions)" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.SupportsCreate)
+                                    {
+                                        <input asp-for="Permissions[index].CanCreate"
+                                               class="form-check-input"
+                                               disabled="@(Model.IsAdminRole || !canEditPermissions)" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.SupportsEdit)
+                                    {
+                                        <input asp-for="Permissions[index].CanEdit"
+                                               class="form-check-input"
+                                               disabled="@(Model.IsAdminRole || !canEditPermissions)" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.SupportsDelete)
+                                    {
+                                        <input asp-for="Permissions[index].CanDelete"
+                                               class="form-check-input"
+                                               disabled="@(Model.IsAdminRole || !canEditPermissions)" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.SupportsExport)
+                                    {
+                                        <input asp-for="Permissions[index].CanExport"
+                                               class="form-check-input"
+                                               disabled="@(Model.IsAdminRole || !canEditPermissions)" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.IsAdminRole && canEditPermissions)
+            {
+                <div class="system-form-actions">
+                    <button class="btn btn-primary" type="submit">Lưu ma trận quyền</button>
+                </div>
+            }
+        </form>
+    </section>
+}

@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
+using WebPhotocopyHub.Application.Branching;
+using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Domain.Constants;
 using WebPhotocopyHub.Domain.Entities;
 using WebPhotocopyHub.Web.Models;
@@ -15,15 +18,21 @@ public class AccountController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly ISystemAdministrationService _systemAdministrationService;
+    private readonly IBranchContext _branchContext;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
+        ISystemAdministrationService systemAdministrationService,
+        IBranchContext branchContext,
         ILogger<AccountController> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _systemAdministrationService = systemAdministrationService;
+        _branchContext = branchContext;
         _logger = logger;
     }
 
@@ -41,68 +50,116 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
-        return await LoginForRolesAsync(
-            model,
-            new[] { RoleConstants.Admin },
-            "/Admin",
-            "Admin hệ thống");
-    }
-
-    private async Task<IActionResult> LoginForRolesAsync(
-        LoginViewModel model,
-        IReadOnlyCollection<string> allowedRoles,
-        string defaultRedirectUrl,
-        string loginScope)
-    {
         if (!ModelState.IsValid)
         {
-            return View("Login", model);
+            return View(model);
         }
 
         var email = model.Email.Trim();
         var user = await _userManager.FindByEmailAsync(email);
         if (user is null || !user.IsActive)
         {
-            ModelState.AddModelError(string.Empty, "Tài khoản không tồn tại hoặc đã bị khóa.");
-            return View("Login", model);
+            ModelState.AddModelError(
+                string.Empty,
+                "Tài khoản không tồn tại hoặc đã bị khóa.");
+            return View(model);
         }
 
-        var result = await _signInManager.PasswordSignInAsync(email, model.Password, model.RememberMe, lockoutOnFailure: true);
+        var result = await _signInManager.PasswordSignInAsync(
+            email,
+            model.Password,
+            model.RememberMe,
+            lockoutOnFailure: true);
+
         if (!result.Succeeded)
         {
             if (result.IsLockedOut)
             {
-                ModelState.AddModelError(string.Empty, "Tài khoản đang bị khóa tạm thời do đăng nhập sai nhiều lần. Vui lòng thử lại sau.");
-                return View("Login", model);
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Tài khoản đang bị khóa tạm thời do đăng nhập sai nhiều lần. Vui lòng thử lại sau.");
+                return View(model);
             }
 
-            ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không đúng.");
-            return View("Login", model);
+            ModelState.AddModelError(
+                string.Empty,
+                "Email hoặc mật khẩu không đúng.");
+            return View(model);
         }
 
-        var roleAllowed = false;
-        foreach (var role in allowedRoles)
+        var accessAllowed = await _systemAdministrationService
+            .CanAccessAdminPortalAsync(
+                user,
+                HttpContext.RequestAborted);
+
+        if (!accessAllowed)
         {
-            if (await _userManager.IsInRoleAsync(user, role))
-            {
-                roleAllowed = true;
-                break;
-            }
+            await RejectAdminLoginAsync(
+                email,
+                "Tài khoản chưa được cấp quyền truy cập khu vực quản trị.");
+            return View(model);
         }
 
-        if (!roleAllowed)
+        var principal = await _signInManager.CreateUserPrincipalAsync(user);
+        var accessibleBranches = await _systemAdministrationService
+            .GetAccessibleAdminBranchesAsync(
+                principal,
+                HttpContext.RequestAborted);
+        var defaultBranch = accessibleBranches.FirstOrDefault();
+
+        if (defaultBranch is not null && !principal.IsInRole(RoleConstants.Admin))
         {
-            await _signInManager.SignOutAsync();
-            _logger.LogWarning("User {Email} attempted to login to {LoginScope} without allowed role.", email, loginScope);
-            ModelState.AddModelError(string.Empty, $"Tài khoản này không thuộc khu vực đăng nhập {loginScope}.");
-            return View("Login", model);
+            _branchContext.Set(defaultBranch);
+            Response.Cookies.Append(
+                BranchContextConstants.AdminBranchCookieName,
+                defaultBranch.Id.ToString(),
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    IsEssential = true,
+                    Secure = Request.IsHttps,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.UtcNow.AddDays(30)
+                });
         }
 
-        if (!string.IsNullOrWhiteSpace(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+        var defaultPath = await _systemAdministrationService
+            .GetFirstAccessibleAdminPathAsync(
+                principal,
+                HttpContext.RequestAborted);
+        if (string.IsNullOrWhiteSpace(defaultPath))
+        {
+            await RejectAdminLoginAsync(
+                email,
+                "Tài khoản chưa có chức năng quản trị khả dụng trong phạm vi được phân công.");
+            return View(model);
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.ReturnUrl)
+            && Url.IsLocalUrl(model.ReturnUrl)
+            && !IsAdminRoot(model.ReturnUrl))
         {
             return Redirect(model.ReturnUrl);
         }
 
-        return LocalRedirect(defaultRedirectUrl);
+        return LocalRedirect(defaultPath);
+    }
+
+    private async Task RejectAdminLoginAsync(
+        string email,
+        string message)
+    {
+        await _signInManager.SignOutAsync();
+        _logger.LogWarning(
+            "User {Email} attempted to login to Admin without an accessible administrative function.",
+            email);
+        ModelState.AddModelError(string.Empty, message);
+    }
+
+    private static bool IsAdminRoot(string returnUrl)
+    {
+        var normalized = returnUrl.TrimEnd('/');
+        return string.IsNullOrWhiteSpace(normalized)
+            || string.Equals(normalized, "/Admin", StringComparison.OrdinalIgnoreCase);
     }
 }

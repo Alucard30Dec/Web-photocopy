@@ -4,8 +4,10 @@ using WebPhotocopyHub.Domain.Enums;
 
 namespace WebPhotocopyHub.Domain.Entities;
 
-public class SupportService : BaseEntity
+public class SupportService : BaseEntity, IBranchScopedEntity
 {
+    public Guid BranchId { get; set; }
+
     [Required]
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
@@ -18,4 +20,5 @@ public class SupportService : BaseEntity
     public bool IsActive { get; set; } = true;
 
     public ICollection<SupportServiceOrder> Orders { get; set; } = new List<SupportServiceOrder>();
+    public Branch? Branch { get; set; }
 }

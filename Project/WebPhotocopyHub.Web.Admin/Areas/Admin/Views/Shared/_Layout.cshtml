@@ -1,277 +1,353 @@
 @using WebPhotocopyHub.Domain.Constants
+@using WebPhotocopyHub.Application.Contracts
+@using WebPhotocopyHub.Application.DTOs
+@inject IBranchContext BranchContext
+@inject ISystemAdministrationService SystemAdministrationService
 @{
     var adminController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
     var adminAction = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
-    var isSystemAdmin = User.IsInRole(RoleConstants.Admin);
+    var isAdminLoginPage = string.Equals(adminController, "Account", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(adminAction, "Login", StringComparison.OrdinalIgnoreCase);
+    var accountName = User.Identity?.Name ?? "System Admin";
+    var adminNavigation = isAdminLoginPage
+        ? Array.Empty<SystemNavigationItemDto>()
+        : await SystemAdministrationService.GetNavigationAsync(User, Context.RequestAborted);
+    var adminBranches = isAdminLoginPage
+        ? Array.Empty<Branch>()
+        : await SystemAdministrationService.GetAccessibleAdminBranchesAsync(User, Context.RequestAborted);
+    var selectedBranch = BranchContext.BranchId.HasValue
+        ? adminBranches.FirstOrDefault(x => x.Id == BranchContext.BranchId.Value)
+        : null;
+    var accountInitial = string.IsNullOrWhiteSpace(accountName)
+        ? "A"
+        : accountName.Trim()[0].ToString().ToUpperInvariant();
+    var pageTitle = ViewData["Title"]?.ToString() ?? "Quản trị hệ thống";
 
-    string IsControllerActive(params string[] controllerNames)
+    SystemNavigationItemDto? FindFirstNavigationLink(IEnumerable<SystemNavigationItemDto> items)
     {
-        return controllerNames.Contains(adminController, StringComparer.OrdinalIgnoreCase)
-            ? "active"
-            : string.Empty;
+        foreach (var item in items.OrderBy(x => x.SortOrder).ThenBy(x => x.Name))
+        {
+            if (!string.IsNullOrWhiteSpace(item.Controller))
+            {
+                return item;
+            }
+
+            var child = FindFirstNavigationLink(item.Children);
+            if (child is not null)
+            {
+                return child;
+            }
+        }
+
+        return null;
     }
 
-    string IsMenuItemActive(string controllerName, string? actionName = null)
+    bool NavigationContainsController(IEnumerable<SystemNavigationItemDto> items, string controller)
     {
-        var controllerMatches = string.Equals(adminController, controllerName, StringComparison.OrdinalIgnoreCase);
-        var actionMatches = string.IsNullOrWhiteSpace(actionName)
-            || string.Equals(adminAction, actionName, StringComparison.OrdinalIgnoreCase);
-
-        return controllerMatches && actionMatches ? "active" : string.Empty;
+        return items.Any(item =>
+            string.Equals(item.Controller, controller, StringComparison.OrdinalIgnoreCase)
+            || NavigationContainsController(item.Children, controller));
     }
+
+    var firstNavigationLink = FindFirstNavigationLink(adminNavigation);
+    var adminHomePath = firstNavigationLink is null
+        ? "/Admin"
+        : $"/Admin/{firstNavigationLink.Controller}/{firstNavigationLink.Action ?? "Index"}";
+    var canOpenBranches = NavigationContainsController(adminNavigation, "Branches");
+    var canOpenUsers = NavigationContainsController(adminNavigation, "Users");
+    var canOpenAuditLogs = NavigationContainsController(adminNavigation, "AuditLogs");
+    var canOpenMonitoring = NavigationContainsController(adminNavigation, "SystemMonitoring");
 }
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Quản trị hệ thống - WebPhotocopyHub</title>
+    <title>@pageTitle - Quản trị hệ thống - WebPhotocopyHub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/_content/WebPhotocopyHub.Web.Admin/css/admin-system.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="system-admin-body">
-    <header class="system-admin-header">
-        <div class="system-admin-brandbar">
-            <div class="container-fluid system-admin-container">
-                <a class="system-admin-brand" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
-                    <span class="system-admin-logo" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" focusable="false">
-                            <path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z"></path>
-                        </svg>
-                    </span>
-                    <span>
-                        <strong>WebPhotocopyHub</strong>
-                        <small>System Administration</small>
-                    </span>
-                </a>
-
-                <div class="system-admin-head-actions">
-                    <a class="system-status-pill" asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">
-                        <span class="system-status-dot"></span>
-                        <span>Giám sát hệ thống</span>
+<body class="system-admin-body @(isAdminLoginPage ? "system-admin-login-body" : "adminops-body adminmega-body")">
+    @if (isAdminLoginPage)
+    {
+        <header class="system-admin-header">
+            <div class="system-admin-brandbar">
+                <div class="container-fluid system-admin-container">
+                    <a class="system-admin-brand" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
+                        <span class="system-admin-logo" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false">
+                                <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z"></path>
+                                <path d="m9 12 2 2 4-5"></path>
+                            </svg>
+                        </span>
+                        <span>
+                            <strong>WebPhotocopyHub</strong>
+                            <small>System Administration</small>
+                        </span>
                     </a>
 
-                    <div class="dropdown">
-                        <button class="btn system-account-trigger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="system-account-avatar">@((User.Identity?.Name ?? "A").Substring(0, 1).ToUpperInvariant())</span>
-                            <span class="system-account-copy">
-                                <strong>@(User.Identity?.Name ?? "System Admin")</strong>
-                                <small>Quản trị viên toàn hệ thống</small>
-                            </span>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end system-account-menu">
-                            <div class="system-account-menu-head">
-                                <strong>Phiên quản trị</strong>
-                                <small>Mọi thao tác nhạy cảm đều phải được ghi audit.</small>
-                            </div>
-                            <a class="dropdown-item" asp-area="Admin" asp-controller="Users" asp-action="Index">Quản lý tài khoản và quyền</a>
-                            <a class="dropdown-item" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">Xem nhật ký hoạt động</a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" asp-area="" asp-controller="Home" asp-action="Index">Về trang chính</a>
-                            <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="px-2 pb-1">
-                                <input type="hidden" name="returnUrl" value="/" />
-                                <button class="btn btn-outline-danger btn-sm w-100" type="submit">Đăng xuất</button>
-                            </form>
+                    <div class="system-admin-head-actions">
+                        <div class="system-admin-login-context" aria-label="Khu vực quản trị hệ thống">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z"></path>
+                                <path d="m9 12 2 2 4-5"></path>
+                            </svg>
+                            <span>Khu vực quản trị hệ thống</span>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <nav class="system-admin-commandbar" aria-label="Điều hướng quản trị hệ thống">
-            <div class="container-fluid system-admin-container">
-                @if (isSystemAdmin)
-                {
-                    <div class="system-admin-nav">
-                        <div class="dropdown system-nav-group">
-                            <button class="system-nav-trigger @(IsControllerActive("Dashboard", "AuditLogs"))" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="system-nav-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><path d="M4 13h6v7H4v-7Zm10-9h6v16h-6V4ZM4 4h6v5H4V4Z"></path></svg>
-                                </span>
-                                <span><strong>Tổng quan</strong><small>Dashboard và nhật ký</small></span>
-                                <span class="system-nav-chevron">⌄</span>
+        <main class="container-fluid system-admin-container system-admin-main">
+            <partial name="_Alert" />
+            @RenderBody()
+        </main>
+    }
+
+
+    @if (!isAdminLoginPage)
+    {
+        <svg class="adminops-symbols" aria-hidden="true" focusable="false">
+            <symbol id="adm-icon-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></symbol>
+            <symbol id="adm-icon-dashboard" viewBox="0 0 24 24"><path d="M4 13h6v7H4zM14 4h6v16h-6zM4 4h6v5H4z"></path></symbol>
+            <symbol id="adm-icon-data" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"></ellipse><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5"></path><path d="M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"></path></symbol>
+            <symbol id="adm-icon-import" viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"></path><path d="M15 4v4h4"></path><path d="M12 17V10"></path><path d="m9 13 3-3 3 3"></path></symbol>
+            <symbol id="adm-icon-export" viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"></path><path d="M15 4v4h4"></path><path d="M12 10v7"></path><path d="m9 14 3 3 3-3"></path></symbol>
+            <symbol id="adm-icon-report" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"></path><path d="M8 16v-4M12 16V8M16 16v-6"></path></symbol>
+            <symbol id="adm-icon-admin" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></symbol>
+            <symbol id="adm-icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19 13.5v-3l-2-.7-.7-1.7.9-1.9-2.1-2.1-1.9.9-1.7-.7L10.5 2h-3l-.7 2-1.7.7-1.9-.9L1.1 5.9 2 7.8l-.7 1.7-2 .7v3l2 .7.7 1.7-.9 1.9 2.1 2.1 1.9-.9 1.7.7.7 2h3l.7-2 1.7-.7 1.9.9 2.1-2.1-.9-1.9.7-1.7z" transform="translate(2.5 0)"></path></symbol>
+            <symbol id="adm-icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M5 20a7 7 0 0 1 14 0"></path></symbol>
+            <symbol id="adm-icon-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 19a6 6 0 0 1 12 0"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M15.5 14.5A5 5 0 0 1 21 19"></path></symbol>
+            <symbol id="adm-icon-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"></circle><path d="m11 12 8-8M16 7l2 2M14 9l2 2"></path></symbol>
+            <symbol id="adm-icon-log" viewBox="0 0 24 24"><path d="M6 4h12v16H6z"></path><path d="M9 8h6M9 12h6M9 16h4"></path></symbol>
+            <symbol id="adm-icon-api" viewBox="0 0 24 24"><path d="M8 7H5a3 3 0 0 0-3 3v4a3 3 0 0 0 3 3h3M16 7h3a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3h-3M8 12h8"></path></symbol>
+            <symbol id="adm-icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 8h18c0-1-3-1-3-8"></path><path d="M10 21h4"></path></symbol>
+            <symbol id="adm-icon-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"></path></symbol>
+            <symbol id="adm-icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></symbol>
+            <symbol id="adm-icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></symbol>
+            <symbol id="adm-icon-chevron" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"></path></symbol>
+            <symbol id="adm-icon-collapse" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM9 5v14M15 9l-3 3 3 3"></path></symbol>
+            <symbol id="adm-icon-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4M7 11h2l2-4 3 8 2-4h2"></path></symbol>
+        </svg>
+
+        <div class="adminmega-shell" data-admin-mega-shell>
+            <header class="adminmega-header">
+                <div class="adminmega-utilitybar">
+                    <div class="container-fluid adminmega-container adminmega-utilitybar-inner">
+                        <div class="adminmega-utility-left">
+                            <button class="adminmega-nav-toggle"
+                                    type="button"
+                                    data-admin-mega-nav-toggle
+                                    aria-controls="adminmega-primary-nav"
+                                    aria-expanded="false"
+                                    aria-label="Mở hoặc đóng danh sách chức năng">
+                                <svg aria-hidden="true"><use href="#adm-icon-menu"></use></svg>
                             </button>
-                            <div class="dropdown-menu system-nav-menu">
-                                <div class="system-nav-menu-heading">
-                                    <strong>Tổng quan và hoạt động</strong>
-                                    <small>Điều phối, theo dõi và truy vết thay đổi.</small>
-                                </div>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("Dashboard"))" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
-                                    <span class="system-nav-item-mark">01</span>
-                                    <span><strong>Dashboard quản trị</strong><small>Tình hình vận hành toàn hệ thống</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("AuditLogs"))" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">
-                                    <span class="system-nav-item-mark">02</span>
-                                    <span><strong>Audit và activity tracking</strong><small>Tra cứu thao tác, IP và chuỗi hash</small></span>
-                                </a>
+
+                            <a class="adminmega-brand" href="@adminHomePath" aria-label="Mở trang quản trị">
+                                <span class="adminmega-brand-mark" aria-hidden="true">
+                                    <svg><use href="#adm-icon-grid"></use></svg>
+                                </span>
+                                <span class="adminmega-brand-copy">
+                                    <strong>WebPhotocopyHub</strong>
+                                    <small>System Administration</small>
+                                </span>
+                            </a>
+
+                            <span class="adminmega-utility-divider" aria-hidden="true"></span>
+
+                            <div class="adminmega-current-page">
+                                <strong>@pageTitle</strong>
+                                <small>@(selectedBranch?.Name ?? "Toàn hệ thống")</small>
                             </div>
                         </div>
 
-                        <div class="dropdown system-nav-group">
-                            <button class="system-nav-trigger @(IsControllerActive("Users"))" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="system-nav-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0H5Zm13-8a3 3 0 0 1 3 3v5h-2v-5a1 1 0 0 0-1-1v-2Z"></path></svg>
-                                </span>
-                                <span><strong>Tài khoản & quyền</strong><small>Users, roles, trạng thái</small></span>
-                                <span class="system-nav-chevron">⌄</span>
-                            </button>
-                            <div class="dropdown-menu system-nav-menu">
-                                <div class="system-nav-menu-heading">
-                                    <strong>Danh tính và phân quyền</strong>
-                                    <small>Kiểm soát tài khoản, vai trò và ví người dùng.</small>
-                                </div>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("Users"))" asp-area="Admin" asp-controller="Users" asp-action="Index">
-                                    <span class="system-nav-item-mark">01</span>
-                                    <span><strong>Quản lý người dùng</strong><small>Khóa/mở, đổi role, điều chỉnh ví</small></span>
-                                </a>
-                            </div>
-                        </div>
+                        <div class="adminmega-utility-actions">
+                            <div class="dropdown adminmega-branch-switcher">
+                                <button class="adminmega-branch-trigger dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+                                    <span>Phạm vi</span>
+                                    <strong>@(selectedBranch?.Name ?? "Toàn hệ thống")</strong>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end adminmega-dropdown-menu">
+                                    @if (User.IsInRole(RoleConstants.Admin))
+                                    {
+                                        <a class="dropdown-item @(selectedBranch is null ? "active" : string.Empty)"
+                                           asp-area="Admin"
+                                           asp-controller="Branches"
+                                           asp-action="ClearSelection">Toàn hệ thống</a>
+                                        <div class="dropdown-divider"></div>
+                                    }
 
-                        <div class="dropdown system-nav-group">
-                            <button class="system-nav-trigger @(IsControllerActive("TopUpRequests", "WalletTransactions", "Reconciliation"))" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="system-nav-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><path d="M3 6h18v13H3V6Zm2 3v8h14V9H5Zm10 2h3v2h-3v-2ZM6 3h12v2H6V3Z"></path></svg>
-                                </span>
-                                <span><strong>Tài chính & ví</strong><small>Top-up và đối soát</small></span>
-                                <span class="system-nav-chevron">⌄</span>
-                            </button>
-                            <div class="dropdown-menu system-nav-menu">
-                                <div class="system-nav-menu-heading">
-                                    <strong>Tài chính và kiểm soát số dư</strong>
-                                    <small>Luồng tiền cần bảo toàn idempotency và audit.</small>
-                                </div>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("TopUpRequests"))" asp-area="Admin" asp-controller="TopUpRequests" asp-action="Index">
-                                    <span class="system-nav-item-mark">01</span>
-                                    <span><strong>Duyệt yêu cầu nạp tiền</strong><small>Kiểm tra và phê duyệt top-up</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("WalletTransactions"))" asp-area="Admin" asp-controller="WalletTransactions" asp-action="Index">
-                                    <span class="system-nav-item-mark">02</span>
-                                    <span><strong>Giao dịch ví</strong><small>Tra cứu biến động và xuất báo cáo</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("Reconciliation"))" asp-area="Admin" asp-controller="Reconciliation" asp-action="Index">
-                                    <span class="system-nav-item-mark">03</span>
-                                    <span><strong>Đối soát số dư</strong><small>Phát hiện chênh lệch dữ liệu ví</small></span>
-                                </a>
-                            </div>
-                        </div>
+                                    @foreach (var branchItem in adminBranches)
+                                    {
+                                        <a class="dropdown-item @(selectedBranch?.Id == branchItem.Id ? "active" : string.Empty)"
+                                           asp-area="Admin"
+                                           asp-controller="Branches"
+                                           asp-action="Select"
+                                           asp-route-id="@branchItem.Id">
+                                            @branchItem.Name
+                                        </a>
+                                    }
 
-                        <div class="dropdown system-nav-group">
-                            <button class="system-nav-trigger @(IsControllerActive("PrintJobs", "ProductOrders", "SupportOrders", "Inventory"))" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="system-nav-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><path d="M5 3h14v5h2v10h-4v3H7v-3H3V8h2V3Zm2 2v3h10V5H7Zm2 10v4h6v-4H9Zm8-4h2v2h-2v-2Z"></path></svg>
-                                </span>
-                                <span><strong>Đơn & vận hành</strong><small>In ấn, dịch vụ, kho</small></span>
-                                <span class="system-nav-chevron">⌄</span>
-                            </button>
-                            <div class="dropdown-menu system-nav-menu">
-                                <div class="system-nav-menu-heading">
-                                    <strong>Điều phối nghiệp vụ toàn hệ thống</strong>
-                                    <small>Quản lý trạng thái đơn và lịch sử tồn kho.</small>
+                                    @if (canOpenBranches)
+                                    {
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item"
+                                           asp-area="Admin"
+                                           asp-controller="Branches"
+                                           asp-action="Index">Quản lý cơ sở</a>
+                                    }
                                 </div>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("PrintJobs"))" asp-area="Admin" asp-controller="PrintJobs" asp-action="Index">
-                                    <span class="system-nav-item-mark">01</span>
-                                    <span><strong>Đơn in</strong><small>Trạng thái, file, hoàn tiền và SLA</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("ProductOrders"))" asp-area="Admin" asp-controller="ProductOrders" asp-action="Index">
-                                    <span class="system-nav-item-mark">02</span>
-                                    <span><strong>Đơn văn phòng phẩm</strong><small>Theo dõi và cập nhật trạng thái</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("SupportOrders"))" asp-area="Admin" asp-controller="SupportOrders" asp-action="Index">
-                                    <span class="system-nav-item-mark">03</span>
-                                    <span><strong>Đơn dịch vụ hỗ trợ</strong><small>Scan, đóng gáy, ép plastic</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("Inventory"))" asp-area="Admin" asp-controller="Inventory" asp-action="Index">
-                                    <span class="system-nav-item-mark">04</span>
-                                    <span><strong>Tồn kho và biến động</strong><small>Nhập/xuất thủ công có audit</small></span>
-                                </a>
                             </div>
-                        </div>
 
-                        <div class="dropdown system-nav-group">
-                            <button class="system-nav-trigger @(IsControllerActive("Products", "SupportServices", "PricingRules"))" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="system-nav-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"></path></svg>
-                                </span>
-                                <span><strong>Danh mục & cấu hình</strong><small>Sản phẩm, giá, dịch vụ</small></span>
-                                <span class="system-nav-chevron">⌄</span>
-                            </button>
-                            <div class="dropdown-menu system-nav-menu">
-                                <div class="system-nav-menu-heading">
-                                    <strong>Dữ liệu nền và bảng giá</strong>
-                                    <small>Cấu hình ảnh hưởng trực tiếp tới giao dịch.</small>
-                                </div>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("Products"))" asp-area="Admin" asp-controller="Products" asp-action="Index">
-                                    <span class="system-nav-item-mark">01</span>
-                                    <span><strong>Danh mục văn phòng phẩm</strong><small>Giá, tồn, trạng thái kinh doanh</small></span>
+                            @if (canOpenMonitoring)
+                            {
+                                <a class="adminmega-health-link"
+                                   asp-area="Admin"
+                                   asp-controller="SystemMonitoring"
+                                   asp-action="Index">
+                                    <span aria-hidden="true"></span>
+                                    <strong>Giám sát</strong>
                                 </a>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("SupportServices"))" asp-area="Admin" asp-controller="SupportServices" asp-action="Index">
-                                    <span class="system-nav-item-mark">02</span>
-                                    <span><strong>Danh mục dịch vụ hỗ trợ</strong><small>Đơn giá và kiểu tính phí</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("PricingRules"))" asp-area="Admin" asp-controller="PricingRules" asp-action="Index">
-                                    <span class="system-nav-item-mark">03</span>
-                                    <span><strong>Bảng giá in</strong><small>Khổ giấy, màu và kiểu in</small></span>
-                                </a>
-                            </div>
-                        </div>
+                            }
 
-                        <div class="dropdown system-nav-group">
-                            <button class="system-nav-trigger @(IsControllerActive("SystemMonitoring"))" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="system-nav-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><path d="M3 4h18v13H3V4Zm2 2v9h14V6H5Zm3 13h8v2H8v-2Zm0-8 2-2 2 2 3-4 2 2-5 6-2-2-1 1-2-1Z"></path></svg>
-                                </span>
-                                <span><strong>API & hệ thống</strong><small>Health, endpoint, runtime</small></span>
-                                <span class="system-nav-chevron">⌄</span>
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end system-nav-menu">
-                                <div class="system-nav-menu-heading">
-                                    <strong>Kiểm soát API và hạ tầng</strong>
-                                    <small>Chỉ hiển thị cho role Admin; không công khai cấu hình nhạy cảm.</small>
+                            @if (canOpenAuditLogs)
+                            {
+                                <a class="adminmega-icon-button"
+                                   asp-area="Admin"
+                                   asp-controller="AuditLogs"
+                                   asp-action="Index"
+                                   aria-label="Mở nhật ký kiểm toán">
+                                    <svg aria-hidden="true"><use href="#adm-icon-bell"></use></svg>
+                                </a>
+                            }
+
+                            <a class="adminmega-icon-button"
+                               asp-area=""
+                               asp-controller="Home"
+                               asp-action="Index"
+                               aria-label="Mở trang chính">
+                                <svg aria-hidden="true"><use href="#adm-icon-globe"></use></svg>
+                            </a>
+
+                            <div class="dropdown adminmega-account">
+                                <button class="adminmega-account-trigger dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+                                    <span class="adminmega-account-avatar">@accountInitial</span>
+                                    <span class="adminmega-account-copy">
+                                        <strong>@accountName</strong>
+                                        <small>@(selectedBranch is null ? "Quản trị toàn hệ thống" : selectedBranch.Name)</small>
+                                    </span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end adminmega-dropdown-menu adminmega-account-menu">
+                                    <div class="adminmega-account-menu-head">
+                                        <span class="adminmega-account-avatar">@accountInitial</span>
+                                        <div>
+                                            <strong>@accountName</strong>
+                                            <small>Phiên quản trị đang hoạt động</small>
+                                        </div>
+                                    </div>
+
+                                    @if (canOpenUsers)
+                                    {
+                                        <a class="dropdown-item"
+                                           asp-area="Admin"
+                                           asp-controller="Users"
+                                           asp-action="Index">Tài khoản và phân quyền</a>
+                                    }
+
+                                    @if (canOpenAuditLogs)
+                                    {
+                                        <a class="dropdown-item"
+                                           asp-area="Admin"
+                                           asp-controller="AuditLogs"
+                                           asp-action="Index">Nhật ký kiểm toán</a>
+                                    }
+
+                                    @if (canOpenMonitoring)
+                                    {
+                                        <a class="dropdown-item"
+                                           asp-area="Admin"
+                                           asp-controller="SystemMonitoring"
+                                           asp-action="Index">Giám sát hệ thống</a>
+                                    }
+
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item"
+                                       asp-area=""
+                                       asp-controller="Home"
+                                       asp-action="Index">Về trang chính</a>
+
+                                    <form asp-area=""
+                                          asp-controller="Account"
+                                          asp-action="Logout"
+                                          method="post"
+                                          class="px-2 pb-1">
+                                        <input type="hidden" name="returnUrl" value="/" />
+                                        <button class="btn btn-outline-danger btn-sm w-100" type="submit">Đăng xuất</button>
+                                    </form>
                                 </div>
-                                <a class="dropdown-item system-nav-item @(IsMenuItemActive("SystemMonitoring"))" asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">
-                                    <span class="system-nav-item-mark">01</span>
-                                    <span><strong>Trung tâm giám sát</strong><small>Health checks, runtime và endpoint inventory</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item" href="/swagger" target="_blank" rel="noopener">
-                                    <span class="system-nav-item-mark">02</span>
-                                    <span><strong>Swagger API</strong><small>Mở tài liệu API trong tab mới</small></span>
-                                </a>
-                                <a class="dropdown-item system-nav-item" href="/healthz/ready" target="_blank" rel="noopener">
-                                    <span class="system-nav-item-mark">03</span>
-                                    <span><strong>Readiness health</strong><small>Kiểm tra ứng dụng và database</small></span>
-                                </a>
                             </div>
                         </div>
                     </div>
-                }
-                else
-                {
-                    <div class="system-admin-access-warning">
-                        Tài khoản hiện tại không có role Admin nên các nhóm chức năng quản trị đã bị ẩn.
+                </div>
+
+                <div class="adminmega-navband" id="adminmega-primary-nav">
+                    <div class="container-fluid adminmega-container adminmega-navband-inner">
+                        @await Component.InvokeAsync("AdminNavigation", new { items = adminNavigation })
                     </div>
-                }
-            </div>
-        </nav>
-    </header>
+                </div>
 
-    <main class="container-fluid system-admin-container system-admin-main">
-        <partial name="_Alert" />
-        @RenderBody()
-    </main>
+                <div class="adminmega-contextbar">
+                    <div class="container-fluid adminmega-container adminmega-contextbar-inner">
+                        <nav class="adminmega-breadcrumb" aria-label="Breadcrumb">
+                            <a href="@adminHomePath">Quản trị</a>
+                            <span aria-hidden="true">/</span>
+                            <span>@pageTitle</span>
+                        </nav>
 
-    <footer class="system-admin-footer">
-        <div class="container-fluid system-admin-container">
-            <span>WebPhotocopyHub System Administration</span>
-            <span>Role yêu cầu: Admin · Các thao tác thay đổi dữ liệu phải qua controller và audit hiện có.</span>
+                        <span class="adminmega-access-note">
+                            Quyền truy cập được áp dụng theo vai trò, chức năng và phạm vi cơ sở.
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            <button class="adminmega-backdrop"
+                    type="button"
+                    data-admin-mega-close
+                    aria-label="Đóng danh sách chức năng"></button>
+
+            <main class="container-fluid system-admin-container system-admin-main adminops-main adminmega-main">
+                <partial name="_Alert" />
+                @RenderBody()
+            </main>
+
+            <footer class="adminmega-footer">
+                <div class="container-fluid adminmega-container adminmega-footer-inner">
+                    <span>WebPhotocopyHub System Administration</span>
+                    <span>Quản trị an toàn, có kiểm soát và truy vết.</span>
+                </div>
+            </footer>
         </div>
-    </footer>
+    }
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @if (!isAdminLoginPage)
+    {
+        <script src="~/_content/WebPhotocopyHub.Web.Admin/js/admin-navigation.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

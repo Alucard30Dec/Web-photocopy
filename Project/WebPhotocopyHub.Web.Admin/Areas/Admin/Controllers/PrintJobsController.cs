@@ -4,17 +4,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using WebPhotocopyHub.Application.Common;
 using WebPhotocopyHub.Application.Contracts;
+using WebPhotocopyHub.Application.Security;
 using WebPhotocopyHub.Application.DTOs;
 using WebPhotocopyHub.Domain.Constants;
 using WebPhotocopyHub.Domain.Entities;
 using WebPhotocopyHub.Web;
+using WebPhotocopyHub.Web.Admin.Authorization;
 using WebPhotocopyHub.Web.Extensions;
 using WebPhotocopyHub.Web.Admin.Models;
 
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = RoleConstants.Admin)]
+[Authorize]
 public class PrintJobsController : Controller
 {
     private readonly IPrintJobService _printJobService;
@@ -114,7 +116,7 @@ public class PrintJobsController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = AppPolicies.DownloadPrintFile)]
+    [SystemPermissionAction(SystemPermissionActions.Export)]
     public async Task<IActionResult> PreviewFile(Guid id, CancellationToken cancellationToken)
     {
         var item = await _printJobService.GetByIdAsync(id, cancellationToken);
@@ -152,7 +154,7 @@ public class PrintJobsController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = AppPolicies.DownloadPrintFile)]
+    [SystemPermissionAction(SystemPermissionActions.Export)]
     public async Task<IActionResult> DownloadFile(Guid id, CancellationToken cancellationToken)
     {
         var item = await _printJobService.GetByIdAsync(id, cancellationToken);

@@ -12,7 +12,7 @@ using WebPhotocopyHub.Web.Admin.Models;
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = RoleConstants.Admin)]
+[Authorize]
 public class TopUpRequestsController : Controller
 {
     private readonly ITopUpService _topUpService;

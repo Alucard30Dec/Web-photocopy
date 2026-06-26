@@ -1,0 +1,159 @@
+@model AdminNavigationViewModel
+@using WebPhotocopyHub.Application.DTOs
+@{
+    bool IsActive(SystemNavigationItemDto item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.Controller)
+            && string.Equals(item.Controller, Model.CurrentController, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return item.Children.Any(IsActive);
+    }
+
+    IEnumerable<(SystemNavigationItemDto Item, int Level)> FlattenLinks(
+        IEnumerable<SystemNavigationItemDto> items,
+        int level = 0)
+    {
+        foreach (var item in items.OrderBy(x => x.SortOrder).ThenBy(x => x.Name))
+        {
+            if (!string.IsNullOrWhiteSpace(item.Controller))
+            {
+                yield return (item, level);
+            }
+
+            foreach (var child in FlattenLinks(item.Children, level + 1))
+            {
+                yield return child;
+            }
+        }
+    }
+}
+
+<nav class="adminmega-nav"
+     aria-label="Chức năng quản trị"
+     data-admin-mega-nav>
+    @if (Model.Items.Count == 0)
+    {
+        <div class="adminmega-nav-empty">
+            Không có chức năng phù hợp với quyền hiện tại.
+        </div>
+    }
+
+    @foreach (var item in Model.Items.OrderBy(x => x.SortOrder).ThenBy(x => x.Name))
+    {
+        var isActive = IsActive(item);
+        var activeClass = isActive ? "active" : string.Empty;
+        var hasChildren = item.Children.Count > 0;
+        var panelId = $"adminmega-panel-{item.Id:N}";
+        var accessibleLinks = FlattenLinks(item.Children).ToList();
+
+        if (!hasChildren && !string.IsNullOrWhiteSpace(item.Controller))
+        {
+            <a class="adminmega-nav-link @activeClass"
+               asp-area="@item.Area"
+               asp-controller="@item.Controller"
+               asp-action="@(item.Action ?? "Index")"
+               aria-current="@(isActive ? "page" : null)">
+                <svg aria-hidden="true">
+                    <use href="#adm-icon-@item.IconKey"></use>
+                </svg>
+                <span>@item.Name</span>
+            </a>
+        }
+
+        if (hasChildren)
+        {
+            <div class="adminmega-nav-item @activeClass"
+                 data-admin-mega-item>
+                <button class="adminmega-nav-trigger"
+                        type="button"
+                        data-admin-mega-trigger
+                        aria-expanded="false"
+                        aria-controls="@panelId">
+                    <svg aria-hidden="true">
+                        <use href="#adm-icon-@item.IconKey"></use>
+                    </svg>
+                    <span>@item.Name</span>
+                    <svg class="adminmega-nav-chevron" aria-hidden="true">
+                        <use href="#adm-icon-chevron"></use>
+                    </svg>
+                </button>
+
+                <div class="adminmega-panel"
+                     id="@panelId"
+                     data-admin-mega-panel
+                     hidden>
+                    <div class="container-fluid adminmega-container adminmega-panel-inner">
+                        <div class="adminmega-panel-heading">
+                            <div>
+                                <span class="adminmega-eyebrow">Nhóm chức năng</span>
+                                <h2>@item.Name</h2>
+                                <p>Chọn chức năng phù hợp với công việc cần thực hiện.</p>
+                            </div>
+                            <span class="adminmega-panel-count">
+                                @accessibleLinks.Count chức năng
+                            </span>
+                        </div>
+
+                        <div class="adminmega-function-grid">
+                            @foreach (var child in item.Children.OrderBy(x => x.SortOrder).ThenBy(x => x.Name))
+                            {
+                                var childLinks = FlattenLinks(new[] { child }).ToList();
+
+                                if (!string.IsNullOrWhiteSpace(child.Controller))
+                                {
+                                    <a class="adminmega-function-link @(IsActive(child) ? "active" : string.Empty)"
+                                       asp-area="@child.Area"
+                                       asp-controller="@child.Controller"
+                                       asp-action="@(child.Action ?? "Index")">
+                                        <span class="adminmega-function-icon" aria-hidden="true">
+                                            <svg>
+                                                <use href="#adm-icon-@child.IconKey"></use>
+                                            </svg>
+                                        </span>
+                                        <span class="adminmega-function-copy">
+                                            <strong>@child.Name</strong>
+                                            <small>Mở chức năng quản trị</small>
+                                        </span>
+                                        <span class="adminmega-function-arrow" aria-hidden="true">→</span>
+                                    </a>
+                                }
+
+                                if (string.IsNullOrWhiteSpace(child.Controller) && childLinks.Count > 0)
+                                {
+                                    <section class="adminmega-function-section">
+                                        <div class="adminmega-function-section-head">
+                                            <span class="adminmega-function-icon" aria-hidden="true">
+                                                <svg>
+                                                    <use href="#adm-icon-@child.IconKey"></use>
+                                                </svg>
+                                            </span>
+                                            <h3>@child.Name</h3>
+                                        </div>
+
+                                        <div class="adminmega-function-section-links">
+                                            @foreach (var childLinkEntry in childLinks)
+                                            {
+                                                var childLink = childLinkEntry.Item;
+
+                                                <a class="@(IsActive(childLink) ? "active" : string.Empty)"
+                                                   asp-area="@childLink.Area"
+                                                   asp-controller="@childLink.Controller"
+                                                   asp-action="@(childLink.Action ?? "Index")">
+                                                    <span>@childLink.Name</span>
+                                                    <span aria-hidden="true">→</span>
+                                                </a>
+                                            }
+                                        </div>
+                                    </section>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</nav>

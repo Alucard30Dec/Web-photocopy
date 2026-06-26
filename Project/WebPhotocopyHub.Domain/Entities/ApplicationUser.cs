@@ -19,4 +19,5 @@ public class ApplicationUser : IdentityUser, IHasRowVersion
     public ICollection<SupportServiceOrder> SupportServiceOrders { get; set; } = new List<SupportServiceOrder>();
     public ICollection<ProductStockMovement> ProductStockMovements { get; set; } = new List<ProductStockMovement>();
     public ICollection<UploadedFileMetadata> UploadedFiles { get; set; } = new List<UploadedFileMetadata>();
+    public ICollection<UserBranchMembership> BranchMemberships { get; set; } = new List<UserBranchMembership>();
 }

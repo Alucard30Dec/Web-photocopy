@@ -1,0 +1,178 @@
+@model SystemFunctionEditViewModel
+@{
+    ViewData["Title"] = Model.Id == Guid.Empty ? "Tạo chức năng" : "Cập nhật chức năng";
+    var isCreate = Model.Id == Guid.Empty;
+    var iconOptions = new[]
+    {
+        "grid", "dashboard", "data", "import", "export", "report",
+        "admin", "settings", "user", "users", "key", "log", "api", "globe"
+    };
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Function definition</span>
+        <h1>@(isCreate ? "Tạo chức năng hệ thống" : "Cập nhật chức năng hệ thống")</h1>
+        <p>Mỗi chức năng đại diện cho một controller trong khu Admin hoặc một nhóm menu chứa các chức năng con.</p>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </div>
+</section>
+
+<section class="system-panel mt-3">
+    <form asp-action="@(isCreate ? "Create" : "Edit")" method="post" class="system-form-grid">
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="IsSystemFunction" type="hidden" />
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger system-validation-summary"></div>
+
+        <div class="system-form-section">
+            <div class="system-panel-header">
+                <div>
+                    <span class="system-panel-kicker">Thông tin chung</span>
+                    <h2>Định danh và phân cấp</h2>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <label asp-for="Code" class="form-label"></label>
+                    <input asp-for="Code"
+                           class="form-control"
+                           readonly="@Model.IsSystemFunction" />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                    <small class="form-text text-muted">Nên trùng tên controller đối với chức năng route.</small>
+                </div>
+                <div class="col-lg-4">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="col-lg-4">
+                    <label asp-for="ParentId" class="form-label"></label>
+                    <select asp-for="ParentId" class="form-select">
+                        <option value="">— Chức năng cấp cao nhất —</option>
+                        @foreach (var parent in Model.ParentOptions)
+                        {
+                            <option value="@parent.Id">@parent.Name (@parent.Code)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="system-form-section">
+            <div class="system-panel-header">
+                <div>
+                    <span class="system-panel-kicker">MVC route</span>
+                    <h2>Liên kết tới chức năng thật</h2>
+                </div>
+                <span class="system-panel-note">Để trống Controller nếu đây chỉ là nhóm menu</span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-3">
+                    <label asp-for="Area" class="form-label"></label>
+                    <input asp-for="Area"
+                           class="form-control"
+                           readonly="@Model.IsSystemFunction" />
+                    <span asp-validation-for="Area" class="text-danger"></span>
+                </div>
+                <div class="col-lg-3">
+                    <label asp-for="Controller" class="form-label"></label>
+                    <input asp-for="Controller"
+                           class="form-control"
+                           readonly="@Model.IsSystemFunction" />
+                    <span asp-validation-for="Controller" class="text-danger"></span>
+                </div>
+                <div class="col-lg-3">
+                    <label asp-for="Action" class="form-label"></label>
+                    <input asp-for="Action"
+                           class="form-control"
+                           readonly="@Model.IsSystemFunction" />
+                    <span asp-validation-for="Action" class="text-danger"></span>
+                </div>
+                <div class="col-lg-3">
+                    <label asp-for="IconKey" class="form-label"></label>
+                    <select asp-for="IconKey" class="form-select">
+                        @foreach (var icon in iconOptions)
+                        {
+                            <option value="@icon">@icon</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-lg-3">
+                    <label asp-for="SortOrder" class="form-label"></label>
+                    <input asp-for="SortOrder" class="form-control" type="number" />
+                </div>
+                <div class="col-lg-5">
+                    <label asp-for="RequiredBranchFeatureCode" class="form-label"></label>
+                    <input asp-for="RequiredBranchFeatureCode" class="form-control" />
+                    <small class="form-text text-muted">Ví dụ: PrintOrders, ProductSales, Wallet.</small>
+                </div>
+                <div class="col-lg-4 d-flex align-items-end">
+                    <div class="system-check-grid w-100">
+                        <label class="form-check">
+                            <input asp-for="RequiresBranchSelection" class="form-check-input" />
+                            <span class="form-check-label">Bắt buộc chọn cơ sở</span>
+                        </label>
+                        <label class="form-check">
+                            <input asp-for="IsMenuItem" class="form-check-input" />
+                            <span class="form-check-label">Hiển thị trên menu</span>
+                        </label>
+                        <label class="form-check">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <span class="form-check-label">Đang hoạt động</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="system-form-section">
+            <div class="system-panel-header">
+                <div>
+                    <span class="system-panel-kicker">Permission capabilities</span>
+                    <h2>Các quyền có thể cấp</h2>
+                </div>
+            </div>
+            <div class="system-permission-capabilities">
+                <label class="form-check">
+                    <input asp-for="SupportsView" class="form-check-input" />
+                    <span class="form-check-label">Xem</span>
+                </label>
+                <label class="form-check">
+                    <input asp-for="SupportsCreate" class="form-check-input" />
+                    <span class="form-check-label">Thêm</span>
+                </label>
+                <label class="form-check">
+                    <input asp-for="SupportsEdit" class="form-check-input" />
+                    <span class="form-check-label">Sửa</span>
+                </label>
+                <label class="form-check">
+                    <input asp-for="SupportsDelete" class="form-check-input" />
+                    <span class="form-check-label">Xóa</span>
+                </label>
+                <label class="form-check">
+                    <input asp-for="SupportsExport" class="form-check-input" />
+                    <span class="form-check-label">Xuất</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="system-form-actions">
+            <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+            <button class="btn btn-primary" type="submit">Lưu chức năng</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,15 +1,25 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Domain.Common;
+using WebPhotocopyHub.Domain.Constants;
 using WebPhotocopyHub.Domain.Entities;
 
 namespace WebPhotocopyHub.Infrastructure.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    private readonly IBranchContext? _branchContext;
+
+    private bool BranchFilterEnabled => _branchContext?.EnforceBranchScope == true && _branchContext.BranchId.HasValue;
+    private Guid CurrentBranchId => _branchContext?.BranchId ?? Guid.Empty;
+
+    public ApplicationDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        IBranchContext? branchContext = null) : base(options)
     {
+        _branchContext = branchContext;
     }
 
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
@@ -24,6 +34,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<PricingRule> PricingRules => Set<PricingRule>();
     public DbSet<UploadedFileMetadata> UploadedFileMetadatas => Set<UploadedFileMetadata>();
+    public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<BranchFeature> BranchFeatures => Set<BranchFeature>();
+    public DbSet<BranchRole> BranchRoles => Set<BranchRole>();
+    public DbSet<BranchRolePermission> BranchRolePermissions => Set<BranchRolePermission>();
+    public DbSet<UserBranchMembership> UserBranchMemberships => Set<UserBranchMembership>();
+    public DbSet<SystemFunction> SystemFunctions => Set<SystemFunction>();
+    public DbSet<ApplicationRoleProfile> ApplicationRoleProfiles => Set<ApplicationRoleProfile>();
+    public DbSet<RoleFunctionPermission> RoleFunctionPermissions => Set<RoleFunctionPermission>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -40,15 +58,125 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(x => x.CreatedAt);
         });
 
+        builder.Entity<Branch>(entity =>
+        {
+            entity.Property(x => x.Code).HasMaxLength(50);
+            entity.Property(x => x.Slug).HasMaxLength(80);
+            entity.Property(x => x.Name).HasMaxLength(200);
+            entity.Property(x => x.RowVersion).IsConcurrencyToken();
+            entity.HasIndex(x => x.Code).IsUnique();
+            entity.HasIndex(x => x.Slug).IsUnique();
+            entity.HasIndex(x => new { x.IsActive, x.Name });
+        });
+
+        builder.Entity<BranchFeature>(entity =>
+        {
+            entity.HasKey(x => new { x.BranchId, x.FeatureCode });
+            entity.Property(x => x.FeatureCode).HasMaxLength(100);
+            entity.Property(x => x.UpdatedByUserId).HasMaxLength(191);
+            entity.HasOne(x => x.Branch)
+                .WithMany(x => x.Features)
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<BranchRole>(entity =>
+        {
+            entity.Property(x => x.Name).HasMaxLength(100);
+            entity.HasIndex(x => new { x.BranchId, x.Name }).IsUnique();
+            entity.HasOne(x => x.Branch)
+                .WithMany(x => x.Roles)
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<BranchRolePermission>(entity =>
+        {
+            entity.HasKey(x => new { x.BranchRoleId, x.PermissionCode });
+            entity.Property(x => x.PermissionCode).HasMaxLength(120);
+            entity.HasOne(x => x.BranchRole)
+                .WithMany(x => x.Permissions)
+                .HasForeignKey(x => x.BranchRoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<UserBranchMembership>(entity =>
+        {
+            entity.Property(x => x.UserId).HasMaxLength(191);
+            entity.Property(x => x.AssignedByUserId).HasMaxLength(191);
+            entity.HasIndex(x => new { x.UserId, x.BranchId }).IsUnique();
+            entity.HasOne(x => x.User)
+                .WithMany(x => x.BranchMemberships)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Branch)
+                .WithMany(x => x.Memberships)
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.BranchRole)
+                .WithMany(x => x.Memberships)
+                .HasForeignKey(x => x.BranchRoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<SystemFunction>(entity =>
+        {
+            entity.Property(x => x.Code).HasMaxLength(100);
+            entity.Property(x => x.Name).HasMaxLength(200);
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.Area).HasMaxLength(50);
+            entity.Property(x => x.Controller).HasMaxLength(100);
+            entity.Property(x => x.Action).HasMaxLength(100);
+            entity.Property(x => x.IconKey).HasMaxLength(50);
+            entity.Property(x => x.RequiredBranchFeatureCode).HasMaxLength(100);
+            entity.HasIndex(x => x.Code).IsUnique();
+            entity.HasIndex(x => new { x.Area, x.Controller })
+                .IsUnique()
+                .HasFilter("\"Controller\" IS NOT NULL");
+            entity.HasIndex(x => new { x.ParentId, x.SortOrder });
+            entity.HasOne(x => x.Parent)
+                .WithMany(x => x.Children)
+                .HasForeignKey(x => x.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<ApplicationRoleProfile>(entity =>
+        {
+            entity.Property(x => x.RoleId).HasMaxLength(191);
+            entity.Property(x => x.DisplayName).HasMaxLength(150);
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.HasOne(x => x.Role)
+                .WithOne()
+                .HasForeignKey<ApplicationRoleProfile>(x => x.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RoleFunctionPermission>(entity =>
+        {
+            entity.HasKey(x => new { x.RoleId, x.SystemFunctionId });
+            entity.Property(x => x.RoleId).HasMaxLength(191);
+            entity.HasOne(x => x.RoleProfile)
+                .WithMany(x => x.FunctionPermissions)
+                .HasForeignKey(x => x.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.SystemFunction)
+                .WithMany(x => x.RolePermissions)
+                .HasForeignKey(x => x.SystemFunctionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         builder.Entity<WalletTransaction>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.CreatedAt });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.Amount).HasColumnType("decimal(18,2)");
             entity.Property(x => x.BalanceBefore).HasColumnType("decimal(18,2)");
             entity.Property(x => x.BalanceAfter).HasColumnType("decimal(18,2)");
             entity.Property(x => x.UserId).HasMaxLength(191);
             entity.Property(x => x.PerformedByAdminId).HasMaxLength(191);
             entity.HasIndex(x => new { x.UserId, x.CreatedAt });
-            entity.HasIndex(x => new { x.UserId, x.TransactionType, x.IdempotencyKey }).IsUnique();
+            entity.HasIndex(x => new { x.BranchId, x.UserId, x.TransactionType, x.IdempotencyKey }).IsUnique();
 
             entity.HasOne(x => x.User)
                 .WithMany(x => x.WalletTransactions)
@@ -63,13 +191,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<TopUpRequest>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.CreatedAt });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.Amount).HasColumnType("decimal(18,2)");
             entity.Property(x => x.UserId).HasMaxLength(191);
             entity.Property(x => x.ReviewedByAdminId).HasMaxLength(191);
             entity.Property(x => x.SecondReviewedByAdminId).HasMaxLength(191);
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => new { x.UserId, x.CreatedAt });
-            entity.HasIndex(x => new { x.UserId, x.CreateIdempotencyKey }).IsUnique();
+            entity.HasIndex(x => new { x.BranchId, x.UserId, x.CreateIdempotencyKey }).IsUnique();
 
             entity.HasOne(x => x.User)
                 .WithMany(x => x.TopUpRequests)
@@ -94,6 +225,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<UploadedFileMetadata>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.CreatedAt });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.OwnerUserId).HasMaxLength(191);
 
             entity.HasOne(x => x.OwnerUser)
@@ -106,6 +240,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<PrintJob>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.Status, x.CreatedAt });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             entity.Property(x => x.SubTotal).HasColumnType("decimal(18,2)");
             entity.Property(x => x.ShippingFee).HasColumnType("decimal(18,2)");
@@ -116,7 +253,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(x => x.ProcessedByAdminId).HasMaxLength(191);
             entity.Property(x => x.RefundedByUserId).HasMaxLength(191);
             entity.HasIndex(x => x.Status);
-            entity.HasIndex(x => new { x.UserId, x.SubmitIdempotencyKey }).IsUnique();
+            entity.HasIndex(x => new { x.BranchId, x.UserId, x.SubmitIdempotencyKey }).IsUnique();
 
             entity.HasOne(x => x.User)
                 .WithMany(x => x.PrintJobs)
@@ -151,6 +288,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<Product>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.IsActive, x.Name });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.Price).HasColumnType("decimal(18,2)");
             entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.HasIndex(x => x.IsActive);
@@ -158,11 +298,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<ProductOrder>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.Status, x.CreatedAt });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.TotalAmount).HasColumnType("decimal(18,2)");
             entity.Property(x => x.UserId).HasMaxLength(191);
             entity.Property(x => x.ProcessedByOperatorId).HasMaxLength(191);
             entity.HasIndex(x => new { x.UserId, x.CreatedAt });
-            entity.HasIndex(x => new { x.UserId, x.OrderIdempotencyKey }).IsUnique();
+            entity.HasIndex(x => new { x.BranchId, x.UserId, x.OrderIdempotencyKey }).IsUnique();
 
             entity.HasOne(x => x.User)
                 .WithMany(x => x.ProductOrders)
@@ -193,17 +336,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<SupportService>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.IsActive, x.Name });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             entity.HasIndex(x => x.IsActive);
         });
 
         builder.Entity<SupportServiceOrder>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.Status, x.CreatedAt });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             entity.Property(x => x.TotalAmount).HasColumnType("decimal(18,2)");
             entity.Property(x => x.UserId).HasMaxLength(191);
             entity.Property(x => x.ProcessedByOperatorId).HasMaxLength(191);
-            entity.HasIndex(x => new { x.UserId, x.OrderIdempotencyKey }).IsUnique();
+            entity.HasIndex(x => new { x.BranchId, x.UserId, x.OrderIdempotencyKey }).IsUnique();
 
             entity.HasOne(x => x.User)
                 .WithMany(x => x.SupportServiceOrders)
@@ -223,6 +372,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<ProductStockMovement>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.BranchId, x.CreatedAt });
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.ActorUserId).HasMaxLength(191);
             entity.HasIndex(x => new { x.ProductId, x.CreatedAt });
 
@@ -239,8 +391,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<PricingRule>(entity =>
         {
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
-            entity.HasIndex(x => new { x.PaperSize, x.PrintSide, x.ColorMode, x.IsPhoto }).IsUnique();
+            entity.HasIndex(x => new { x.BranchId, x.PaperSize, x.PrintSide, x.ColorMode, x.IsPhoto }).IsUnique();
         });
 
         builder.Entity<AuditLog>(entity =>
@@ -310,6 +464,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     private void ApplyAuditableRules()
     {
         var now = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<IBranchScopedEntity>())
+        {
+            if (entry.State == EntityState.Added && entry.Entity.BranchId == Guid.Empty)
+            {
+                entry.Entity.BranchId = _branchContext?.BranchId ?? BranchDefaults.PrimaryBranchId;
+            }
+        }
 
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
         {

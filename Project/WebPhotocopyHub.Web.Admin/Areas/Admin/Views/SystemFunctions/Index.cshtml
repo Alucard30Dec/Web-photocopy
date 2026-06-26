@@ -1,0 +1,120 @@
+@model SystemFunctionListViewModel
+@{
+    ViewData["Title"] = "Chức năng và menu";
+    var activeCount = Model.Functions.Count(x => x.IsActive);
+    var canCreate = ViewBag.CanCreate is true;
+    var canEdit = ViewBag.CanEdit is true;
+    var canDelete = ViewBag.CanDelete is true;
+    var canViewPermissions = ViewBag.CanViewPermissions is true;
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">System function registry</span>
+        <h1>Chức năng và cấu trúc menu</h1>
+        <p>Đăng ký route có thật trong hệ thống, sắp xếp menu và khai báo các loại quyền được hỗ trợ.</p>
+        <div class="system-hero-meta">
+            <span class="system-soft-chip">@Model.Functions.Count mục</span>
+            <span class="system-soft-chip">@activeCount đang hoạt động</span>
+        </div>
+    </div>
+    <div class="system-hero-actions">
+        @if (canViewPermissions)
+        {
+            <a class="btn btn-outline-secondary"
+               asp-area="Admin"
+               asp-controller="SystemPermissions"
+               asp-action="Index">Mở ma trận quyền</a>
+        }
+        @if (canCreate)
+        {
+            <a class="btn btn-primary"
+               asp-action="Create">Tạo chức năng</a>
+        }
+    </div>
+</section>
+
+<section class="system-panel mt-3">
+    <div class="system-panel-header">
+        <div>
+            <span class="system-panel-kicker">Menu hierarchy</span>
+            <h2>Danh mục chức năng quản trị</h2>
+        </div>
+        <span class="system-panel-note">Chức năng hệ thống được bảo vệ khỏi vô hiệu hóa</span>
+    </div>
+
+    <div class="table-responsive system-table-wrap">
+        <table class="table system-table align-middle">
+            <thead>
+                <tr>
+                    <th>Chức năng</th>
+                    <th>Route</th>
+                    <th>Quyền hỗ trợ</th>
+                    <th class="text-center">Thứ tự</th>
+                    <th>Trạng thái</th>
+                    <th style="width:220px">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Functions.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6">
+                            <div class="system-empty-state">Chưa có chức năng hệ thống.</div>
+                        </td>
+                    </tr>
+                }
+                @foreach (var item in Model.Functions)
+                {
+                    <tr>
+                        <td>
+                            <div class="system-function-name" style="padding-left:@(item.Level * 22)px">
+                                @if (item.Level > 0)
+                                {
+                                    <span class="system-tree-branch" aria-hidden="true">↳</span>
+                                }
+                                <div>
+                                    <strong>@item.Name</strong>
+                                    <small>@item.Code @(item.IsSystemFunction ? "• Mặc định" : "• Tùy chỉnh")</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><code>@item.Route</code></td>
+                        <td>@item.PermissionSummary</td>
+                        <td class="text-center">@item.SortOrder</td>
+                        <td>
+                            <span class="system-access-badge @(item.IsActive ? "is-protected" : "is-public")">
+                                @(item.IsActive ? "Đang hoạt động" : "Đã vô hiệu hóa")
+                            </span>
+                        </td>
+                        <td>
+                            <div class="system-action-stack">
+                                @if (canEdit)
+                                {
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       asp-action="Edit"
+                                       asp-route-id="@item.Id">Chỉnh sửa</a>
+                                }
+                                @if (canDelete && !item.IsSystemFunction)
+                                {
+                                    <form asp-action="SetActive" method="post">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="isActive" value="@(!item.IsActive)" />
+                                        <button class="btn btn-sm @(item.IsActive ? "btn-outline-danger" : "btn-outline-success")"
+                                                type="submit">
+                                            @(item.IsActive ? "Vô hiệu hóa" : "Kích hoạt")
+                                        </button>
+                                    </form>
+                                }
+                                @if (!canEdit && (!canDelete || item.IsSystemFunction))
+                                {
+                                    <span class="text-muted">Chỉ xem</span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

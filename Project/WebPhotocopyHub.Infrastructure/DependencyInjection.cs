@@ -86,6 +86,8 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddScoped<IBranchContext, BranchContext>();
+        services.AddScoped<IBranchManagementService, BranchManagementService>();
         services.AddScoped<IPricingService, PricingService>();
         services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<ITopUpService, TopUpService>();
@@ -97,6 +99,7 @@ public static class DependencyInjection
         services.AddScoped<IPricingRuleService, PricingRuleService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IWalletReconciliationService, WalletReconciliationService>();
+        services.AddScoped<ISystemAdministrationService, SystemAdministrationService>();
         services.AddScoped<IDbInitializer, DbInitializer>();
 
         return services;

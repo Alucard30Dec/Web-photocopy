@@ -1,0 +1,47 @@
+@model IReadOnlyList<Branch>
+@{
+    ViewData["Title"] = "Quản lý cơ sở";
+    var currentBranchId = ViewBag.CurrentBranchId as Guid?;
+}
+
+<section class="branch-admin-page">
+    <div class="branch-admin-heading">
+        <div>
+            <span class="branch-admin-eyebrow">PHẠM VI HỆ THỐNG</span>
+            <h1>Quản lý tất cả cơ sở</h1>
+            <p>Chọn một cơ sở để toàn bộ đơn hàng, danh mục, kho, tài chính và báo cáo được lọc đúng theo cơ sở đó.</p>
+        </div>
+        <a class="btn btn-primary" asp-action="Edit">Thêm cơ sở</a>
+    </div>
+
+    <div class="branch-admin-grid">
+        @foreach (var item in Model)
+        {
+            var isCurrent = currentBranchId.HasValue && currentBranchId.Value == item.Id;
+            <article class="branch-admin-card @(isCurrent ? "is-current" : string.Empty)">
+                <div class="branch-admin-card-head">
+                    <div>
+                        <span class="branch-admin-code">@item.Code</span>
+                        <h2>@item.Name</h2>
+                        <p>@(item.Address ?? "Chưa cập nhật địa chỉ")</p>
+                    </div>
+                    <span class="branch-admin-status @(item.IsActive ? "is-active" : "is-disabled")">
+                        @(item.IsActive ? "Đang hoạt động" : "Đã khóa")
+                    </span>
+                </div>
+                <div class="branch-admin-meta">
+                    <span>Slug: <strong>@item.Slug</strong></span>
+                    <span>Nhận đơn: <strong>@(item.IsAcceptingOrders ? "Có" : "Tạm dừng")</strong></span>
+                    <span>Giờ mở cửa: <strong>@(item.OpenHours ?? "Chưa cập nhật")</strong></span>
+                </div>
+                <div class="branch-admin-actions">
+                    <a class="btn btn-primary btn-sm" asp-action="Select" asp-route-id="@item.Id">@(isCurrent ? "Đang quản lý" : "Quản lý cơ sở")</a>
+                    <a class="btn btn-outline-secondary btn-sm" asp-action="Edit" asp-route-id="@item.Id">Thông tin</a>
+                    <a class="btn btn-outline-secondary btn-sm" asp-action="Features" asp-route-id="@item.Id">Chức năng</a>
+                    <a class="btn btn-outline-secondary btn-sm" asp-action="Users" asp-route-id="@item.Id">Nhân sự &amp; quyền</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="/@item.Slug/Admin">Mở vận hành</a>
+                </div>
+            </article>
+        }
+    </div>
+</section>

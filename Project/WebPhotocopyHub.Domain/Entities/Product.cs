@@ -3,8 +3,10 @@ using WebPhotocopyHub.Domain.Common;
 
 namespace WebPhotocopyHub.Domain.Entities;
 
-public class Product : BaseEntity, IHasRowVersion
+public class Product : BaseEntity, IHasRowVersion, IBranchScopedEntity
 {
+    public Guid BranchId { get; set; }
+
     [Required]
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
@@ -23,4 +25,5 @@ public class Product : BaseEntity, IHasRowVersion
 
     public ICollection<ProductOrderItem> ProductOrderItems { get; set; } = new List<ProductOrderItem>();
     public ICollection<ProductStockMovement> StockMovements { get; set; } = new List<ProductStockMovement>();
+    public Branch? Branch { get; set; }
 }

@@ -19,6 +19,9 @@ using WebPhotocopyHub.Report;
 using WebPhotocopyHub.Web;
 using WebPhotocopyHub.Web.Models;
 using WebPhotocopyHub.Web.HealthChecks;
+using WebPhotocopyHub.Web.Authorization;
+using WebPhotocopyHub.Web.Admin.Authorization;
+using WebPhotocopyHub.Infrastructure.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +61,8 @@ builder.Services
             .Build();
         options.Filters.Add(new AuthorizeFilter(policy));
         options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+        options.Filters.AddService<BranchAccessFilter>();
+        options.Filters.AddService<SystemAdminPermissionFilter>();
     })
     .AddWebPhotocopyHubWebModules()
     .AddJsonOptions(options =>
@@ -66,6 +71,9 @@ builder.Services
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
+builder.Services.AddScoped<BranchAccessFilter>();
+builder.Services.AddScoped<SystemAdminPermissionFilter>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -350,6 +358,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.UseMiddleware<BranchContextMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

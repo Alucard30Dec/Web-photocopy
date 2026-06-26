@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using WebPhotocopyHub.Application.Contracts;
+using WebPhotocopyHub.Application.Branching;
 using WebPhotocopyHub.Domain.Constants;
 using WebPhotocopyHub.Domain.Entities;
 using WebPhotocopyHub.Domain.Enums;
@@ -25,6 +26,7 @@ public class DbInitializer : IDbInitializer
     private readonly ILogger<DbInitializer> _logger;
     private readonly IConfiguration _configuration;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly IBranchManagementService _branchManagementService;
 
     public DbInitializer(
         ApplicationDbContext dbContext,
@@ -32,7 +34,8 @@ public class DbInitializer : IDbInitializer
         UserManager<ApplicationUser> userManager,
         ILogger<DbInitializer> logger,
         IConfiguration configuration,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        IBranchManagementService branchManagementService)
     {
         _dbContext = dbContext;
         _roleManager = roleManager;
@@ -40,19 +43,24 @@ public class DbInitializer : IDbInitializer
         _logger = logger;
         _configuration = configuration;
         _hostEnvironment = hostEnvironment;
+        _branchManagementService = branchManagementService;
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await EnsureDatabaseReadyAsync(cancellationToken);
+        await EnsureBranchGovernanceSchemaAsync(cancellationToken);
+        await EnsureSystemAdministrationSchemaAsync(cancellationToken);
 
         await SeedRolesAsync();
+        await SeedSystemAdministrationAsync(cancellationToken);
         await SeedAdminAsync();
         await SeedShopOperatorAsync();
         await SeedDefaultCustomerAccountsAsync();
         await SeedPricingAsync(cancellationToken);
         await SeedProductsAsync(cancellationToken);
         await SeedSupportServicesAsync(cancellationToken);
+        await SeedBranchGovernanceAsync(cancellationToken);
         try
         {
             await SeedSampleDataAsync(cancellationToken);
@@ -97,6 +105,537 @@ public class DbInitializer : IDbInitializer
         }
     }
 
+    private async Task EnsureSystemAdministrationSchemaAsync(
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+CREATE TABLE IF NOT EXISTS "SystemFunctions" (
+    "Id" uuid NOT NULL,
+    "Code" character varying(100) NOT NULL,
+    "Name" character varying(200) NOT NULL,
+    "Description" character varying(500) NULL,
+    "ParentId" uuid NULL,
+    "Area" character varying(50) NOT NULL,
+    "Controller" character varying(100) NULL,
+    "Action" character varying(100) NULL,
+    "IconKey" character varying(50) NOT NULL,
+    "RequiredBranchFeatureCode" character varying(100) NULL,
+    "SortOrder" integer NOT NULL,
+    "RequiresBranchSelection" boolean NOT NULL DEFAULT FALSE,
+    "IsMenuItem" boolean NOT NULL DEFAULT TRUE,
+    "IsActive" boolean NOT NULL DEFAULT TRUE,
+    "IsSystemFunction" boolean NOT NULL DEFAULT FALSE,
+    "SupportsView" boolean NOT NULL DEFAULT TRUE,
+    "SupportsCreate" boolean NOT NULL DEFAULT FALSE,
+    "SupportsEdit" boolean NOT NULL DEFAULT FALSE,
+    "SupportsDelete" boolean NOT NULL DEFAULT FALSE,
+    "SupportsExport" boolean NOT NULL DEFAULT FALSE,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NULL,
+    CONSTRAINT "PK_SystemFunctions" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_SystemFunctions_SystemFunctions_ParentId"
+        FOREIGN KEY ("ParentId") REFERENCES "SystemFunctions" ("Id") ON DELETE RESTRICT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_SystemFunctions_Code"
+    ON "SystemFunctions" ("Code");
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_SystemFunctions_Area_Controller"
+    ON "SystemFunctions" ("Area", "Controller")
+    WHERE "Controller" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS "IX_SystemFunctions_ParentId_SortOrder"
+    ON "SystemFunctions" ("ParentId", "SortOrder");
+
+CREATE TABLE IF NOT EXISTS "ApplicationRoleProfiles" (
+    "RoleId" character varying(191) NOT NULL,
+    "DisplayName" character varying(150) NOT NULL,
+    "Description" character varying(500) NULL,
+    "IsSystemRole" boolean NOT NULL DEFAULT FALSE,
+    "IsActive" boolean NOT NULL DEFAULT TRUE,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NULL,
+    CONSTRAINT "PK_ApplicationRoleProfiles" PRIMARY KEY ("RoleId"),
+    CONSTRAINT "FK_ApplicationRoleProfiles_AspNetRoles_RoleId"
+        FOREIGN KEY ("RoleId") REFERENCES "AspNetRoles" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "RoleFunctionPermissions" (
+    "RoleId" character varying(191) NOT NULL,
+    "SystemFunctionId" uuid NOT NULL,
+    "CanView" boolean NOT NULL DEFAULT FALSE,
+    "CanCreate" boolean NOT NULL DEFAULT FALSE,
+    "CanEdit" boolean NOT NULL DEFAULT FALSE,
+    "CanDelete" boolean NOT NULL DEFAULT FALSE,
+    "CanExport" boolean NOT NULL DEFAULT FALSE,
+    CONSTRAINT "PK_RoleFunctionPermissions"
+        PRIMARY KEY ("RoleId", "SystemFunctionId"),
+    CONSTRAINT "FK_RoleFunctionPermissions_ApplicationRoleProfiles_RoleId"
+        FOREIGN KEY ("RoleId") REFERENCES "ApplicationRoleProfiles" ("RoleId") ON DELETE CASCADE,
+    CONSTRAINT "FK_RoleFunctionPermissions_SystemFunctions_SystemFunctionId"
+        FOREIGN KEY ("SystemFunctionId") REFERENCES "SystemFunctions" ("Id") ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "IX_RoleFunctionPermissions_SystemFunctionId"
+    ON "RoleFunctionPermissions" ("SystemFunctionId");
+""";
+
+        await _dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+    }
+
+    private async Task SeedSystemAdministrationAsync(
+        CancellationToken cancellationToken)
+    {
+        var roleDefinitions = new Dictionary<string, (string DisplayName, string Description)>
+        {
+            [RoleConstants.Admin] = (
+                "Quản trị hệ thống",
+                "Toàn quyền quản trị, không bị giới hạn bởi ma trận quyền."),
+            [RoleConstants.ShopOperator] = (
+                "Nhân viên vận hành",
+                "Tài khoản vận hành cửa hàng và cơ sở."),
+            [RoleConstants.Customer] = (
+                "Khách hàng",
+                "Tài khoản sử dụng cổng dịch vụ khách hàng.")
+        };
+
+        foreach (var roleDefinition in roleDefinitions)
+        {
+            var role = await _roleManager.FindByNameAsync(roleDefinition.Key);
+            if (role is null)
+            {
+                continue;
+            }
+
+            var profile = await _dbContext.ApplicationRoleProfiles
+                .FirstOrDefaultAsync(
+                    x => x.RoleId == role.Id,
+                    cancellationToken);
+
+            if (profile is null)
+            {
+                _dbContext.ApplicationRoleProfiles.Add(new ApplicationRoleProfile
+                {
+                    RoleId = role.Id,
+                    DisplayName = roleDefinition.Value.DisplayName,
+                    Description = roleDefinition.Value.Description,
+                    IsSystemRole = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                profile.IsSystemRole = true;
+                profile.IsActive = true;
+                profile.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        var dashboardId = Guid.Parse("91000000-0000-0000-0000-000000000001");
+        var usersGroupId = Guid.Parse("91000000-0000-0000-0000-000000000010");
+        var ordersGroupId = Guid.Parse("91000000-0000-0000-0000-000000000020");
+        var catalogGroupId = Guid.Parse("91000000-0000-0000-0000-000000000030");
+        var financeGroupId = Guid.Parse("91000000-0000-0000-0000-000000000040");
+        var systemGroupId = Guid.Parse("91000000-0000-0000-0000-000000000050");
+
+        var definitions = new[]
+        {
+            new SystemFunction
+            {
+                Id = dashboardId,
+                Code = "Dashboard",
+                Name = "Dashboard",
+                Description = "Tổng quan quản trị toàn hệ thống.",
+                Area = "Admin",
+                Controller = "Dashboard",
+                Action = "Index",
+                IconKey = "dashboard",
+                SortOrder = 10,
+                SupportsView = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = usersGroupId,
+                Code = "Group.Users",
+                Name = "Người dùng",
+                Description = "Tài khoản, vai trò và phân quyền.",
+                Area = "Admin",
+                IconKey = "users",
+                SortOrder = 20,
+                SupportsView = false,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000011"),
+                Code = "Users",
+                Name = "Quản lý tài khoản",
+                Description = "Tạo, cập nhật, khóa/mở và đặt lại mật khẩu tài khoản.",
+                ParentId = usersGroupId,
+                Area = "Admin",
+                Controller = "Users",
+                Action = "Index",
+                IconKey = "users",
+                SortOrder = 10,
+                SupportsView = true,
+                SupportsCreate = true,
+                SupportsEdit = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000012"),
+                Code = "SystemRoles",
+                Name = "Vai trò hệ thống",
+                Description = "Quản lý nhóm quyền dựa trên ASP.NET Core Identity roles.",
+                ParentId = usersGroupId,
+                Area = "Admin",
+                Controller = "SystemRoles",
+                Action = "Index",
+                IconKey = "user",
+                SortOrder = 20,
+                SupportsView = true,
+                SupportsCreate = true,
+                SupportsEdit = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000013"),
+                Code = "SystemPermissions",
+                Name = "Ma trận phân quyền",
+                Description = "Phân quyền xem, thêm, sửa, xóa và xuất theo vai trò.",
+                ParentId = usersGroupId,
+                Area = "Admin",
+                Controller = "SystemPermissions",
+                Action = "Index",
+                IconKey = "key",
+                SortOrder = 30,
+                SupportsView = true,
+                SupportsEdit = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000014"),
+                Code = "Branches",
+                Name = "Cơ sở và nhân sự",
+                Description = "Quản lý cơ sở, chức năng cơ sở, vai trò và phân công nhân sự.",
+                ParentId = usersGroupId,
+                Area = "Admin",
+                Controller = "Branches",
+                Action = "Index",
+                IconKey = "grid",
+                SortOrder = 40,
+                SupportsView = true,
+                SupportsCreate = true,
+                SupportsEdit = true,
+                SupportsDelete = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = ordersGroupId,
+                Code = "Group.Orders",
+                Name = "Đơn hàng",
+                Description = "Các luồng đơn hàng tại cơ sở.",
+                Area = "Admin",
+                IconKey = "export",
+                SortOrder = 30,
+                SupportsView = false,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000021"),
+                Code = "PrintJobs",
+                Name = "Đơn in",
+                ParentId = ordersGroupId,
+                Area = "Admin",
+                Controller = "PrintJobs",
+                Action = "Index",
+                IconKey = "import",
+                RequiredBranchFeatureCode = BranchFeatureCodes.PrintOrders,
+                RequiresBranchSelection = true,
+                SortOrder = 10,
+                SupportsView = true,
+                SupportsEdit = true,
+                SupportsDelete = true,
+                SupportsExport = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000022"),
+                Code = "ProductOrders",
+                Name = "Đơn sản phẩm",
+                ParentId = ordersGroupId,
+                Area = "Admin",
+                Controller = "ProductOrders",
+                Action = "Index",
+                IconKey = "export",
+                RequiredBranchFeatureCode = BranchFeatureCodes.ProductSales,
+                RequiresBranchSelection = true,
+                SortOrder = 20,
+                SupportsView = true,
+                SupportsEdit = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000023"),
+                Code = "SupportOrders",
+                Name = "Đơn dịch vụ hỗ trợ",
+                ParentId = ordersGroupId,
+                Area = "Admin",
+                Controller = "SupportOrders",
+                Action = "Index",
+                IconKey = "settings",
+                RequiredBranchFeatureCode = BranchFeatureCodes.SupportServices,
+                RequiresBranchSelection = true,
+                SortOrder = 30,
+                SupportsView = true,
+                SupportsEdit = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = catalogGroupId,
+                Code = "Group.Catalog",
+                Name = "Danh mục",
+                Description = "Danh mục sản phẩm, dịch vụ, giá và tồn kho.",
+                Area = "Admin",
+                IconKey = "data",
+                SortOrder = 40,
+                SupportsView = false,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000031"),
+                Code = "Products",
+                Name = "Sản phẩm",
+                ParentId = catalogGroupId,
+                Area = "Admin",
+                Controller = "Products",
+                Action = "Index",
+                IconKey = "data",
+                RequiredBranchFeatureCode = BranchFeatureCodes.ProductSales,
+                RequiresBranchSelection = true,
+                SortOrder = 10,
+                SupportsView = true,
+                SupportsCreate = true,
+                SupportsEdit = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000032"),
+                Code = "SupportServices",
+                Name = "Dịch vụ hỗ trợ",
+                ParentId = catalogGroupId,
+                Area = "Admin",
+                Controller = "SupportServices",
+                Action = "Index",
+                IconKey = "settings",
+                RequiredBranchFeatureCode = BranchFeatureCodes.SupportServices,
+                RequiresBranchSelection = true,
+                SortOrder = 20,
+                SupportsView = true,
+                SupportsCreate = true,
+                SupportsEdit = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000033"),
+                Code = "PricingRules",
+                Name = "Quy tắc tính giá",
+                ParentId = catalogGroupId,
+                Area = "Admin",
+                Controller = "PricingRules",
+                Action = "Index",
+                IconKey = "report",
+                RequiredBranchFeatureCode = BranchFeatureCodes.Pricing,
+                RequiresBranchSelection = true,
+                SortOrder = 30,
+                SupportsView = true,
+                SupportsCreate = true,
+                SupportsEdit = true,
+                SupportsDelete = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000034"),
+                Code = "Inventory",
+                Name = "Kho và tồn sản phẩm",
+                ParentId = catalogGroupId,
+                Area = "Admin",
+                Controller = "Inventory",
+                Action = "Index",
+                IconKey = "data",
+                RequiredBranchFeatureCode = BranchFeatureCodes.Inventory,
+                RequiresBranchSelection = true,
+                SortOrder = 40,
+                SupportsView = true,
+                SupportsEdit = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = financeGroupId,
+                Code = "Group.Finance",
+                Name = "Tài chính",
+                Description = "Nạp tiền, ví và đối soát.",
+                Area = "Admin",
+                IconKey = "report",
+                SortOrder = 50,
+                SupportsView = false,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000041"),
+                Code = "TopUpRequests",
+                Name = "Yêu cầu nạp tiền",
+                ParentId = financeGroupId,
+                Area = "Admin",
+                Controller = "TopUpRequests",
+                Action = "Index",
+                IconKey = "import",
+                RequiredBranchFeatureCode = BranchFeatureCodes.TopUps,
+                RequiresBranchSelection = true,
+                SortOrder = 10,
+                SupportsView = true,
+                SupportsEdit = true,
+                SupportsExport = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000042"),
+                Code = "WalletTransactions",
+                Name = "Giao dịch ví",
+                ParentId = financeGroupId,
+                Area = "Admin",
+                Controller = "WalletTransactions",
+                Action = "Index",
+                IconKey = "report",
+                RequiredBranchFeatureCode = BranchFeatureCodes.Wallet,
+                RequiresBranchSelection = true,
+                SortOrder = 20,
+                SupportsView = true,
+                SupportsEdit = true,
+                SupportsExport = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000043"),
+                Code = "Reconciliation",
+                Name = "Đối soát số dư",
+                ParentId = financeGroupId,
+                Area = "Admin",
+                Controller = "Reconciliation",
+                Action = "Index",
+                IconKey = "key",
+                RequiredBranchFeatureCode = BranchFeatureCodes.Wallet,
+                RequiresBranchSelection = true,
+                SortOrder = 30,
+                SupportsView = true,
+                SupportsExport = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = systemGroupId,
+                Code = "Group.System",
+                Name = "Hệ thống",
+                Description = "Danh mục chức năng, giám sát và nhật ký.",
+                Area = "Admin",
+                IconKey = "admin",
+                SortOrder = 60,
+                SupportsView = false,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000051"),
+                Code = "SystemFunctions",
+                Name = "Chức năng và menu",
+                Description = "Đăng ký chức năng, phân cấp menu và khai báo loại quyền hỗ trợ.",
+                ParentId = systemGroupId,
+                Area = "Admin",
+                Controller = "SystemFunctions",
+                Action = "Index",
+                IconKey = "grid",
+                SortOrder = 10,
+                SupportsView = true,
+                SupportsCreate = true,
+                SupportsEdit = true,
+                SupportsDelete = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000052"),
+                Code = "SystemMonitoring",
+                Name = "Giám sát hệ thống",
+                ParentId = systemGroupId,
+                Area = "Admin",
+                Controller = "SystemMonitoring",
+                Action = "Index",
+                IconKey = "api",
+                SortOrder = 20,
+                SupportsView = true,
+                IsSystemFunction = true
+            },
+            new SystemFunction
+            {
+                Id = Guid.Parse("91000000-0000-0000-0000-000000000053"),
+                Code = "AuditLogs",
+                Name = "Nhật ký kiểm toán",
+                ParentId = systemGroupId,
+                Area = "Admin",
+                Controller = "AuditLogs",
+                Action = "Index",
+                IconKey = "log",
+                SortOrder = 30,
+                SupportsView = true,
+                SupportsExport = true,
+                IsSystemFunction = true
+            }
+        };
+
+        var existingFunctions = await _dbContext.SystemFunctions
+            .ToDictionaryAsync(x => x.Code, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        foreach (var definition in definitions)
+        {
+            if (!existingFunctions.TryGetValue(definition.Code, out var current))
+            {
+                definition.CreatedAt = DateTime.UtcNow;
+                _dbContext.SystemFunctions.Add(definition);
+                continue;
+            }
+
+            current.Area = definition.Area;
+            current.Controller = definition.Controller;
+            current.Action = definition.Action;
+            current.RequiredBranchFeatureCode = definition.RequiredBranchFeatureCode;
+            current.RequiresBranchSelection = definition.RequiresBranchSelection;
+            current.IsActive = true;
+            current.IsSystemFunction = true;
+            current.SupportsView = definition.SupportsView;
+            current.SupportsCreate = definition.SupportsCreate;
+            current.SupportsEdit = definition.SupportsEdit;
+            current.SupportsDelete = definition.SupportsDelete;
+            current.SupportsExport = definition.SupportsExport;
+            current.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private bool IsSeedOnlyMode()
     {
         return _configuration.GetValue<bool>("WEBPHOTOCOPYHUB_SEED_ONLY")
@@ -119,6 +658,224 @@ public class DbInitializer : IDbInitializer
             var databaseCreator = _dbContext.GetService<IRelationalDatabaseCreator>();
             await databaseCreator.CreateTablesAsync(cancellationToken);
         }
+    }
+
+
+    private async Task EnsureBranchGovernanceSchemaAsync(CancellationToken cancellationToken)
+    {
+        const string primaryBranchId = "11111111-1111-1111-1111-111111111111";
+        var sql = $"""
+CREATE TABLE IF NOT EXISTS "Branches" (
+    "Id" uuid NOT NULL,
+    "Code" character varying(50) NOT NULL,
+    "Slug" character varying(80) NOT NULL,
+    "Name" character varying(200) NOT NULL,
+    "Address" character varying(500) NULL,
+    "PhoneNumber" character varying(50) NULL,
+    "Email" character varying(200) NULL,
+    "OpenHours" character varying(200) NULL,
+    "ShortDescription" character varying(1000) NULL,
+    "CustomerNote" character varying(1000) NULL,
+    "PopularServices" character varying(2000) NULL,
+    "QuickOptions" character varying(2000) NULL,
+    "IsActive" boolean NOT NULL DEFAULT TRUE,
+    "IsAcceptingOrders" boolean NOT NULL DEFAULT TRUE,
+    "RowVersion" bytea NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NULL,
+    CONSTRAINT "PK_Branches" PRIMARY KEY ("Id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_Branches_Code" ON "Branches" ("Code");
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_Branches_Slug" ON "Branches" ("Slug");
+
+INSERT INTO "Branches" ("Id", "Code", "Slug", "Name", "Address", "PhoneNumber", "OpenHours", "ShortDescription", "CustomerNote", "PopularServices", "QuickOptions", "IsActive", "IsAcceptingOrders", "RowVersion", "CreatedAt")
+VALUES
+('11111111-1111-1111-1111-111111111111', 'TOAN', 'toanphotocopy', 'Toàn Photocopy', 'Đang cập nhật', 'Đang cập nhật', '08:00 - 21:00 hằng ngày', 'Cơ sở photocopy phục vụ gửi file, tạo đơn in và theo dõi trạng thái xử lý.', 'Bạn có thể upload file trước và ghi chú đầy đủ yêu cầu in.', 'In tài liệu A4/A3;Photocopy;Đóng gáy;Scan tài liệu', 'Upload file online;Tạo đơn in;Theo dõi trạng thái', TRUE, TRUE, decode(md5(random()::text || clock_timestamp()::text), 'hex'), NOW()),
+('22222222-2222-2222-2222-222222222222', 'DBP141', '141-dien-bien-phu', 'WebPhotocopyHub 141 Điện Biên Phủ', '141 Điện Biên Phủ', 'Đang cập nhật', '08:00 - 21:00', 'Cơ sở phục vụ khách hàng đặt in, upload file và theo dõi trạng thái đơn.', 'Khách hàng gửi file trước để cơ sở kiểm tra và chuẩn bị nhanh hơn.', 'In và photocopy tài liệu;Upload file online;Đóng gáy và hoàn thiện', 'Tạo đơn in;Xem sản phẩm;Dịch vụ hỗ trợ', TRUE, TRUE, decode(md5(random()::text || clock_timestamp()::text), 'hex'), NOW()),
+('33333333-3333-3333-3333-333333333333', 'CENTER', 'co-so-trung-tam', 'WebPhotocopyHub Cơ sở trung tâm', 'Khu vực trung tâm', 'Đang cập nhật', '08:00 - 21:00', 'Cơ sở trung tâm hỗ trợ đặt in, photocopy và đặt sản phẩm.', 'Khách hàng có thể gửi file trước và theo dõi trạng thái trực tuyến.', 'In tài liệu;Photocopy;Đặt sản phẩm', 'Tạo đơn in;Xem sản phẩm;Liên hệ cơ sở', TRUE, TRUE, decode(md5(random()::text || clock_timestamp()::text), 'hex'), NOW())
+ON CONFLICT ("Id") DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS "BranchFeatures" (
+    "BranchId" uuid NOT NULL,
+    "FeatureCode" character varying(100) NOT NULL,
+    "IsEnabled" boolean NOT NULL DEFAULT TRUE,
+    "UpdatedAt" timestamp with time zone NOT NULL,
+    "UpdatedByUserId" character varying(191) NULL,
+    CONSTRAINT "PK_BranchFeatures" PRIMARY KEY ("BranchId", "FeatureCode"),
+    CONSTRAINT "FK_BranchFeatures_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "BranchRoles" (
+    "Id" uuid NOT NULL,
+    "BranchId" uuid NOT NULL,
+    "Name" character varying(100) NOT NULL,
+    "Description" character varying(500) NULL,
+    "IsSystemRole" boolean NOT NULL DEFAULT FALSE,
+    "IsActive" boolean NOT NULL DEFAULT TRUE,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NULL,
+    CONSTRAINT "PK_BranchRoles" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_BranchRoles_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_BranchRoles_BranchId_Name" ON "BranchRoles" ("BranchId", "Name");
+
+CREATE TABLE IF NOT EXISTS "BranchRolePermissions" (
+    "BranchRoleId" uuid NOT NULL,
+    "PermissionCode" character varying(120) NOT NULL,
+    CONSTRAINT "PK_BranchRolePermissions" PRIMARY KEY ("BranchRoleId", "PermissionCode"),
+    CONSTRAINT "FK_BranchRolePermissions_BranchRoles_BranchRoleId" FOREIGN KEY ("BranchRoleId") REFERENCES "BranchRoles" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "UserBranchMemberships" (
+    "Id" uuid NOT NULL,
+    "UserId" character varying(191) NOT NULL,
+    "BranchId" uuid NOT NULL,
+    "BranchRoleId" uuid NOT NULL,
+    "IsPrimary" boolean NOT NULL DEFAULT FALSE,
+    "IsActive" boolean NOT NULL DEFAULT TRUE,
+    "AssignedByUserId" character varying(191) NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NULL,
+    CONSTRAINT "PK_UserBranchMemberships" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_UserBranchMemberships_AspNetUsers_UserId" FOREIGN KEY ("UserId") REFERENCES "AspNetUsers" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_UserBranchMemberships_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_UserBranchMemberships_BranchRoles_BranchRoleId" FOREIGN KEY ("BranchRoleId") REFERENCES "BranchRoles" ("Id") ON DELETE RESTRICT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_UserBranchMemberships_UserId_BranchId" ON "UserBranchMemberships" ("UserId", "BranchId");
+CREATE INDEX IF NOT EXISTS "IX_UserBranchMemberships_BranchId" ON "UserBranchMemberships" ("BranchId");
+CREATE INDEX IF NOT EXISTS "IX_UserBranchMemberships_BranchRoleId" ON "UserBranchMemberships" ("BranchRoleId");
+
+ALTER TABLE "WalletTransactions" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "TopUpRequests" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "UploadedFileMetadatas" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "PrintJobs" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "Products" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "ProductOrders" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "SupportServices" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "SupportServiceOrders" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "ProductStockMovements" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+ALTER TABLE "PricingRules" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
+
+UPDATE "WalletTransactions" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "TopUpRequests" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "UploadedFileMetadatas" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "PrintJobs" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "Products" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "ProductOrders" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "SupportServices" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "SupportServiceOrders" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "ProductStockMovements" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+UPDATE "PricingRules" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
+
+ALTER TABLE "WalletTransactions" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "TopUpRequests" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "UploadedFileMetadatas" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "PrintJobs" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "Products" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "ProductOrders" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "SupportServices" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "SupportServiceOrders" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "ProductStockMovements" ALTER COLUMN "BranchId" SET NOT NULL;
+ALTER TABLE "PricingRules" ALTER COLUMN "BranchId" SET NOT NULL;
+
+DO $branch_fk$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_WalletTransactions_Branches_BranchId') THEN
+        ALTER TABLE "WalletTransactions" ADD CONSTRAINT "FK_WalletTransactions_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_TopUpRequests_Branches_BranchId') THEN
+        ALTER TABLE "TopUpRequests" ADD CONSTRAINT "FK_TopUpRequests_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_UploadedFileMetadatas_Branches_BranchId') THEN
+        ALTER TABLE "UploadedFileMetadatas" ADD CONSTRAINT "FK_UploadedFileMetadatas_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_PrintJobs_Branches_BranchId') THEN
+        ALTER TABLE "PrintJobs" ADD CONSTRAINT "FK_PrintJobs_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_Products_Branches_BranchId') THEN
+        ALTER TABLE "Products" ADD CONSTRAINT "FK_Products_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductOrders_Branches_BranchId') THEN
+        ALTER TABLE "ProductOrders" ADD CONSTRAINT "FK_ProductOrders_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_SupportServices_Branches_BranchId') THEN
+        ALTER TABLE "SupportServices" ADD CONSTRAINT "FK_SupportServices_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_SupportServiceOrders_Branches_BranchId') THEN
+        ALTER TABLE "SupportServiceOrders" ADD CONSTRAINT "FK_SupportServiceOrders_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductStockMovements_Branches_BranchId') THEN
+        ALTER TABLE "ProductStockMovements" ADD CONSTRAINT "FK_ProductStockMovements_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_PricingRules_Branches_BranchId') THEN
+        ALTER TABLE "PricingRules" ADD CONSTRAINT "FK_PricingRules_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $branch_fk$;
+
+CREATE INDEX IF NOT EXISTS "IX_WalletTransactions_BranchId_CreatedAt" ON "WalletTransactions" ("BranchId", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_TopUpRequests_BranchId_CreatedAt" ON "TopUpRequests" ("BranchId", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_UploadedFileMetadatas_BranchId_CreatedAt" ON "UploadedFileMetadatas" ("BranchId", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_PrintJobs_BranchId_Status_CreatedAt" ON "PrintJobs" ("BranchId", "Status", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_Products_BranchId_IsActive_Name" ON "Products" ("BranchId", "IsActive", "Name");
+CREATE INDEX IF NOT EXISTS "IX_ProductOrders_BranchId_Status_CreatedAt" ON "ProductOrders" ("BranchId", "Status", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_SupportServices_BranchId_IsActive_Name" ON "SupportServices" ("BranchId", "IsActive", "Name");
+CREATE INDEX IF NOT EXISTS "IX_SupportServiceOrders_BranchId_Status_CreatedAt" ON "SupportServiceOrders" ("BranchId", "Status", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_ProductStockMovements_BranchId_CreatedAt" ON "ProductStockMovements" ("BranchId", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_PricingRules_BranchId" ON "PricingRules" ("BranchId");
+
+DROP INDEX IF EXISTS "IX_WalletTransactions_UserId_TransactionType_IdempotencyKey";
+DROP INDEX IF EXISTS "IX_TopUpRequests_UserId_CreateIdempotencyKey";
+DROP INDEX IF EXISTS "IX_PrintJobs_UserId_SubmitIdempotencyKey";
+DROP INDEX IF EXISTS "IX_ProductOrders_UserId_OrderIdempotencyKey";
+DROP INDEX IF EXISTS "IX_SupportServiceOrders_UserId_OrderIdempotencyKey";
+DROP INDEX IF EXISTS "IX_PricingRules_PaperSize_PrintSide_ColorMode_IsPhoto";
+
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_WalletTransactions_BranchId_UserId_TransactionType_IdempotencyKey" ON "WalletTransactions" ("BranchId", "UserId", "TransactionType", "IdempotencyKey");
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_TopUpRequests_BranchId_UserId_CreateIdempotencyKey" ON "TopUpRequests" ("BranchId", "UserId", "CreateIdempotencyKey");
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_PrintJobs_BranchId_UserId_SubmitIdempotencyKey" ON "PrintJobs" ("BranchId", "UserId", "SubmitIdempotencyKey");
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_ProductOrders_BranchId_UserId_OrderIdempotencyKey" ON "ProductOrders" ("BranchId", "UserId", "OrderIdempotencyKey");
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_SupportServiceOrders_BranchId_UserId_OrderIdempotencyKey" ON "SupportServiceOrders" ("BranchId", "UserId", "OrderIdempotencyKey");
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_ColorMode_IsPhoto" ON "PricingRules" ("BranchId", "PaperSize", "PrintSide", "ColorMode", "IsPhoto");
+""";
+
+        await _dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+    }
+
+    private async Task SeedBranchGovernanceAsync(CancellationToken cancellationToken)
+    {
+        var branches = await _dbContext.Branches.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
+        foreach (var branch in branches)
+        {
+            await _branchManagementService.EnsureDefaultsForBranchAsync(branch.Id, cancellationToken);
+        }
+
+        var operators = await _userManager.GetUsersInRoleAsync(RoleConstants.ShopOperator);
+        foreach (var branch in branches)
+        {
+            var managerRole = await _dbContext.BranchRoles
+                .AsNoTracking()
+                .FirstAsync(x => x.BranchId == branch.Id && x.Name == "Quản lý cơ sở", cancellationToken);
+
+            foreach (var operatorUser in operators)
+            {
+                if (!await _dbContext.UserBranchMemberships.AnyAsync(
+                    x => x.BranchId == branch.Id && x.UserId == operatorUser.Id,
+                    cancellationToken))
+                {
+                    _dbContext.UserBranchMemberships.Add(new UserBranchMembership
+                    {
+                        UserId = operatorUser.Id,
+                        BranchId = branch.Id,
+                        BranchRoleId = managerRole.Id,
+                        IsPrimary = branch.Id == BranchDefaults.PrimaryBranchId,
+                        IsActive = true
+                    });
+                }
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _branchManagementService.SyncStaticCatalogAsync(cancellationToken);
     }
 
     private static bool ContainsException<TException>(Exception exception)

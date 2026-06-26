@@ -31,60 +31,211 @@
         <div class="bh-hero-main">
             <span class="bh-kicker">Trang cơ sở</span>
             <h1>Đặt in tại @Model.Branch.Name</h1>
-            <p>Gửi file, chọn cấu hình in và theo dõi trạng thái xử lý tại cơ sở. Trang này chỉ giữ các chức năng cần dùng nhanh; thông tin tổng quan nằm trong Dashboard.</p>
+
+            <p>
+                Gửi file, chọn cấu hình in và theo dõi trạng thái xử lý tại cơ sở.
+                Trang này chỉ giữ các chức năng cần dùng nhanh; thông tin tổng quan nằm trong Dashboard.
+            </p>
 
             <div class="bh-trust-row" aria-label="Thông tin nhanh">
-                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-file-earmark-richtext"></use></svg>PDF, DOCX, PPTX</span>
-                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg>Thanh toán theo từng đơn</span>
-                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-shop"></use></svg>Nhận tại cơ sở</span>
+                <span>
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-file-earmark-richtext"></use>
+                    </svg>
+                    PDF, DOCX, PPTX
+                </span>
+
+                <span>
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-wallet2"></use>
+                    </svg>
+                    Thanh toán theo từng đơn
+                </span>
+
+                <span>
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-shop"></use>
+                    </svg>
+                    Nhận tại cơ sở
+                </span>
             </div>
 
             <div class="bh-hero-actions">
-                <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg>Tạo đơn in</a>
-                <a class="bh-btn bh-btn-secondary" href="@RequireLogin(printJobsUrl)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clipboard-check"></use></svg>Theo dõi đơn</a>
-                <a class="bh-btn bh-btn-soft" href="#customerPriceQuick"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-tags"></use></svg>Xem bảng giá</a>
+                @if (Model.IsSignedIn)
+                {
+                    <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)">
+                        <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                            <use href="#cu-icon-printer"></use>
+                        </svg>
+                        Tạo đơn in
+                    </a>
+
+                    <a class="bh-btn bh-btn-secondary" href="@RequireLogin(printJobsUrl)">
+                        <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                            <use href="#cu-icon-clipboard-check"></use>
+                        </svg>
+                        Theo dõi đơn
+                    </a>
+                }
+
+                <a class="bh-btn bh-btn-soft" href="#customerPriceQuick">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-tags"></use>
+                    </svg>
+                    Xem bảng giá
+                </a>
             </div>
         </div>
 
-        <aside class="bh-start-card" aria-label="Bắt đầu tạo đơn">
-            <div class="bh-start-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-rocket-takeoff"></use></svg></div>
-            <span class="bh-kicker">Bắt đầu nhanh</span>
-            <h2>Tạo yêu cầu in</h2>
-            <p>Chọn file ở bước tiếp theo, nhập số trang, số bản, màu sắc và ghi chú nếu cần.</p>
-            <div class="bh-start-options">
-                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-aspect-ratio"></use></svg>A4 / A3</span>
-                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-layout-split"></use></svg>1 mặt / 2 mặt</span>
-                <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-palette"></use></svg>Đen trắng / màu</span>
-            </div>
-            <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-right-circle"></use></svg>Mở form tạo đơn</a>
-        </aside>
+        @if (Model.IsSignedIn)
+        {
+            <aside class="bh-start-card" aria-label="Bắt đầu tạo đơn">
+                <div class="bh-start-icon" aria-hidden="true">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-rocket-takeoff"></use>
+                    </svg>
+                </div>
+
+                <span class="bh-kicker">Bắt đầu nhanh</span>
+                <h2>Tạo yêu cầu in</h2>
+
+                <p>
+                    Chọn file ở bước tiếp theo, nhập số trang, số bản,
+                    màu sắc và ghi chú nếu cần.
+                </p>
+
+                <div class="bh-start-options">
+                    <span>
+                        <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                            <use href="#cu-icon-aspect-ratio"></use>
+                        </svg>
+                        A4 / A3
+                    </span>
+
+                    <span>
+                        <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                            <use href="#cu-icon-layout-split"></use>
+                        </svg>
+                        1 mặt / 2 mặt
+                    </span>
+
+                    <span>
+                        <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                            <use href="#cu-icon-palette"></use>
+                        </svg>
+                        Đen trắng / màu
+                    </span>
+                </div>
+
+                <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-arrow-right-circle"></use>
+                    </svg>
+                    Mở form tạo đơn
+                </a>
+            </aside>
+        }
+
+        @if (!Model.IsSignedIn)
+        {
+            <aside class="bh-start-card" aria-label="Đăng nhập khách hàng">
+                <div class="bh-start-icon" aria-hidden="true">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-person-vcard"></use>
+                    </svg>
+                </div>
+
+                <span class="bh-kicker">Dành cho khách hàng</span>
+                <h2>Đăng nhập để đặt in</h2>
+
+                <p>
+                    Sau khi đăng nhập, bạn có thể tạo đơn, gửi file,
+                    mua sản phẩm và theo dõi toàn bộ lịch sử xử lý.
+                </p>
+
+                <div class="bh-start-options">
+                    <span>
+                        <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                            <use href="#cu-icon-printer"></use>
+                        </svg>
+                        Tạo đơn
+                    </span>
+
+                    <span>
+                        <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                            <use href="#cu-icon-clock-history"></use>
+                        </svg>
+                        Theo dõi
+                    </span>
+
+                    <span>
+                        <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                            <use href="#cu-icon-wallet2"></use>
+                        </svg>
+                        Thanh toán
+                    </span>
+                </div>
+
+                <a class="bh-btn bh-btn-primary" href="@RequireLogin(dashboardUrl)">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-box-arrow-in-right"></use>
+                    </svg>
+                    Đăng nhập
+                </a>
+            </aside>
+        }
     </section>
 
-    <section class="bh-action-strip" aria-label="Thao tác nhanh">
-        <a class="bh-action-card" href="@RequireLogin(printCreateUrl)">
-            <span class="bh-action-icon is-blue" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg></span>
-            <strong>Tạo đơn in</strong>
-            <small>Upload file và gửi yêu cầu in mới.</small>
-        </a>
+    @if (Model.IsSignedIn)
+    {
+        <!-- Auth-only branch actions - start -->
+        <section class="bh-action-strip" aria-label="Thao tác nhanh">
+            <a class="bh-action-card" href="@RequireLogin(printCreateUrl)">
+                <span class="bh-action-icon is-blue" aria-hidden="true">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-printer"></use>
+                    </svg>
+                </span>
 
-        <a class="bh-action-card" href="@RequireLogin(printJobsUrl)">
-            <span class="bh-action-icon is-green" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-list-check"></use></svg></span>
-            <strong>Đơn của tôi</strong>
-            <small>Theo dõi trạng thái đơn đang xử lý.</small>
-        </a>
+                <strong>Tạo đơn in</strong>
+                <small>Upload file và gửi yêu cầu in mới.</small>
+            </a>
 
-        <a class="bh-action-card" href="@RequireLogin(productsUrl)">
-            <span class="bh-action-icon is-purple" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span>
-            <strong>Sản phẩm</strong>
-            <small>Mua giấy, bút, bìa và vật tư.</small>
-        </a>
+            <a class="bh-action-card" href="@RequireLogin(printJobsUrl)">
+                <span class="bh-action-icon is-green" aria-hidden="true">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-list-check"></use>
+                    </svg>
+                </span>
 
-        <a class="bh-action-card" href="@RequireLogin(supportCreateUrl)">
-            <span class="bh-action-icon is-rose" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-life-preserver"></use></svg></span>
-            <strong>Dịch vụ hỗ trợ</strong>
-            <small>Scan, đóng gáy, ép plastic.</small>
-        </a>
-    </section>
+                <strong>Đơn của tôi</strong>
+                <small>Theo dõi trạng thái đơn đang xử lý.</small>
+            </a>
+
+            <a class="bh-action-card" href="@RequireLogin(productsUrl)">
+                <span class="bh-action-icon is-purple" aria-hidden="true">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-bag-heart"></use>
+                    </svg>
+                </span>
+
+                <strong>Sản phẩm</strong>
+                <small>Mua giấy, bút, bìa và vật tư.</small>
+            </a>
+
+            <a class="bh-action-card" href="@RequireLogin(supportCreateUrl)">
+                <span class="bh-action-icon is-rose" aria-hidden="true">
+                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                        <use href="#cu-icon-life-preserver"></use>
+                    </svg>
+                </span>
+
+                <strong>Dịch vụ hỗ trợ</strong>
+                <small>Scan, đóng gáy, ép plastic.</small>
+            </a>
+        </section>
+        <!-- Auth-only branch actions - end -->
+    }
 
     <section class="bh-content-grid">
         <article id="customerPriceQuick" class="bh-panel">
@@ -93,7 +244,11 @@
                     <span class="bh-kicker">Bảng giá</span>
                     <h2>Giá tham khảo đang áp dụng</h2>
                 </div>
-                <a href="@RequireLogin(printCreateUrl)">Tạo đơn</a>
+
+                @if (Model.IsSignedIn)
+                {
+                    <a href="@RequireLogin(printCreateUrl)">Tạo đơn</a>
+                }
             </div>
 
             @if (Model.QuickPrices.Count > 0)
@@ -106,6 +261,7 @@
                                 <strong>@price.Name</strong>
                                 <small>@price.Description</small>
                             </span>
+
                             <em>@price.UnitPrice.ToString("N0") đ / trang</em>
                         </div>
                     }
@@ -116,7 +272,10 @@
             {
                 <div class="bh-empty-state">
                     <strong>Chưa có bảng giá hoạt động</strong>
-                    <span>Vui lòng cập nhật bảng giá trong phần quản trị để khách hàng xem được giá thật.</span>
+                    <span>
+                        Vui lòng cập nhật bảng giá trong phần quản trị
+                        để khách hàng xem được giá thật.
+                    </span>
                 </div>
             }
         </article>
@@ -136,71 +295,96 @@
                 <span>@Model.Branch.OpenHours</span>
             </div>
 
-            <div class="bh-contact-actions">
-                <a href="@RequireLogin(supportCreateUrl)">Yêu cầu hỗ trợ</a>
-                <a href="@RequireLogin(profileUrl)">Hồ sơ nhận hàng</a>
-            </div>
+            @if (Model.IsSignedIn)
+            {
+                <div class="bh-contact-actions">
+                    <a href="@RequireLogin(supportCreateUrl)">Yêu cầu hỗ trợ</a>
+                    <a href="@RequireLogin(profileUrl)">Hồ sơ nhận hàng</a>
+                </div>
+            }
         </aside>
 
-        <article class="bh-panel bh-panel-wide">
-            <div class="bh-panel-head">
-                <div>
-                    <span class="bh-kicker">Đơn cần chú ý</span>
-                    <h2>Hoạt động gần đây</h2>
-                </div>
-                <a href="@RequireLogin(dashboardUrl)">Mở Dashboard</a>
-            </div>
+        @if (Model.IsSignedIn)
+        {
+            <!-- Auth-only account overview - start -->
+            <article class="bh-panel bh-panel-wide">
+                <div class="bh-panel-head">
+                    <div>
+                        <span class="bh-kicker">Đơn cần chú ý</span>
+                        <h2>Hoạt động gần đây</h2>
+                    </div>
 
-            @if (!Model.IsSignedIn)
-            {
-                <div class="bh-empty-state bh-empty-state-inline">
-                    <strong>Đăng nhập để xem đơn của bạn</strong>
-                    <span>Sau khi đăng nhập, các đơn in gần đây và trạng thái đang xử lý sẽ hiển thị tại đây.</span>
-                    <a class="bh-btn bh-btn-secondary" href="@RequireLogin(dashboardUrl)">Đăng nhập / Dashboard</a>
+                    <a href="@RequireLogin(dashboardUrl)">Mở Dashboard</a>
                 </div>
-            }
 
-            @if (Model.IsSignedIn && Model.RecentPrintJobs.Count == 0)
-            {
-                <div class="bh-empty-state bh-empty-state-inline">
-                    <strong>Bạn chưa có đơn in nào</strong>
-                    <span>Tạo đơn in đầu tiên bằng cách gửi file và chọn cấu hình in.</span>
-                    <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg>Tạo đơn in</a>
-                </div>
-            }
+                @if (Model.RecentPrintJobs.Count == 0)
+                {
+                    <div class="bh-empty-state bh-empty-state-inline">
+                        <strong>Bạn chưa có đơn in nào</strong>
+                        <span>
+                            Tạo đơn in đầu tiên bằng cách gửi file và chọn cấu hình in.
+                        </span>
 
-            @if (Model.IsSignedIn && Model.RecentPrintJobs.Count > 0)
-            {
-                <div class="bh-order-list">
-                    @foreach (var job in Model.RecentPrintJobs)
-                    {
-                        <a href="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs/Details/{job.Id}")">
-                            <span class="bh-order-status">@job.Status.GetDisplayName()</span>
-                            <div>
-                                <strong>@job.PaperSize.GetDisplayName() · @job.ColorMode.GetDisplayName() · @job.PrintSide.GetDisplayName()</strong>
-                                <small>@job.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") · @job.TotalAmount.ToString("N0") đ</small>
-                            </div>
-                            <em>→</em>
+                        <a class="bh-btn bh-btn-primary" href="@RequireLogin(printCreateUrl)">
+                            <svg class="cu-svg-icon" aria-hidden="true" focusable="false">
+                                <use href="#cu-icon-printer"></use>
+                            </svg>
+                            Tạo đơn in
                         </a>
-                    }
-                </div>
-            }
-        </article>
+                    </div>
+                }
 
-        <aside class="bh-panel">
-            <div class="bh-panel-head">
-                <div>
-                    <span class="bh-kicker">Dashboard</span>
-                    <h2>Tổng quan riêng</h2>
-                </div>
-            </div>
+                @if (Model.RecentPrintJobs.Count > 0)
+                {
+                    <div class="bh-order-list">
+                        @foreach (var job in Model.RecentPrintJobs)
+                        {
+                            <a href="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs/Details/{job.Id}")">
+                                <span class="bh-order-status">@job.Status.GetDisplayName()</span>
 
-            <div class="bh-dashboard-brief">
-                <strong>@Model.ActivePrintJobCount</strong>
-                <span>đơn in đang cần theo dõi</span>
-                <p>Dashboard chứa số dư ví, giao dịch, đơn sản phẩm, dịch vụ hỗ trợ và thống kê cá nhân.</p>
-                <a class="bh-btn bh-btn-secondary" href="@RequireLogin(dashboardUrl)">Vào Dashboard</a>
-            </div>
-        </aside>
+                                <div>
+                                    <strong>
+                                        @job.PaperSize.GetDisplayName() ·
+                                        @job.ColorMode.GetDisplayName() ·
+                                        @job.PrintSide.GetDisplayName()
+                                    </strong>
+
+                                    <small>
+                                        @job.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ·
+                                        @job.TotalAmount.ToString("N0") đ
+                                    </small>
+                                </div>
+
+                                <em>→</em>
+                            </a>
+                        }
+                    </div>
+                }
+            </article>
+
+            <aside class="bh-panel">
+                <div class="bh-panel-head">
+                    <div>
+                        <span class="bh-kicker">Dashboard</span>
+                        <h2>Tổng quan riêng</h2>
+                    </div>
+                </div>
+
+                <div class="bh-dashboard-brief">
+                    <strong>@Model.ActivePrintJobCount</strong>
+                    <span>đơn in đang cần theo dõi</span>
+
+                    <p>
+                        Dashboard chứa số dư ví, giao dịch, đơn sản phẩm,
+                        dịch vụ hỗ trợ và thống kê cá nhân.
+                    </p>
+
+                    <a class="bh-btn bh-btn-secondary" href="@RequireLogin(dashboardUrl)">
+                        Vào Dashboard
+                    </a>
+                </div>
+            </aside>
+            <!-- Auth-only account overview - end -->
+        }
     </section>
 </section>

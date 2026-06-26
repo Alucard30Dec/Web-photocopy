@@ -6,202 +6,138 @@
         : string.Equals(Model.HealthStatus, "Degraded", StringComparison.OrdinalIgnoreCase)
             ? "is-warning"
             : "is-danger";
+    var auditClass = Model.IsAuditChainValid ? "is-success" : "is-danger";
+    var urgentWorkCount = Model.Summary.PendingTopUps + Model.Summary.PrintJobsPending;
+    var activeCatalogCount = Model.Summary.ActiveProducts + Model.Summary.ActiveSupportServices;
+    var updatedAt = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
 }
 
-<section class="system-page-hero">
+<section class="adminops-dashboard-header" aria-labelledby="admin-dashboard-title">
     <div>
-        <span class="system-eyebrow">System administration center</span>
-        <h1>Dashboard quản trị toàn hệ thống</h1>
-        <p>Theo dõi tài khoản, giao dịch, đơn hàng, danh mục, API và hoạt động audit từ một khu vực duy nhất.</p>
-        <div class="system-hero-meta">
-            <span class="system-health-chip @healthClass">
-                <span></span>
-                Health: @Model.HealthStatus
-            </span>
-            <span class="system-soft-chip">@Model.ApiEndpointCount API endpoints</span>
-            <span class="system-soft-chip">@Model.ActivityLast24Hours hoạt động / 24 giờ</span>
+        <span class="adminops-eyebrow">Operations console</span>
+        <h1 id="admin-dashboard-title">Dashboard quản trị toàn hệ thống</h1>
+        <p>Tập trung vào công việc cần xử lý, kiểm soát tài chính, vận hành đơn hàng và sức khỏe hệ thống.</p>
+        <div class="adminops-dashboard-meta">
+            <span>Cập nhật lúc @updatedAt</span>
+            <span class="adminops-status-chip @healthClass"><i aria-hidden="true"></i>Health: @Model.HealthStatus</span>
+            <span>@Model.ActivityLast24Hours hoạt động trong 24 giờ</span>
         </div>
     </div>
-    <div class="system-hero-actions">
-        <a class="btn btn-primary" asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">Mở trung tâm giám sát</a>
-        <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">Tra cứu audit log</a>
+    <div class="adminops-dashboard-actions">
+        <a class="adminops-button secondary" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">Tra cứu audit log</a>
+        <a class="adminops-button primary" asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">Mở trung tâm giám sát</a>
     </div>
 </section>
 
-<section class="system-kpi-grid" aria-label="Chỉ số quản trị chính">
-    <a class="system-kpi-card tone-blue" asp-area="Admin" asp-controller="Users" asp-action="Index">
-        <span class="system-kpi-label">Tổng tài khoản</span>
-        <strong>@Model.Summary.TotalUsers</strong>
-        <small>Quản lý trạng thái, role và số dư</small>
-    </a>
-    <a class="system-kpi-card tone-amber" asp-area="Admin" asp-controller="TopUpRequests" asp-action="Index">
-        <span class="system-kpi-label">Top-up chờ duyệt</span>
+<section class="adminops-attention-grid" aria-label="Chỉ số cần chú ý">
+    <a class="adminops-attention-card tone-warning" asp-area="Admin" asp-controller="TopUpRequests" asp-action="Index">
+        <div class="adminops-attention-head"><span>Top-up chờ duyệt</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16v12H4zM4 10h16M16 14h2M7 4h10"></path></svg></div>
         <strong>@Model.Summary.PendingTopUps</strong>
-        <small>Luồng tiền cần xử lý và đối soát</small>
+        <p>Chứng từ và giao dịch cần kiểm tra trước khi ghi nhận số dư.</p>
+        <span class="adminops-card-link">Mở hàng đợi <b aria-hidden="true">→</b></span>
     </a>
-    <a class="system-kpi-card tone-cyan" asp-area="Admin" asp-controller="PrintJobs" asp-action="Index">
-        <span class="system-kpi-label">Đơn in đang xử lý</span>
+    <a class="adminops-attention-card tone-info" asp-area="Admin" asp-controller="PrintJobs" asp-action="Index">
+        <div class="adminops-attention-head"><span>Đơn in đang xử lý</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12v5H6zM5 9h14a2 2 0 0 1 2 2v6h-4v3H7v-3H3v-6a2 2 0 0 1 2-2ZM9 15h6v5H9z"></path></svg></div>
         <strong>@Model.Summary.PrintJobsPending</strong>
-        <small>Theo dõi trạng thái, file và SLA</small>
+        <p>Theo dõi file, trạng thái xử lý và các tình huống cần can thiệp.</p>
+        <span class="adminops-card-link">Điều phối đơn <b aria-hidden="true">→</b></span>
     </a>
-    <a class="system-kpi-card tone-violet" asp-area="Admin" asp-controller="WalletTransactions" asp-action="Index">
-        <span class="system-kpi-label">Giao dịch ví</span>
-        <strong>@Model.Summary.TotalWalletTransactions</strong>
-        <small>Tra cứu biến động và tham chiếu</small>
+    <a class="adminops-attention-card tone-neutral" asp-area="Admin" asp-controller="Reconciliation" asp-action="Index">
+        <div class="adminops-attention-head"><span>Đối soát ví</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h15v13H4zM16 10h5v5h-5a2.5 2.5 0 0 1 0-5ZM7 3h10"></path></svg></div>
+        <strong>Kiểm tra</strong>
+        <p>Đối chiếu số dư hiện tại với lịch sử giao dịch và tham chiếu nghiệp vụ.</p>
+        <span class="adminops-card-link">Mở đối soát <b aria-hidden="true">→</b></span>
     </a>
-    <a class="system-kpi-card tone-green" asp-area="Admin" asp-controller="Products" asp-action="Index">
-        <span class="system-kpi-label">Sản phẩm hoạt động</span>
-        <strong>@Model.Summary.ActiveProducts</strong>
-        <small>Danh mục, giá và tồn kho</small>
-    </a>
-    <a class="system-kpi-card tone-slate" asp-area="Admin" asp-controller="SupportServices" asp-action="Index">
-        <span class="system-kpi-label">Dịch vụ hoạt động</span>
-        <strong>@Model.Summary.ActiveSupportServices</strong>
-        <small>Đơn giá và kiểu tính phí</small>
+    <a class="adminops-attention-card @healthClass" asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">
+        <div class="adminops-attention-head"><span>Sức khỏe hệ thống</span><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4M7 11h2l2-4 3 8 2-4h2"></path></svg></div>
+        <strong>@Model.HealthStatus</strong>
+        <p>@Model.ApiEndpointCount API endpoint đang được kiểm kê trong hệ thống.</p>
+        <span class="adminops-card-link">Xem giám sát <b aria-hidden="true">→</b></span>
     </a>
 </section>
 
-<div class="system-dashboard-grid">
-    <section class="system-panel system-panel-span-2">
-        <div class="system-panel-header">
-            <div>
-                <span class="system-panel-kicker">Điều phối ưu tiên</span>
-                <h2>Việc cần kiểm soát ngay</h2>
-            </div>
-            <span class="system-panel-note">Dữ liệu lấy từ service hiện có</span>
-        </div>
+<section class="adminops-summary-strip" aria-label="Tổng quan dữ liệu hệ thống">
+    <a asp-area="Admin" asp-controller="Users" asp-action="Index"><span>Tài khoản</span><strong>@Model.Summary.TotalUsers</strong><small>Người dùng toàn hệ thống</small></a>
+    <a asp-area="Admin" asp-controller="WalletTransactions" asp-action="Index"><span>Giao dịch ví</span><strong>@Model.Summary.TotalWalletTransactions</strong><small>Lịch sử biến động</small></a>
+    <a asp-area="Admin" asp-controller="Products" asp-action="Index"><span>Danh mục hoạt động</span><strong>@activeCatalogCount</strong><small>@Model.Summary.ActiveProducts sản phẩm · @Model.Summary.ActiveSupportServices dịch vụ</small></a>
+    <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index"><span>Audit 24 giờ</span><strong>@Model.ActivityLast24Hours</strong><small class="@auditClass">Chuỗi audit: @(Model.IsAuditChainValid ? "Hợp lệ" : "Cần kiểm tra")</small></a>
+</section>
 
-        <div class="system-priority-grid">
-            <a class="system-priority-card is-hot" asp-area="Admin" asp-controller="TopUpRequests" asp-action="Index">
-                <span class="system-priority-index">01</span>
-                <div>
-                    <strong>Duyệt top-up</strong>
-                    <small>Kiểm tra chứng từ, trạng thái và idempotency.</small>
-                </div>
-                <b>@Model.Summary.PendingTopUps</b>
-            </a>
-            <a class="system-priority-card" asp-area="Admin" asp-controller="PrintJobs" asp-action="Index">
-                <span class="system-priority-index">02</span>
-                <div>
-                    <strong>Điều phối đơn in</strong>
-                    <small>Kiểm soát file, tiến độ và hoàn tiền.</small>
-                </div>
-                <b>@Model.Summary.PrintJobsPending</b>
-            </a>
-            <a class="system-priority-card" asp-area="Admin" asp-controller="Reconciliation" asp-action="Index">
-                <span class="system-priority-index">03</span>
-                <div>
-                    <strong>Đối soát ví</strong>
-                    <small>Phát hiện chênh lệch giữa số dư và lịch sử.</small>
-                </div>
-                <b>→</b>
-            </a>
+<div class="adminops-dashboard-layout">
+    <section class="adminops-panel adminops-work-panel">
+        <header class="adminops-panel-header">
+            <div><span class="adminops-eyebrow">Work queue</span><h2>Trung tâm công việc</h2><p>@urgentWorkCount mục đang cần theo dõi trực tiếp.</p></div>
+            <span class="adminops-panel-badge">Ưu tiên vận hành</span>
+        </header>
+        <div class="adminops-work-table" role="table" aria-label="Danh sách công việc ưu tiên">
+            <div class="adminops-work-row adminops-work-head" role="row">
+                <span role="columnheader">Ưu tiên</span><span role="columnheader">Công việc</span><span role="columnheader">Số lượng</span><span role="columnheader">Kiểm soát</span><span role="columnheader">Thao tác</span>
+            </div>
+            <div class="adminops-work-row" role="row">
+                <span role="cell"><b class="adminops-priority high">Cao</b></span>
+                <span role="cell"><strong>Duyệt yêu cầu nạp tiền</strong><small>Kiểm tra chứng từ, trạng thái và idempotency.</small></span>
+                <span role="cell"><b>@Model.Summary.PendingTopUps</b></span>
+                <span role="cell">Luồng tiền</span>
+                <span role="cell"><a asp-area="Admin" asp-controller="TopUpRequests" asp-action="Index">Xử lý</a></span>
+            </div>
+            <div class="adminops-work-row" role="row">
+                <span role="cell"><b class="adminops-priority medium">Trung bình</b></span>
+                <span role="cell"><strong>Điều phối đơn in</strong><small>Kiểm soát file, tiến độ, trạng thái và hoàn tiền.</small></span>
+                <span role="cell"><b>@Model.Summary.PrintJobsPending</b></span>
+                <span role="cell">Vận hành</span>
+                <span role="cell"><a asp-area="Admin" asp-controller="PrintJobs" asp-action="Index">Mở danh sách</a></span>
+            </div>
+            <div class="adminops-work-row" role="row">
+                <span role="cell"><b class="adminops-priority normal">Định kỳ</b></span>
+                <span role="cell"><strong>Đối soát số dư ví</strong><small>Phát hiện chênh lệch giữa số dư và lịch sử.</small></span>
+                <span role="cell"><b>—</b></span>
+                <span role="cell">Tài chính</span>
+                <span role="cell"><a asp-area="Admin" asp-controller="Reconciliation" asp-action="Index">Đối soát</a></span>
+            </div>
         </div>
     </section>
 
-    <aside class="system-panel">
-        <div class="system-panel-header">
-            <div>
-                <span class="system-panel-kicker">Security & observability</span>
-                <h2>Trạng thái kiểm soát</h2>
-            </div>
-        </div>
-        <div class="system-control-list">
-            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">
-                <span>Health checks</span>
-                <strong class="@healthClass">@Model.HealthStatus</strong>
-            </a>
-            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">
-                <span>API inventory</span>
-                <strong>@Model.ApiEndpointCount endpoints</strong>
-            </a>
-            <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">
-                <span>Audit chain</span>
-                <strong class="@(Model.IsAuditChainValid ? "is-success" : "is-danger")">
-                    @(Model.IsAuditChainValid ? "Hợp lệ" : "Cần kiểm tra")
-                </strong>
-            </a>
-            <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">
-                <span>Activity 24 giờ</span>
-                <strong>@Model.ActivityLast24Hours bản ghi</strong>
-            </a>
+    <aside class="adminops-panel adminops-control-panel">
+        <header class="adminops-panel-header"><div><span class="adminops-eyebrow">Security &amp; observability</span><h2>Trạng thái kiểm soát</h2><p>Các chỉ báo kỹ thuật và truy vết quan trọng.</p></div></header>
+        <div class="adminops-control-list">
+            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index"><span><i class="@healthClass" aria-hidden="true"></i>Health checks</span><strong class="@healthClass">@Model.HealthStatus</strong></a>
+            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index"><span><i class="is-info" aria-hidden="true"></i>API inventory</span><strong>@Model.ApiEndpointCount endpoints</strong></a>
+            <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index"><span><i class="@auditClass" aria-hidden="true"></i>Audit chain</span><strong class="@auditClass">@(Model.IsAuditChainValid ? "Hợp lệ" : "Cần kiểm tra")</strong></a>
+            <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index"><span><i class="is-neutral" aria-hidden="true"></i>Activity 24 giờ</span><strong>@Model.ActivityLast24Hours bản ghi</strong></a>
         </div>
     </aside>
 </div>
 
-<section class="system-panel mt-3">
-    <div class="system-panel-header">
-        <div>
-            <span class="system-panel-kicker">Quyền quản trị hiện có</span>
-            <h2>Trung tâm chức năng</h2>
-        </div>
-        <span class="system-panel-note">Mỗi action vẫn được bảo vệ bằng role Admin tại controller</span>
-    </div>
-
-    <div class="system-capability-grid">
-        <div class="system-capability-card">
-            <span>Danh tính</span>
-            <h3>Người dùng và phân quyền</h3>
-            <p>Khóa/mở tài khoản, thay đổi role, điều chỉnh ví và ngăn tự hạ quyền quản trị.</p>
-            <a asp-area="Admin" asp-controller="Users" asp-action="Index">Mở quản lý người dùng</a>
-        </div>
-        <div class="system-capability-card">
-            <span>Tài chính</span>
-            <h3>Ví, top-up và đối soát</h3>
-            <p>Duyệt nạp tiền, tra cứu giao dịch, xuất CSV và kiểm tra tính nhất quán số dư.</p>
-            <a asp-area="Admin" asp-controller="Reconciliation" asp-action="Index">Mở kiểm soát tài chính</a>
-        </div>
-        <div class="system-capability-card">
-            <span>Vận hành</span>
-            <h3>Đơn hàng toàn hệ thống</h3>
-            <p>Quản lý đơn in, đơn văn phòng phẩm, đơn dịch vụ và lịch sử biến động kho.</p>
-            <a asp-area="Admin" asp-controller="ProductOrders" asp-action="Index">Mở trung tâm đơn hàng</a>
-        </div>
-        <div class="system-capability-card">
-            <span>Cấu hình</span>
-            <h3>Danh mục và bảng giá</h3>
-            <p>Chỉnh sản phẩm, dịch vụ hỗ trợ và quy tắc giá in đang áp dụng.</p>
-            <a asp-area="Admin" asp-controller="PricingRules" asp-action="Index">Mở cấu hình hệ thống</a>
-        </div>
-        <div class="system-capability-card">
-            <span>Giám sát</span>
-            <h3>API, health và audit</h3>
-            <p>Kiểm tra endpoint, yêu cầu xác thực, rate-limit metadata, runtime và chuỗi audit.</p>
-            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index">Mở trung tâm giám sát</a>
-        </div>
-    </div>
-</section>
-
-<section class="system-panel mt-3">
-    <div class="system-panel-header">
-        <div>
-            <span class="system-panel-kicker">Activity tracking</span>
-            <h2>Hoạt động gần đây</h2>
-        </div>
-        <a class="btn btn-sm btn-outline-primary" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">Xem toàn bộ</a>
-    </div>
-
-    <div class="system-activity-list">
-        @if (Model.RecentActivities.Count == 0)
-        {
-            <div class="system-empty-state">Chưa có bản ghi audit nào.</div>
-        }
-        else
-        {
+<div class="adminops-dashboard-layout lower">
+    <section class="adminops-panel adminops-activity-panel">
+        <header class="adminops-panel-header">
+            <div><span class="adminops-eyebrow">Activity tracking</span><h2>Hoạt động gần đây</h2><p>Nhật ký mới nhất phục vụ truy vết thay đổi.</p></div>
+            <a class="adminops-text-link" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index">Xem toàn bộ →</a>
+        </header>
+        <div class="adminops-activity-list">
+            @if (Model.RecentActivities.Count == 0)
+            {
+                <div class="adminops-empty-state"><strong>Chưa có hoạt động gần đây</strong><span>Các thao tác quản trị mới sẽ xuất hiện tại đây.</span></div>
+            }
             @foreach (var item in Model.RecentActivities)
             {
-                <a class="system-activity-item" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index" asp-route-query="@item.Action">
-                    <span class="system-activity-dot"></span>
-                    <div>
-                        <strong>@item.Action</strong>
-                        <small>@item.EntityName · @(item.EntityId ?? "Không có mã")</small>
-                    </div>
-                    <div class="system-activity-meta">
-                        <span>@item.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</span>
-                        <small>@(item.IpAddress ?? "Không có IP")</small>
-                    </div>
+                var activityIso = item.CreatedAt.ToString("O");
+                <a class="adminops-activity-item" asp-area="Admin" asp-controller="AuditLogs" asp-action="Index" asp-route-query="@item.Action">
+                    <span class="adminops-activity-dot" aria-hidden="true"></span>
+                    <span><strong>@item.Action</strong><small>@item.EntityName · @(item.EntityId ?? "Không có mã")</small></span>
+                    <time datetime="@activityIso">@item.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</time>
                 </a>
             }
-        }
-    </div>
-</section>
+        </div>
+    </section>
+
+    <section class="adminops-panel adminops-quick-panel">
+        <header class="adminops-panel-header"><div><span class="adminops-eyebrow">Management center</span><h2>Truy cập nhanh</h2><p>Mở các nhóm chức năng quản trị thường dùng.</p></div></header>
+        <div class="adminops-quick-grid">
+            <a asp-area="Admin" asp-controller="Users" asp-action="Index"><span>Danh tính</span><strong>Người dùng và quyền</strong><small>Tài khoản, vai trò và số dư</small></a>
+            <a asp-area="Admin" asp-controller="ProductOrders" asp-action="Index"><span>Vận hành</span><strong>Đơn hàng hệ thống</strong><small>Đơn sản phẩm và dịch vụ</small></a>
+            <a asp-area="Admin" asp-controller="Inventory" asp-action="Index"><span>Kho</span><strong>Tồn kho và biến động</strong><small>Sản phẩm, nhập xuất và cảnh báo</small></a>
+            <a asp-area="Admin" asp-controller="PricingRules" asp-action="Index"><span>Cấu hình</span><strong>Danh mục và bảng giá</strong><small>Quy tắc giá và dịch vụ</small></a>
+        </div>
+    </section>
+</div>

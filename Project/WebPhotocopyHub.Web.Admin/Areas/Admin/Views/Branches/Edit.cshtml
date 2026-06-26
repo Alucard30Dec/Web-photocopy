@@ -1,0 +1,84 @@
+@model BranchEditViewModel
+@{
+    ViewData["Title"] = Model.Id.HasValue ? "Cập nhật cơ sở" : "Thêm cơ sở";
+}
+
+<section class="branch-admin-page branch-admin-form-page">
+    <div class="branch-admin-heading">
+        <div>
+            <span class="branch-admin-eyebrow">CẤU HÌNH CƠ SỞ</span>
+            <h1>@ViewData["Title"]</h1>
+            <p>Thông tin này được dùng cho trang khách hàng, khu vận hành và bộ chọn phạm vi quản trị.</p>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+    </div>
+
+    <form asp-action="Edit" method="post" class="branch-admin-form">
+        <input asp-for="Id" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="branch-admin-form-grid">
+            <div class="form-group">
+                <label asp-for="Code"></label>
+                <input asp-for="Code" class="form-control" />
+                <span asp-validation-for="Code" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Slug"></label>
+                <input asp-for="Slug" class="form-control" placeholder="vi-du-co-so-1" />
+                <span asp-validation-for="Slug" class="text-danger"></span>
+            </div>
+            <div class="form-group branch-admin-span-2">
+                <label asp-for="Name"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group branch-admin-span-2">
+                <label asp-for="Address"></label>
+                <input asp-for="Address" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label asp-for="PhoneNumber"></label>
+                <input asp-for="PhoneNumber" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" class="form-control" />
+            </div>
+            <div class="form-group branch-admin-span-2">
+                <label asp-for="OpenHours"></label>
+                <input asp-for="OpenHours" class="form-control" placeholder="08:00 - 21:00 hằng ngày" />
+            </div>
+            <div class="form-group branch-admin-span-2">
+                <label asp-for="ShortDescription"></label>
+                <textarea asp-for="ShortDescription" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-group branch-admin-span-2">
+                <label asp-for="CustomerNote"></label>
+                <textarea asp-for="CustomerNote" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label asp-for="PopularServices"></label>
+                <textarea asp-for="PopularServices" class="form-control" rows="5"></textarea>
+            </div>
+            <div class="form-group">
+                <label asp-for="QuickOptions"></label>
+                <textarea asp-for="QuickOptions" class="form-control" rows="5"></textarea>
+            </div>
+        </div>
+
+        <div class="branch-admin-switches">
+            <label><input asp-for="IsActive" /> <span>Cơ sở đang hoạt động</span></label>
+            <label><input asp-for="IsAcceptingOrders" /> <span>Cho phép khách hàng tạo đơn mới</span></label>
+        </div>
+
+        <div class="branch-admin-form-actions">
+            <button class="btn btn-primary" type="submit">Lưu cơ sở</button>
+            <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

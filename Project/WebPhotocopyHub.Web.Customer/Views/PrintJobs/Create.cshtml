@@ -29,7 +29,7 @@
 
     <div class="print-workspace print-workspace--create">
         <div class="print-form-shell">
-            <form asp-action="Create" method="post" enctype="multipart/form-data" id="printJobForm" asp-route-branchSlug="@branchSlug" data-page-count-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/ReadUploadPageCount")" data-office-preview-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/PreviewOfficeUpload")" novalidate>
+            <form asp-route="shop-branch-customer" asp-route-branchSlug="@branchSlug" asp-route-controller="PrintJobs" asp-route-action="Create" method="post" enctype="multipart/form-data" id="printJobForm" data-page-count-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/ReadUploadPageCount")" data-office-preview-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/PreviewOfficeUpload")" novalidate>
                 <input asp-for="IdempotencyKey" type="hidden" />
                 <div asp-validation-summary="All" class="alert alert-danger print-validation-summary" role="alert"></div>
 
@@ -179,7 +179,7 @@
                         <span>Tiệm xác nhận từng tài liệu trước khi trừ tiền ví.</span>
                     </div>
                     <div class="print-submit-actions">
-                        <a class="btn btn-outline-secondary" asp-action="Index" asp-route-branchSlug="@branchSlug"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-left-circle"></use></svg>Quay lại</a>
+                        <a class="btn btn-outline-secondary" href="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs")"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-left-circle"></use></svg>Quay lại</a>
                         <button class="btn btn-primary" type="submit" id="submitPrintJobButton"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-send-check"></use></svg><span>Gửi đơn in</span></button>
                     </div>
                 </div>

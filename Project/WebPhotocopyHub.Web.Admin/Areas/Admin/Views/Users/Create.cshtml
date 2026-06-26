@@ -1,0 +1,94 @@
+@model CreateSystemUserViewModel
+@{
+    ViewData["Title"] = "Tạo tài khoản";
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Create account</span>
+        <h1>Tạo tài khoản hệ thống</h1>
+        <p>Tài khoản được tạo bằng ASP.NET Core Identity và phải có ít nhất một vai trò.</p>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+    </div>
+</section>
+
+<section class="system-panel mt-3">
+    <form asp-action="Create" method="post" class="system-form-grid">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger system-validation-summary"></div>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" autocomplete="name" />
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="email" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control" autocomplete="tel" />
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="Address" class="form-label"></label>
+                <input asp-for="Address" class="form-control" autocomplete="street-address" />
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="ConfirmPassword" class="form-label"></label>
+                <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="system-form-section">
+            <div class="system-panel-header">
+                <div>
+                    <span class="system-panel-kicker">Role membership</span>
+                    <h2>Vai trò được gán</h2>
+                </div>
+            </div>
+            <span asp-validation-for="SelectedRoleIds" class="text-danger d-block mb-2"></span>
+            <div class="system-role-option-grid">
+                @foreach (var role in Model.AvailableRoles)
+                {
+                    <label class="system-role-option">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="SelectedRoleIds"
+                               value="@role.RoleId"
+                               checked="@Model.SelectedRoleIds.Contains(role.RoleId)" />
+                        <span>
+                            <strong>@role.DisplayName</strong>
+                            <small>@role.RoleName — @(role.Description ?? "Không có mô tả")</small>
+                        </span>
+                    </label>
+                }
+            </div>
+        </div>
+
+        <label class="form-check">
+            <input asp-for="IsActive" class="form-check-input" />
+            <span class="form-check-label">Tài khoản hoạt động ngay sau khi tạo</span>
+        </label>
+
+        <div class="system-form-actions">
+            <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+            <button class="btn btn-primary" type="submit">Tạo tài khoản</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

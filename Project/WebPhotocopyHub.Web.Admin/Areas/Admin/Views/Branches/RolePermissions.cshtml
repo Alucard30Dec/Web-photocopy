@@ -1,0 +1,45 @@
+@model BranchRolePermissionsViewModel
+@{
+    ViewData["Title"] = "Quyền vai trò cơ sở";
+}
+
+<section class="branch-admin-page">
+    <div class="branch-admin-heading">
+        <div>
+            <span class="branch-admin-eyebrow">ROLE PERMISSIONS</span>
+            <h1>@Model.RoleName</h1>
+            <p>@Model.BranchName — @Model.RoleDescription</p>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Users" asp-route-id="@Model.BranchId">Quay lại nhân sự</a>
+    </div>
+
+    <div class="branch-admin-warning">
+        Quyền được kiểm tra ở cả menu và backend. Bỏ quyền tại đây sẽ chặn truy cập trực tiếp bằng URL.
+    </div>
+
+    <form asp-action="RolePermissions" method="post" class="branch-admin-feature-form">
+        <input asp-for="BranchId" type="hidden" />
+        <input asp-for="BranchRoleId" type="hidden" />
+        <div class="branch-admin-feature-grid">
+            @for (var index = 0; index < Model.Permissions.Count; index++)
+            {
+                <article class="branch-admin-feature-card">
+                    <input asp-for="Permissions[index].Code" type="hidden" />
+                    <input asp-for="Permissions[index].Name" type="hidden" />
+                    <input asp-for="Permissions[index].Description" type="hidden" />
+                    <label>
+                        <span>
+                            <strong>@Model.Permissions[index].Name</strong>
+                            <small>@Model.Permissions[index].Description</small>
+                            <code>@Model.Permissions[index].Code</code>
+                        </span>
+                        <input asp-for="Permissions[index].IsGranted" type="checkbox" />
+                    </label>
+                </article>
+            }
+        </div>
+        <div class="branch-admin-form-actions">
+            <button class="btn btn-primary" type="submit">Lưu ma trận quyền</button>
+        </div>
+    </form>
+</section>

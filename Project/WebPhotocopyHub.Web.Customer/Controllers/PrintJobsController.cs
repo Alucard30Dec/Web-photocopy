@@ -276,7 +276,14 @@ public class PrintJobsController : Controller
             TempData["Success"] = createdCount == 1
                 ? "Đã gửi đơn in. Tiệm sẽ xác nhận file trước khi trừ tiền ví."
                 : $"Đã tạo {createdCount} đơn in từ {createdCount} tài liệu. Tiệm sẽ xác nhận từng file trước khi trừ tiền ví.";
-            return RedirectToAction(nameof(Index), BranchRouteValues());
+            return RedirectToRoute(
+                "shop-branch-customer",
+                new
+                {
+                    branchSlug = RouteData.Values["branchSlug"]?.ToString(),
+                    controller = "PrintJobs",
+                    action = "Index"
+                });
         }
         catch (BusinessException ex)
         {

@@ -14,7 +14,7 @@ using WebPhotocopyHub.Web.Admin.Models;
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = RoleConstants.Admin)]
+[Authorize]
 public sealed class SystemMonitoringController : Controller
 {
     private readonly HealthCheckService _healthCheckService;

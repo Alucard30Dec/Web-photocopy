@@ -1,0 +1,99 @@
+@model LoginViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Đăng nhập quản trị";
+
+    if (string.IsNullOrWhiteSpace(Model.ReturnUrl))
+    {
+        Model.ReturnUrl = "/Admin";
+    }
+}
+
+<section class="admin-login-shell" aria-labelledby="admin-login-title">
+    <div class="admin-login-card">
+        <header class="admin-login-brand">
+            <span class="admin-login-brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z"></path>
+                    <path d="m9 12 2 2 4-5"></path>
+                </svg>
+            </span>
+
+            <span class="admin-login-brand-copy">
+                <strong>WebPhotocopyHub</strong>
+                <small>System Administration</small>
+            </span>
+        </header>
+
+        <div class="admin-login-heading">
+            <span class="admin-login-eyebrow">Khu vực quản trị</span>
+            <h1 id="admin-login-title">Đăng nhập admin</h1>
+            <p>Sử dụng tài khoản quản trị đã được cấp để tiếp tục.</p>
+        </div>
+
+        <form action="/Admin/Login" method="post" class="admin-login-form" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <div asp-validation-summary="ModelOnly"
+                 class="admin-login-validation-summary text-danger"></div>
+
+            <div class="admin-login-field">
+                <label asp-for="Email" class="admin-login-label"></label>
+                <input asp-for="Email"
+                       type="text"
+                       class="form-control admin-login-input"
+                       autocomplete="username"
+                       inputmode="email"
+                       placeholder="Nhập email hoặc tên đăng nhập"
+                       autofocus />
+                <span asp-validation-for="Email"
+                      class="admin-login-validation text-danger"></span>
+            </div>
+
+            <div class="admin-login-field">
+                <label asp-for="Password" class="admin-login-label"></label>
+                <input asp-for="Password"
+                       type="password"
+                       class="form-control admin-login-input"
+                       autocomplete="current-password"
+                       placeholder="Nhập mật khẩu" />
+                <span asp-validation-for="Password"
+                      class="admin-login-validation text-danger"></span>
+            </div>
+
+            <div class="admin-login-options">
+                <div class="form-check">
+                    <input asp-for="RememberMe"
+                           class="form-check-input" />
+                    <label asp-for="RememberMe"
+                           class="form-check-label"></label>
+                </div>
+            </div>
+
+            <button class="admin-login-submit" type="submit">
+                <span>Đăng nhập</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M5 12h14"></path>
+                    <path d="m14 7 5 5-5 5"></path>
+                </svg>
+            </button>
+        </form>
+
+        <footer class="admin-login-card-footer">
+            <a href="/Home">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M19 12H5"></path>
+                    <path d="m10 17-5-5 5-5"></path>
+                </svg>
+                <span>Quay về trang chính</span>
+            </a>
+
+            <span>Chỉ dành cho tài khoản có quyền Admin.</span>
+        </footer>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

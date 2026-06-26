@@ -26,21 +26,11 @@
 <section class="branch-customer-landing">
     <div class="branch-customer-hero">
         <div class="branch-customer-hero-copy">
-            <span class="branch-customer-pill">
-                @(isSignedIn ? "Trang khách hàng đã đăng nhập" : "Trang khách hàng")
-            </span>
+            <span class="branch-customer-pill">Trang khách hàng</span>
 
             <h1>@Model.Name</h1>
             <p>@Model.ShortDescription</p>
 
-            <div class="branch-customer-auth-state @(isSignedIn ? "is-signed-in" : "is-guest")">
-                <strong>@(isSignedIn ? "Bạn đã đăng nhập" : "Bạn chưa đăng nhập")</strong>
-                <span>
-                    @(isSignedIn
-                        ? "Bạn có thể tạo đơn, theo dõi đơn, nạp ví và quản lý hồ sơ ngay tại cơ sở này."
-                        : "Đăng nhập để tạo đơn in, theo dõi trạng thái, nạp ví và quản lý hồ sơ cá nhân.")
-                </span>
-            </div>
 
             <div class="branch-customer-meta">
                 <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>@Model.Address</span>

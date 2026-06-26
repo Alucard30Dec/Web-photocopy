@@ -1,0 +1,94 @@
+@model BranchUsersViewModel
+@{
+    ViewData["Title"] = "Nhân sự và quyền cơ sở";
+}
+
+<section class="branch-admin-page">
+    <div class="branch-admin-heading">
+        <div>
+            <span class="branch-admin-eyebrow">BRANCH RBAC</span>
+            <h1>Nhân sự tại @Model.BranchName</h1>
+            <p>Mỗi người chỉ mở được những chức năng có trong vai trò được gán tại cơ sở này.</p>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+    </div>
+
+    <div class="branch-role-summary">
+        @foreach (var role in Model.Roles)
+        {
+            <article>
+                <div>
+                    <strong>@role.Name</strong>
+                    <small>@role.Description</small>
+                </div>
+                <a class="btn btn-outline-primary btn-sm" asp-action="RolePermissions" asp-route-id="@role.Id">Cấu hình quyền</a>
+            </article>
+        }
+    </div>
+
+    <form asp-action="AssignUser" method="post" class="branch-admin-assign-form">
+        <input type="hidden" name="BranchId" value="@Model.BranchId" />
+        <div class="form-group">
+            <label>Người dùng</label>
+            <select class="form-select" name="UserId" required>
+                <option value="">-- Chọn người dùng --</option>
+                @foreach (var user in Model.Users)
+                {
+                    <option value="@user.Id">@(string.IsNullOrWhiteSpace(user.FullName) ? user.Email : user.FullName) — @user.Email</option>
+                }
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Vai trò tại cơ sở</label>
+            <select class="form-select" name="BranchRoleId" required>
+                <option value="">-- Chọn vai trò --</option>
+                @foreach (var role in Model.Roles)
+                {
+                    <option value="@role.Id">@role.Name</option>
+                }
+            </select>
+        </div>
+        <label class="branch-admin-primary-check">
+            <input type="checkbox" name="IsPrimary" value="true" />
+            <span>Đặt làm cơ sở chính</span>
+        </label>
+        <button class="btn btn-primary" type="submit">Gán quyền</button>
+    </form>
+
+    <div class="table-responsive branch-admin-table-wrap">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Nhân viên</th>
+                    <th>Email</th>
+                    <th>Vai trò</th>
+                    <th>Cơ sở chính</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Memberships)
+                {
+                    <tr>
+                        <td><strong>@(item.User?.FullName ?? "Chưa cập nhật")</strong></td>
+                        <td>@item.User?.Email</td>
+                        <td>@item.BranchRole?.Name</td>
+                        <td>@(item.IsPrimary ? "Có" : "Không")</td>
+                        <td><span class="branch-admin-status @(item.IsActive ? "is-active" : "is-disabled")">@(item.IsActive ? "Đang có quyền" : "Đã thu hồi")</span></td>
+                        <td class="text-end">
+                            @if (item.IsActive)
+                            {
+                                <form asp-action="RemoveUser" method="post" class="d-inline">
+                                    <input type="hidden" name="membershipId" value="@item.Id" />
+                                    <input type="hidden" name="branchId" value="@Model.BranchId" />
+                                    <button class="btn btn-outline-danger btn-sm" type="submit">Thu hồi</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

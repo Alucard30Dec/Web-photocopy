@@ -4,8 +4,10 @@ using WebPhotocopyHub.Domain.Enums;
 
 namespace WebPhotocopyHub.Domain.Entities;
 
-public class PrintJob : BaseEntity
+public class PrintJob : BaseEntity, IBranchScopedEntity
 {
+    public Guid BranchId { get; set; }
+
     [Required]
     [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
@@ -68,4 +70,5 @@ public class PrintJob : BaseEntity
     public ApplicationUser? ProcessedByAdmin { get; set; }
     public ApplicationUser? RefundedByUser { get; set; }
     public UploadedFileMetadata? UploadedFile { get; set; }
+    public Branch? Branch { get; set; }
 }

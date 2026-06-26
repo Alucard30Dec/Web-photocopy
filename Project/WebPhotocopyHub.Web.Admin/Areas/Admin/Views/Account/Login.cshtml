@@ -1,7 +1,7 @@
 @model LoginViewModel
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Đăng nhập admin hệ thống";
+    ViewData["Title"] = "Đăng nhập quản trị";
 
     if (string.IsNullOrWhiteSpace(Model.ReturnUrl))
     {
@@ -9,51 +9,159 @@
     }
 }
 
-<section class="role-login-page role-login-page--admin">
-    <div class="role-login-hero">
-        <a class="role-login-brand" href="/Admin">
-            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6z"></path><path d="m9 12 2 2 4-5"></path></svg></span>
-            WebPhotocopyHub Admin
-        </a>
-        <h1>Admin toàn hệ thống</h1>
-        <p>Chỉ dành cho tài khoản quản trị hệ thống để quản lý người dùng, ví, bảng giá và audit log.</p>
-        <div class="role-login-pills">
-            <span>Người dùng</span>
-            <span>Ví hệ thống</span>
-            <span>Audit log</span>
-        </div>
+<section class="admin-login-shell" aria-labelledby="admin-login-title">
+    <div class="admin-login-background" aria-hidden="true">
+        <span class="admin-login-decor admin-login-decor-dots-left"></span>
+        <span class="admin-login-decor admin-login-decor-dots-right"></span>
+        <span class="admin-login-decor admin-login-decor-orbit-right"></span>
+        <span class="admin-login-decor admin-login-decor-ring-left"></span>
+        <span class="admin-login-decor admin-login-decor-bubble-top"></span>
+        <span class="admin-login-decor admin-login-decor-bubble-bottom"></span>
     </div>
 
-    <div class="role-login-card">
-        <span class="role-login-kicker">System admin</span>
-        <h2>Đăng nhập admin</h2>
-        <p class="text-muted small mb-3">Nhập tài khoản quản trị hệ thống đã được cấp.</p>
+    <div class="admin-login-card">
+        <header class="admin-login-brand">
+            <span class="admin-login-brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z"></path>
+                    <path d="m9 12 2 2 4-5"></path>
+                </svg>
+            </span>
 
-        <form action="/Admin/Login" method="post" novalidate>
+            <span class="admin-login-brand-copy">
+                <strong>WebPhotocopyHub</strong>
+                <small>System Administration</small>
+            </span>
+        </header>
+
+        <div class="admin-login-heading">
+            <span class="admin-login-eyebrow">Khu vực quản trị</span>
+            <h1 id="admin-login-title">Đăng nhập admin</h1>
+            <p>Sử dụng tài khoản quản trị đã được cấp để tiếp tục.</p>
+        </div>
+
+        <form action="/Admin/Login" method="post" class="admin-login-form" novalidate>
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="ReturnUrl" />
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-            <label asp-for="Email" class="form-label"></label>
-            <input asp-for="Email" type="email" class="form-control mb-3" autocomplete="username" placeholder="Email quản trị hệ thống" />
-            <span asp-validation-for="Email" class="text-danger small"></span>
+            <div asp-validation-summary="ModelOnly"
+                 class="admin-login-validation-summary text-danger"></div>
 
-            <label asp-for="Password" class="form-label"></label>
-            <input asp-for="Password" type="password" class="form-control mb-3" autocomplete="current-password" placeholder="Mật khẩu admin" />
-            <span asp-validation-for="Password" class="text-danger small"></span>
-
-            <div class="form-check mb-3">
-                <input asp-for="RememberMe" class="form-check-input" />
-                <label asp-for="RememberMe" class="form-check-label"></label>
+            <div class="admin-login-field">
+                <label asp-for="Email" class="admin-login-label"></label>
+                <div class="admin-login-input-wrap">
+                    <span class="admin-login-input-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M20 21a8 8 0 0 0-16 0"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </span>
+                    <input asp-for="Email"
+                           type="text"
+                           class="form-control admin-login-input"
+                           autocomplete="username"
+                           inputmode="email"
+                           placeholder="Nhập email hoặc tên đăng nhập"
+                           autofocus />
+                </div>
+                <span asp-validation-for="Email"
+                      class="admin-login-validation text-danger"></span>
             </div>
 
-            <button class="btn btn-dark w-100" type="submit">Vào admin hệ thống</button>
+            <div class="admin-login-field">
+                <label asp-for="Password" class="admin-login-label"></label>
+                <div class="admin-login-input-wrap admin-login-password-wrap">
+                    <span class="admin-login-input-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+                            <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+                            <path d="M12 14v2"></path>
+                        </svg>
+                    </span>
+                    <input asp-for="Password"
+                           type="password"
+                           class="form-control admin-login-input"
+                           autocomplete="current-password"
+                           placeholder="Nhập mật khẩu" />
+                    <button class="admin-login-password-toggle"
+                            type="button"
+                            aria-label="Hiện mật khẩu"
+                            aria-controls="Password"
+                            aria-pressed="false">
+                        <svg class="admin-login-eye-open" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
+                            <circle cx="12" cy="12" r="2.7"></circle>
+                        </svg>
+                        <svg class="admin-login-eye-closed" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="m3 3 18 18"></path>
+                            <path d="M10.6 6.2A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.1 2.8"></path>
+                            <path d="M6.5 6.6C3.9 8.3 2.5 12 2.5 12s3.5 6 9.5 6a9.7 9.7 0 0 0 3.2-.5"></path>
+                        </svg>
+                    </button>
+                </div>
+                <span asp-validation-for="Password"
+                      class="admin-login-validation text-danger"></span>
+            </div>
+
+            <div class="admin-login-options">
+                <div class="form-check">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="form-check-label"></label>
+                </div>
+            </div>
+
+            <button class="admin-login-submit" type="submit">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+                    <path d="M12 14v2"></path>
+                </svg>
+                <span>Đăng nhập</span>
+            </button>
         </form>
 
-        <a class="role-login-alt" href="/Home">Quay về trang chính</a>
+        <div class="admin-login-divider" aria-hidden="true">
+            <span>hoặc</span>
+        </div>
+
+        <footer class="admin-login-card-footer">
+            <a href="/Home">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M19 12H5"></path>
+                    <path d="m10 17-5-5 5-5"></path>
+                </svg>
+                <span>Quay về trang chính</span>
+            </a>
+
+            <span class="admin-login-security-note">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z"></path>
+                    <path d="m9 12 2 2 4-5"></path>
+                </svg>
+                <span>Chỉ dành cho tài khoản có quyền Admin.</span>
+            </span>
+        </footer>
     </div>
 </section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const toggle = document.querySelector('.admin-login-password-toggle');
+            const passwordInput = document.getElementById('Password');
+
+            if (!toggle || !passwordInput) {
+                return;
+            }
+
+            toggle.addEventListener('click', () => {
+                const shouldShow = passwordInput.type === 'password';
+                passwordInput.type = shouldShow ? 'text' : 'password';
+                toggle.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+                toggle.setAttribute('aria-label', shouldShow ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+                passwordInput.focus({ preventScroll: true });
+            });
+        })();
+    </script>
 }

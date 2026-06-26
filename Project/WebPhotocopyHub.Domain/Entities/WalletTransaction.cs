@@ -4,8 +4,10 @@ using WebPhotocopyHub.Domain.Enums;
 
 namespace WebPhotocopyHub.Domain.Entities;
 
-public class WalletTransaction : BaseEntity
+public class WalletTransaction : BaseEntity, IBranchScopedEntity
 {
+    public Guid BranchId { get; set; }
+
     [Required]
     [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
@@ -31,4 +33,5 @@ public class WalletTransaction : BaseEntity
 
     public ApplicationUser? User { get; set; }
     public ApplicationUser? PerformedByAdmin { get; set; }
+    public Branch? Branch { get; set; }
 }

@@ -3,8 +3,10 @@ using WebPhotocopyHub.Domain.Common;
 
 namespace WebPhotocopyHub.Domain.Entities;
 
-public class UploadedFileMetadata : BaseEntity
+public class UploadedFileMetadata : BaseEntity, IBranchScopedEntity
 {
+    public Guid BranchId { get; set; }
+
     [Required]
     [MaxLength(450)]
     public string OwnerUserId { get; set; } = string.Empty;
@@ -31,4 +33,5 @@ public class UploadedFileMetadata : BaseEntity
 
     public ApplicationUser? OwnerUser { get; set; }
     public ICollection<PrintJob> PrintJobs { get; set; } = new List<PrintJob>();
+    public Branch? Branch { get; set; }
 }

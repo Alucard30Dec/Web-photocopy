@@ -10,7 +10,7 @@ using WebPhotocopyHub.Web.Admin.Models;
 namespace WebPhotocopyHub.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = RoleConstants.Admin)]
+[Authorize]
 public class DashboardController : Controller
 {
     private readonly IBackOfficeDashboardQueryService _dashboardQueryService;

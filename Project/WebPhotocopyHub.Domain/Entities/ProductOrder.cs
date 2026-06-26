@@ -4,8 +4,10 @@ using WebPhotocopyHub.Domain.Enums;
 
 namespace WebPhotocopyHub.Domain.Entities;
 
-public class ProductOrder : BaseEntity
+public class ProductOrder : BaseEntity, IBranchScopedEntity
 {
+    public Guid BranchId { get; set; }
+
     [Required]
     [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
@@ -36,4 +38,5 @@ public class ProductOrder : BaseEntity
     public ApplicationUser? User { get; set; }
     public ApplicationUser? ProcessedByOperator { get; set; }
     public ICollection<ProductOrderItem> Items { get; set; } = new List<ProductOrderItem>();
+    public Branch? Branch { get; set; }
 }

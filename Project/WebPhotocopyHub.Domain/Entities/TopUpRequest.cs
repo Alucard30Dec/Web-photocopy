@@ -4,8 +4,10 @@ using WebPhotocopyHub.Domain.Enums;
 
 namespace WebPhotocopyHub.Domain.Entities;
 
-public class TopUpRequest : BaseEntity
+public class TopUpRequest : BaseEntity, IBranchScopedEntity
 {
+    public Guid BranchId { get; set; }
+
     [Required]
     [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
@@ -52,4 +54,5 @@ public class TopUpRequest : BaseEntity
     public ApplicationUser? ReviewedByAdmin { get; set; }
     public ApplicationUser? SecondReviewedByAdmin { get; set; }
     public UploadedFileMetadata? ProofFile { get; set; }
+    public Branch? Branch { get; set; }
 }

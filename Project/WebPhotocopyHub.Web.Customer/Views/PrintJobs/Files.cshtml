@@ -14,8 +14,8 @@
             <h1>File đã upload</h1>
             <p>Quản lý các file bạn đã gửi lên hệ thống để tái sử dụng cho đơn in mới hoặc tải lại khi cần.</p>
             <div class="cu-actions">
-                <a class="btn btn-primary" asp-action="Create" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Upload trong đơn in mới</a>
-                <a class="btn btn-outline-secondary" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Đơn in của tôi</a>
+                <a class="btn btn-primary" href="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/Create")">Upload trong đơn in mới</a>
+                <a class="btn btn-outline-secondary" href="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs")">Đơn in của tôi</a>
             </div>
         </div>
         <aside class="cu-hero-card">
@@ -57,8 +57,8 @@
                         <td>@item.ContentType</td>
                         <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" asp-action="PreviewFile" asp-route-id="@item.Id" target="_blank" rel="noopener" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Xem trước</a>
-                            <a class="btn btn-sm btn-outline-secondary" asp-action="DownloadFile" asp-route-id="@item.Id" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Tải xuống</a>
+                            <a class="btn btn-sm btn-outline-primary" href="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs/PreviewFile/{item.Id}")" target="_blank" rel="noopener">Xem trước</a>
+                            <a class="btn btn-sm btn-outline-secondary" href="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs/DownloadFile/{item.Id}")">Tải xuống</a>
                         </td>
                     </tr>
                 }

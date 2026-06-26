@@ -1,12 +1,26 @@
 @using Microsoft.AspNetCore.Identity
 @using WebPhotocopyHub.Domain.Entities
+@using WebPhotocopyHub.Application.Branching
+@using WebPhotocopyHub.Application.Contracts
 @inject UserManager<ApplicationUser> UserManager
+@inject IBranchContext BranchContext
+@inject IBranchManagementService BranchManagementService
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var currentUser = isSignedIn ? await UserManager.GetUserAsync(User) : null;
 
     var branch = CustomerBranchContext.GetBranch(ViewContext);
+    var enabledFeatures = BranchContext.BranchId.HasValue
+        ? await BranchManagementService.GetEnabledFeaturesAsync(BranchContext.BranchId.Value)
+        : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var hasPrintOrders = enabledFeatures.Contains(BranchFeatureCodes.PrintOrders);
+    var hasProductSales = enabledFeatures.Contains(BranchFeatureCodes.ProductSales);
+    var hasSupportServices = enabledFeatures.Contains(BranchFeatureCodes.SupportServices);
+    var hasPricing = enabledFeatures.Contains(BranchFeatureCodes.Pricing);
+    var hasTopUps = enabledFeatures.Contains(BranchFeatureCodes.TopUps);
+    var hasWallet = enabledFeatures.Contains(BranchFeatureCodes.Wallet);
+    var isAcceptingOrders = BranchContext.IsAcceptingOrders;
     var branchHomeUrl = CustomerBranchContext.Home(ViewContext);
     var loginUrl = CustomerBranchContext.ToPath(ViewContext, "Login");
     var dashboardUrl = CustomerBranchContext.ToPath(ViewContext, "Dashboard");
@@ -124,36 +138,80 @@
             <span class="customer-nav-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-house-door-fill"></use></svg></span> Trang chủ
         </a>
 
-        <div class="customer-nav-group dropdown @ActiveGroup("PrintJobs")">
-            <button class="customer-nav-trigger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="customer-nav-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-files"></use></svg></span> Đơn in
-            </button>
-            <div class="dropdown-menu customer-nav-menu">
-                <a class="customer-nav-item" href="@RequireLogin(printCreateUrl)"><strong>Tạo đơn in</strong><small>Gửi file và chọn cấu hình in.</small></a>
-                <a class="customer-nav-item" href="@RequireLogin(printJobsUrl)"><strong>Đơn của tôi</strong><small>Theo dõi trạng thái xử lý và thanh toán.</small></a>
-                <a class="customer-nav-item" href="@RequireLogin(printFilesUrl)"><strong>File đã gửi</strong><small>Xem lại file đã upload.</small></a>
-            </div>
-        </div>
+        @if (isSignedIn)
+        {
+            <!-- Auth-only customer navigation - start -->
+            <div class="customer-nav-group dropdown @ActiveGroup("PrintJobs")" hidden="@(!hasPrintOrders)">
+                <button class="customer-nav-trigger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="customer-nav-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-files"></use></svg></span> Đơn in
+                </button>
 
-        <div class="customer-nav-group dropdown @ActiveGroup("Products")">
-            <button class="customer-nav-trigger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="customer-nav-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span> Sản phẩm
-            </button>
-            <div class="dropdown-menu customer-nav-menu">
-                <a class="customer-nav-item" href="@RequireLogin(productsUrl)"><strong>Mua sản phẩm</strong><small>Giấy, bút, bìa và vật tư văn phòng.</small></a>
-                <a class="customer-nav-item" href="@RequireLogin(productOrdersUrl)"><strong>Đơn sản phẩm</strong><small>Kiểm tra các đơn sản phẩm đã đặt.</small></a>
-            </div>
-        </div>
+                <div class="dropdown-menu customer-nav-menu">
+                    <a class="customer-nav-item" href="@RequireLogin(printCreateUrl)" hidden="@(!isAcceptingOrders)">
+                        <strong>Tạo đơn in</strong>
+                        <small>Gửi file và chọn cấu hình in.</small>
+                    </a>
 
-        <div class="customer-nav-group dropdown @ActiveGroup("SupportOrders")">
+                    <a class="customer-nav-item" href="@RequireLogin(printJobsUrl)">
+                        <strong>Đơn của tôi</strong>
+                        <small>Theo dõi trạng thái xử lý và thanh toán.</small>
+                    </a>
+
+                    <a class="customer-nav-item" href="@RequireLogin(printFilesUrl)">
+                        <strong>File đã gửi</strong>
+                        <small>Xem lại file đã upload.</small>
+                    </a>
+                </div>
+            </div>
+
+            <div class="customer-nav-group dropdown @ActiveGroup("Products")" hidden="@(!hasProductSales)">
+                <button class="customer-nav-trigger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="customer-nav-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span> Sản phẩm
+                </button>
+
+                <div class="dropdown-menu customer-nav-menu">
+                    <a class="customer-nav-item" href="@RequireLogin(productsUrl)">
+                        <strong>Mua sản phẩm</strong>
+                        <small>Giấy, bút, bìa và vật tư văn phòng.</small>
+                    </a>
+
+                    <a class="customer-nav-item" href="@RequireLogin(productOrdersUrl)">
+                        <strong>Đơn sản phẩm</strong>
+                        <small>Kiểm tra các đơn sản phẩm đã đặt.</small>
+                    </a>
+                </div>
+            </div>
+            <!-- Auth-only customer navigation - end -->
+        }
+
+        <div class="customer-nav-group dropdown @ActiveGroup("SupportOrders")" hidden="@(!(hasPricing || hasSupportServices))">
             <button class="customer-nav-trigger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <span class="customer-nav-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-life-preserver"></use></svg></span> Bảng giá & hỗ trợ
             </button>
+
             <div class="dropdown-menu customer-nav-menu">
-                <a class="customer-nav-item" href="@priceUrl"><strong>Bảng giá in</strong><small>Xem giá đang áp dụng tại cơ sở.</small></a>
-                <a class="customer-nav-item" href="@RequireLogin(supportCreateUrl)"><strong>Tạo yêu cầu dịch vụ</strong><small>Scan, đóng gáy, ép plastic, hỗ trợ file.</small></a>
-                <a class="customer-nav-item" href="@RequireLogin(supportHistoryUrl)"><strong>Lịch sử dịch vụ</strong><small>Xem các yêu cầu hỗ trợ đã gửi.</small></a>
-                <a class="customer-nav-item" href="@contactUrl"><strong>Liên hệ cơ sở</strong><small>Địa chỉ, điện thoại và giờ mở cửa.</small></a>
+                <a class="customer-nav-item" href="@priceUrl" hidden="@(!hasPricing)">
+                    <strong>Bảng giá in</strong>
+                    <small>Xem giá đang áp dụng tại cơ sở.</small>
+                </a>
+
+                @if (isSignedIn && hasSupportServices)
+                {
+                    <a class="customer-nav-item" href="@RequireLogin(supportCreateUrl)" hidden="@(!isAcceptingOrders)">
+                        <strong>Tạo yêu cầu dịch vụ</strong>
+                        <small>Scan, đóng gáy, ép plastic, hỗ trợ file.</small>
+                    </a>
+
+                    <a class="customer-nav-item" href="@RequireLogin(supportHistoryUrl)">
+                        <strong>Lịch sử dịch vụ</strong>
+                        <small>Xem các yêu cầu hỗ trợ đã gửi.</small>
+                    </a>
+                }
+
+                <a class="customer-nav-item" href="@contactUrl">
+                    <strong>Liên hệ cơ sở</strong>
+                    <small>Địa chỉ, điện thoại và giờ mở cửa.</small>
+                </a>
             </div>
         </div>
     </nav>
@@ -188,8 +246,8 @@
 
                     <a class="customer-account-link" href="@RequireLogin(dashboardUrl)"><span class="customer-account-link-icon is-blue"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-speedometer2"></use></svg></span><div><strong>Dashboard</strong><small>Tổng quan đơn, ví và hoạt động.</small></div></a>
                     <a class="customer-account-link" href="@RequireLogin(profileUrl)"><span class="customer-account-link-icon is-purple"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-person-gear"></use></svg></span><div><strong>Hồ sơ khách hàng</strong><small>Cập nhật thông tin cá nhân.</small></div></a>
-                    <a class="customer-account-link" href="@RequireLogin(walletUrl)"><span class="customer-account-link-icon is-green"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg></span><div><strong>Ví & giao dịch</strong><small>Xem số dư và lịch sử thanh toán.</small></div></a>
-                    <a class="customer-account-link" href="@RequireLogin(topUpUrl)"><span class="customer-account-link-icon is-amber"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-plus-circle"></use></svg></span><div><strong>Nạp tiền</strong><small>Tạo yêu cầu nạp ví.</small></div></a>
+                    <a class="customer-account-link" href="@RequireLogin(walletUrl)" hidden="@(!hasWallet)"><span class="customer-account-link-icon is-green"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg></span><div><strong>Ví & giao dịch</strong><small>Xem số dư và lịch sử thanh toán.</small></div></a>
+                    <a class="customer-account-link" href="@RequireLogin(topUpUrl)" hidden="@(!hasTopUps)"><span class="customer-account-link-icon is-amber"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-plus-circle"></use></svg></span><div><strong>Nạp tiền</strong><small>Tạo yêu cầu nạp ví.</small></div></a>
 
                     <form asp-controller="Account" asp-action="Logout" asp-area="" method="post" class="customer-account-logout-form">
                         <input type="hidden" name="returnUrl" value="@branchHomeUrl" />

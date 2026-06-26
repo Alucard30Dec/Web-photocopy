@@ -1,0 +1,114 @@
+@model EditSystemUserViewModel
+@{
+    ViewData["Title"] = "Cập nhật tài khoản";
+    var isCurrentUser = string.Equals(
+        User.GetUserId(),
+        Model.UserId,
+        StringComparison.Ordinal);
+    var canAssignRoles = ViewBag.CanAssignRoles is true;
+}
+
+<section class="system-page-hero compact">
+    <div>
+        <span class="system-eyebrow">Account profile & roles</span>
+        <h1>Cập nhật tài khoản</h1>
+        <p>Cập nhật thông tin định danh và quản lý các vai trò được gán cho tài khoản.</p>
+    </div>
+    <div class="system-hero-actions">
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+        <a class="btn btn-outline-primary"
+           asp-action="ResetPassword"
+           asp-route-userId="@Model.UserId">Đặt lại mật khẩu</a>
+    </div>
+</section>
+
+<section class="system-panel mt-3">
+    <form asp-action="Edit" method="post" class="system-form-grid">
+        <input asp-for="UserId" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger system-validation-summary"></div>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" />
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control" />
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="Address" class="form-label"></label>
+                <input asp-for="Address" class="form-control" />
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="system-form-section">
+            <div class="system-panel-header">
+                <div>
+                    <span class="system-panel-kicker">Role membership</span>
+                    <h2>Vai trò được gán</h2>
+                </div>
+            </div>
+            <span asp-validation-for="SelectedRoleIds" class="text-danger d-block mb-2"></span>
+            <div class="system-role-option-grid">
+                @foreach (var role in Model.AvailableRoles)
+                {
+                    var isSelected = Model.SelectedRoleIds.Contains(role.RoleId);
+                    <label class="system-role-option">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="SelectedRoleIds"
+                               value="@role.RoleId"
+                               checked="@isSelected"
+                               disabled="@(!canAssignRoles || isCurrentUser)" />
+                        @if (isSelected && (!canAssignRoles || isCurrentUser))
+                        {
+                            <input type="hidden" name="SelectedRoleIds" value="@role.RoleId" />
+                        }
+                        <span>
+                            <strong>@role.DisplayName</strong>
+                            <small>@role.RoleName — @(role.Description ?? "Không có mô tả")</small>
+                        </span>
+                    </label>
+                }
+            </div>
+            @if (!canAssignRoles)
+            {
+                <small class="text-muted">Bạn có thể cập nhật hồ sơ nhưng không có quyền gán vai trò.</small>
+            }
+            @if (isCurrentUser)
+            {
+                <small class="text-muted d-block mt-1">Không thể thay đổi vai trò của chính tài khoản đang đăng nhập.</small>
+            }
+        </div>
+
+        <label class="form-check">
+            <input asp-for="IsActive"
+                   class="form-check-input"
+                   disabled="@isCurrentUser" />
+            @if (isCurrentUser)
+            {
+                <input asp-for="IsActive" type="hidden" />
+            }
+            <span class="form-check-label">Tài khoản đang hoạt động</span>
+        </label>
+        <span asp-validation-for="IsActive" class="text-danger"></span>
+
+        <div class="system-form-actions">
+            <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+            <button class="btn btn-primary" type="submit">Lưu tài khoản</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
