@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Domain.Common;
 using WebPhotocopyHub.Domain.Constants;
@@ -10,6 +11,36 @@ namespace WebPhotocopyHub.Infrastructure.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
+    private const string AppSchema = "app";
+    private const string AuditSchema = "audit";
+    private const string SystemSchema = "system";
+    private const string PublicSchema = "public";
+
+    private static readonly Dictionary<Type, (string Schema, string Table)> BusinessTableMappings = new()
+    {
+        [typeof(Branch)] = (AppSchema, "shop_branches"),
+        [typeof(BranchFeature)] = (AppSchema, "branch_features"),
+        [typeof(BranchRole)] = (AppSchema, "branch_roles"),
+        [typeof(BranchRolePermission)] = (AppSchema, "branch_role_permissions"),
+        [typeof(UserBranchMembership)] = (AppSchema, "user_branch_memberships"),
+        [typeof(WalletAccount)] = (AppSchema, "branch_wallets"),
+        [typeof(WalletTransaction)] = (AppSchema, "wallet_transactions"),
+        [typeof(TopUpRequest)] = (AppSchema, "top_up_requests"),
+        [typeof(UploadedFileMetadata)] = (AppSchema, "uploaded_files"),
+        [typeof(PrintJob)] = (AppSchema, "print_jobs"),
+        [typeof(Product)] = (AppSchema, "products"),
+        [typeof(ProductOrder)] = (AppSchema, "product_orders"),
+        [typeof(ProductOrderItem)] = (AppSchema, "product_order_items"),
+        [typeof(ProductStockMovement)] = (AppSchema, "product_stock_movements"),
+        [typeof(SupportService)] = (AppSchema, "support_services"),
+        [typeof(SupportServiceOrder)] = (AppSchema, "support_service_orders"),
+        [typeof(PricingRule)] = (AppSchema, "pricing_rules"),
+        [typeof(AuditLog)] = (AuditSchema, "audit_logs"),
+        [typeof(SystemFunction)] = (SystemSchema, "system_functions"),
+        [typeof(ApplicationRoleProfile)] = (SystemSchema, "application_role_profiles"),
+        [typeof(RoleFunctionPermission)] = (SystemSchema, "role_function_permissions")
+    };
+
     private readonly IBranchContext? _branchContext;
 
     private bool BranchFilterEnabled => _branchContext?.EnforceBranchScope == true && _branchContext.BranchId.HasValue;
@@ -22,6 +53,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         _branchContext = branchContext;
     }
 
+    public DbSet<WalletAccount> WalletAccounts => Set<WalletAccount>();
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<TopUpRequest> TopUpRequests => Set<TopUpRequest>();
     public DbSet<PrintJob> PrintJobs => Set<PrintJob>();
@@ -47,11 +79,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
         ConfigureIdentityKeyLengths(builder);
+        ConfigureIdentityPhysicalNames(builder);
+        ConfigureBusinessPhysicalNames(builder);
         // ChatGPT fix 2026-06-01: runtime đã chuẩn hóa PostgreSQL, không còn cấu hình MySQL GUID storage.
 
         builder.Entity<ApplicationUser>(entity =>
         {
-            entity.Property(x => x.CurrentBalance).HasColumnType("decimal(18,2)");
+            entity.Property<decimal>("CurrentBalance").HasColumnType("decimal(18,2)");
             entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.Property(x => x.FullName).HasMaxLength(200);
             entity.Property(x => x.Address).HasMaxLength(500);
@@ -132,7 +166,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(x => x.Code).IsUnique();
             entity.HasIndex(x => new { x.Area, x.Controller })
                 .IsUnique()
-                .HasFilter("\"Controller\" IS NOT NULL");
+                .HasFilter("controller IS NOT NULL");
             entity.HasIndex(x => new { x.ParentId, x.SortOrder });
             entity.HasOne(x => x.Parent)
                 .WithMany(x => x.Children)
@@ -165,6 +199,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        builder.Entity<WalletAccount>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.UserId).HasMaxLength(191);
+            entity.Property(x => x.Balance).HasColumnType("numeric(18,2)");
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
+            entity.HasIndex(x => new { x.UserId, x.BranchId }).IsUnique();
+            entity.HasIndex(x => new { x.BranchId, x.UserId });
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         builder.Entity<WalletTransaction>(entity =>
         {
             entity.HasQueryFilter(x => !BranchFilterEnabled || x.BranchId == CurrentBranchId);
@@ -174,9 +227,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(x => x.BalanceBefore).HasColumnType("decimal(18,2)");
             entity.Property(x => x.BalanceAfter).HasColumnType("decimal(18,2)");
             entity.Property(x => x.UserId).HasMaxLength(191);
+            entity.Property(x => x.WalletAccountId).HasColumnName("branch_wallet_id");
             entity.Property(x => x.PerformedByAdminId).HasMaxLength(191);
             entity.HasIndex(x => new { x.UserId, x.CreatedAt });
-            entity.HasIndex(x => new { x.BranchId, x.UserId, x.TransactionType, x.IdempotencyKey }).IsUnique();
+            entity.HasIndex(x => new { x.BranchId, x.UserId, x.TransactionType, x.IdempotencyKey })
+                .IsUnique()
+                .HasFilter("idempotency_key IS NOT NULL");
+            entity.HasIndex(x => new { x.WalletAccountId, x.CreatedAt });
 
             entity.HasOne(x => x.User)
                 .WithMany(x => x.WalletTransactions)
@@ -186,6 +243,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(x => x.PerformedByAdmin)
                 .WithMany()
                 .HasForeignKey(x => x.PerformedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.WalletAccount)
+                .WithMany(x => x.Transactions)
+                .HasForeignKey(x => x.WalletAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -402,6 +464,118 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(x => x.CreatedAt);
             entity.HasIndex(x => x.RecordHash).IsUnique();
         });
+
+        ConfigureTrackingColumns(builder);
+        ConfigureBusinessColumnNames(builder);
+    }
+
+    private static void ConfigureIdentityPhysicalNames(ModelBuilder builder)
+    {
+        builder.Entity<ApplicationUser>().ToTable("AspNetUsers", PublicSchema);
+        builder.Entity<IdentityRole>().ToTable("AspNetRoles", PublicSchema);
+        builder.Entity<IdentityUserClaim<string>>().ToTable("AspNetUserClaims", PublicSchema);
+        builder.Entity<IdentityUserLogin<string>>().ToTable("AspNetUserLogins", PublicSchema);
+        builder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRoles", PublicSchema);
+        builder.Entity<IdentityUserToken<string>>().ToTable("AspNetUserTokens", PublicSchema);
+        builder.Entity<IdentityRoleClaim<string>>().ToTable("AspNetRoleClaims", PublicSchema);
+    }
+
+    private static void ConfigureBusinessPhysicalNames(ModelBuilder builder)
+    {
+        foreach (var mapping in BusinessTableMappings)
+        {
+            builder.Entity(mapping.Key).ToTable(mapping.Value.Table, mapping.Value.Schema);
+        }
+    }
+
+    private static void ConfigureTrackingColumns(ModelBuilder builder)
+    {
+        foreach (var entityType in builder.Model.GetEntityTypes()
+                     .Where(x => BusinessTableMappings.ContainsKey(x.ClrType)
+                         && typeof(BaseEntity).IsAssignableFrom(x.ClrType)))
+        {
+            var entity = builder.Entity(entityType.ClrType);
+            entity.Property<int>(nameof(BaseEntity.IsDeleted))
+                .HasColumnName("is_deleted")
+                .HasDefaultValue(0);
+            entity.Property<DateTime>(nameof(BaseEntity.CreatedAt))
+                .HasColumnName("created_at")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property<string?>(nameof(BaseEntity.CreatedBy))
+                .HasColumnName("created_by")
+                .HasMaxLength(100);
+            entity.Property<string?>(nameof(BaseEntity.CreatedByFunction))
+                .HasColumnName("created_by_function")
+                .HasMaxLength(100);
+            entity.Property<DateTime?>(nameof(BaseEntity.UpdatedAt))
+                .HasColumnName("updated_at")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property<string?>(nameof(BaseEntity.UpdatedBy))
+                .HasColumnName("updated_by")
+                .HasMaxLength(100);
+            entity.Property<string?>(nameof(BaseEntity.UpdatedByFunction))
+                .HasColumnName("updated_by_function")
+                .HasMaxLength(100);
+            var mapping = BusinessTableMappings[entityType.ClrType];
+            entity.ToTable(mapping.Table, mapping.Schema, tableBuilder =>
+                tableBuilder.HasCheckConstraint(
+                    $"ck_{mapping.Table}_is_deleted",
+                    "is_deleted IN (0, 1)"));
+        }
+    }
+
+    private static void ConfigureBusinessColumnNames(ModelBuilder builder)
+    {
+        foreach (var entityType in builder.Model.GetEntityTypes()
+                     .Where(x => BusinessTableMappings.ContainsKey(x.ClrType)))
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                property.SetColumnName(GetBusinessColumnName(entityType.ClrType, property.Name));
+            }
+        }
+    }
+
+    private static string GetBusinessColumnName(Type entityType, string propertyName)
+    {
+        if (entityType == typeof(WalletTransaction) && propertyName == nameof(WalletTransaction.WalletAccountId))
+        {
+            return "branch_wallet_id";
+        }
+
+        return ToSnakeCase(propertyName);
+    }
+
+    private static string ToSnakeCase(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        var builder = new StringBuilder(value.Length + 8);
+        for (var i = 0; i < value.Length; i++)
+        {
+            var current = value[i];
+            if (char.IsUpper(current))
+            {
+                var previousIsLowerOrDigit = i > 0 && (char.IsLower(value[i - 1]) || char.IsDigit(value[i - 1]));
+                var nextIsLower = i + 1 < value.Length && char.IsLower(value[i + 1]);
+                if (builder.Length > 0 && (previousIsLowerOrDigit || nextIsLower))
+                {
+                    builder.Append('_');
+                }
+
+                builder.Append(char.ToLowerInvariant(current));
+                continue;
+            }
+
+            builder.Append(current);
+        }
+
+        return builder.ToString();
     }
 
     private static void ConfigureIdentityKeyLengths(ModelBuilder builder)
@@ -473,26 +647,73 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             }
         }
 
-        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
-        {
-            if (entry.State == EntityState.Added)
-            {
-                if (entry.Entity.CreatedAt == default)
-                {
-                    entry.Entity.CreatedAt = now;
-                }
-            }
-            else if (entry.State == EntityState.Modified)
-            {
-                entry.Entity.UpdatedAt = now;
-            }
-        }
+        ApplyTrackingRules(now);
 
         foreach (var entry in ChangeTracker.Entries<IHasRowVersion>())
         {
             if (entry.State is EntityState.Added or EntityState.Modified)
             {
                 entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
+            }
+        }
+    }
+
+    private void ApplyTrackingRules(DateTime now)
+    {
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        {
+            if (entry.State is not (EntityState.Added or EntityState.Modified))
+            {
+                continue;
+            }
+
+            if (entry.State == EntityState.Added)
+            {
+                if (entry.Entity.CreatedAt == default)
+                {
+                    entry.Entity.CreatedAt = now;
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.Entity.CreatedBy))
+                {
+                    entry.Entity.CreatedBy = "application";
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.Entity.CreatedByFunction))
+                {
+                    entry.Entity.CreatedByFunction = "ApplicationDbContext.SaveChanges";
+                }
+            }
+            else
+            {
+                entry.Property(x => x.CreatedAt).IsModified = false;
+                entry.Property(x => x.CreatedBy).IsModified = false;
+                entry.Property(x => x.CreatedByFunction).IsModified = false;
+            }
+
+            entry.Entity.UpdatedAt = now;
+            if (string.IsNullOrWhiteSpace(entry.Entity.UpdatedBy))
+            {
+                entry.Entity.UpdatedBy = "application";
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Entity.UpdatedByFunction))
+            {
+                entry.Entity.UpdatedByFunction = "ApplicationDbContext.SaveChanges";
+            }
+
+            if (entry.Entity.IsDeleted is not (0 or 1))
+            {
+                throw new InvalidOperationException("BaseEntity.IsDeleted chỉ được nhận giá trị 0 hoặc 1.");
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                if (entry.Property(x => x.IsDeleted).OriginalValue == 1 &&
+                    entry.Property(x => x.IsDeleted).CurrentValue == 0)
+                {
+                    throw new InvalidOperationException("Không được khôi phục bản ghi soft-delete nếu chưa có nghiệp vụ riêng.");
+                }
             }
         }
     }

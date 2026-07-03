@@ -6,8 +6,8 @@
 @{
     ViewData["Title"] = "Ví của tôi";
 
-    var creditTotal = Model.Transactions.Where(x => x.Amount > 0).Sum(x => x.Amount);
-    var debitTotal = Model.Transactions.Where(x => x.Amount < 0).Sum(x => Math.Abs(x.Amount));
+    var creditTotal = Model.Transactions.Items.Where(x => x.Amount > 0).Sum(x => x.Amount);
+    var debitTotal = Model.Transactions.Items.Where(x => x.Amount < 0).Sum(x => Math.Abs(x.Amount));
 }
 
 <section class="cu-page">
@@ -31,7 +31,7 @@
     <section class="cu-stat-grid">
         <div class="cu-stat-card"><span class="cu-stat-icon is-green" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-down-circle"></use></svg></span><span>Tổng đã nạp</span><strong>@creditTotal.ToString("N0") đ</strong><small>Các giao dịch tăng số dư.</small></div>
         <div class="cu-stat-card"><span class="cu-stat-icon is-rose" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-up-circle"></use></svg></span><span>Tổng đã chi</span><strong>@debitTotal.ToString("N0") đ</strong><small>Các khoản thanh toán đơn.</small></div>
-        <div class="cu-stat-card"><span class="cu-stat-icon is-blue" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-receipt"></use></svg></span><span>Số giao dịch</span><strong>@Model.Transactions.Count</strong><small>Lịch sử ví của tài khoản.</small></div>
+        <div class="cu-stat-card"><span class="cu-stat-icon is-blue" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-receipt"></use></svg></span><span>Số giao dịch</span><strong>@Model.Transactions.TotalCount</strong><small>Lịch sử ví của tài khoản.</small></div>
     </section>
 
     <section class="cu-card">
@@ -55,13 +55,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                @if (Model.Transactions.Count == 0)
+                @if (Model.Transactions.Items.Count == 0)
                 {
                     <tr>
                         <td colspan="6"><div class="cu-empty"><strong>Chưa có giao dịch nào.</strong><span>Các giao dịch ví sẽ hiển thị tại đây.</span></div></td>
                     </tr>
                 }
-                @foreach (var tx in Model.Transactions)
+                @foreach (var tx in Model.Transactions.Items)
                 {
                     <tr>
                         <td>@tx.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
@@ -75,5 +75,27 @@
                 </tbody>
             </table>
         </div>
+
+        @if (Model.Transactions.TotalPages > 1)
+        {
+            <div class="cu-pagination mt-4 d-flex justify-content-center">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        <li class="page-item @(!Model.Transactions.HasPreviousPage ? "disabled" : "")">
+                            <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"Wallet?page={Model.Transactions.PageNumber - 1}")" tabindex="-1">Trước</a>
+                        </li>
+                        @for (int i = 1; i <= Model.Transactions.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.Transactions.PageNumber ? "active" : "")">
+                                <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"Wallet?page={i}")">@i</a>
+                            </li>
+                        }
+                        <li class="page-item @(!Model.Transactions.HasNextPage ? "disabled" : "")">
+                            <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"Wallet?page={Model.Transactions.PageNumber + 1}")">Sau</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     </section>
 </section>

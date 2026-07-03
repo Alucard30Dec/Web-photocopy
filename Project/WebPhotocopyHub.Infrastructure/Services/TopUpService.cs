@@ -73,21 +73,6 @@ public class TopUpService : ITopUpService
         };
 
         _dbContext.TopUpRequests.Add(topUp);
-        var currentBalance = await _walletService.GetCurrentBalanceAsync(request.UserId, cancellationToken);
-
-        _dbContext.WalletTransactions.Add(new WalletTransaction
-        {
-            UserId = request.UserId,
-            TransactionType = WalletTransactionType.TopUpPending,
-            Amount = 0,
-            BalanceBefore = currentBalance,
-            BalanceAfter = currentBalance,
-            ReferenceType = nameof(TopUpRequest),
-            ReferenceId = topUp.Id,
-            Note = $"Yêu cầu nạp tiền chờ duyệt: {request.Amount:N0}",
-            IdempotencyKey = idempotencyKey
-        });
-
         await _dbContext.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return topUp;
@@ -236,7 +221,6 @@ public class TopUpService : ITopUpService
             else
             {
                 request.Status = TopUpStatus.Rejected;
-                await AddRejectedRecordAsync(request, reviewDto.Note, reviewDto.ReviewerUserId, idempotencyKey, cancellationToken);
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -257,7 +241,6 @@ public class TopUpService : ITopUpService
         if (!reviewDto.IsApprove)
         {
             request.Status = TopUpStatus.Rejected;
-            await AddRejectedRecordAsync(request, reviewDto.Note, reviewDto.ReviewerUserId, idempotencyKey, cancellationToken);
         }
         else
         {
@@ -299,29 +282,6 @@ public class TopUpService : ITopUpService
         await _dbContext.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return request;
-    }
-
-    private async Task AddRejectedRecordAsync(
-        TopUpRequest request,
-        string? note,
-        string reviewerId,
-        string idempotencyKey,
-        CancellationToken cancellationToken)
-    {
-        var currentBalance = await _walletService.GetCurrentBalanceAsync(request.UserId, cancellationToken);
-        _dbContext.WalletTransactions.Add(new WalletTransaction
-        {
-            UserId = request.UserId,
-            TransactionType = WalletTransactionType.TopUpRejected,
-            Amount = 0,
-            BalanceBefore = currentBalance,
-            BalanceAfter = currentBalance,
-            ReferenceType = nameof(TopUpRequest),
-            ReferenceId = request.Id,
-            Note = note ?? "Từ chối yêu cầu nạp tiền",
-            IdempotencyKey = idempotencyKey,
-            PerformedByAdminId = reviewerId
-        });
     }
 
     private static string? NormalizeIdempotencyKey(string? key)

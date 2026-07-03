@@ -2,7 +2,7 @@
     Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
 }
 
-@model List<ProductOrder>
+@model WebPhotocopyHub.Application.DTOs.PagedResult<ProductOrder>
 @{
     ViewData["Title"] = "Đơn văn phòng phẩm";
 }
@@ -19,7 +19,7 @@
         </div>
         <aside class="cu-hero-card">
             <span class="cu-card-label">Tổng đơn</span>
-            <strong>@Model.Count</strong>
+            <strong>@Model.TotalCount</strong>
             <small>Đơn sản phẩm của tài khoản hiện tại.</small>
         </aside>
     </section>
@@ -37,13 +37,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                @if (Model.Count == 0)
+                @if (Model.Items.Count == 0)
                 {
                     <tr>
                         <td colspan="5"><div class="cu-empty"><strong>Chưa có đơn sản phẩm.</strong><span>Chọn sản phẩm và tạo đơn mới.</span></div></td>
                     </tr>
                 }
-                @foreach (var item in Model)
+                @foreach (var item in Model.Items)
                 {
                     <tr>
                         <td><span class="cu-code">@item.Id</span></td>
@@ -56,5 +56,27 @@
                 </tbody>
             </table>
         </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="cu-pagination mt-4 d-flex justify-content-center">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")">
+                            <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"Products/Orders?page={Model.PageNumber - 1}")" tabindex="-1">Trước</a>
+                        </li>
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"Products/Orders?page={i}")">@i</a>
+                            </li>
+                        }
+                        <li class="page-item @(!Model.HasNextPage ? "disabled" : "")">
+                            <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"Products/Orders?page={Model.PageNumber + 1}")">Sau</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     </section>
 </section>

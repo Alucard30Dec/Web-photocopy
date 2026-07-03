@@ -1,708 +1,360 @@
--- WebPhotocopyHub TKS PostgreSQL objects
--- Version: 20260602_001
--- Apply manually or through an approved deployment runner before enabling stored-routine DataAccess runtime.
+-- WebPhotocopyHub PostgreSQL reporting and operations objects.
+-- Version: 20260602_001 refreshed for the 20260630 bilingual database naming standard.
+-- Apply the database/patches/V20260630_001_database_bilingual_refactor.sql patch first.
 
-        CREATE OR REPLACE VIEW "view_Sys_Application_User" AS
-        SELECT
-            A."Id",
-            A."FullName",
-            A."Email",
-            A."PhoneNumber",
-            A."Address",
-            A."CurrentBalance",
-            A."IsActive",
-            A."CreatedAt"
-        FROM "AspNetUsers" AS A;
+CREATE SCHEMA IF NOT EXISTS reporting;
+CREATE SCHEMA IF NOT EXISTS operations;
+CREATE SCHEMA IF NOT EXISTS vi;
 
-        CREATE OR REPLACE VIEW "view_TC_Wallet_Transaction" AS
-        SELECT
-            A."Id",
-            A."UserId",
-            A."TransactionType",
-            A."Amount",
-            A."BalanceBefore",
-            A."BalanceAfter",
-            A."ReferenceType",
-            A."ReferenceId",
-            A."Note",
-            A."IdempotencyKey",
-            A."PerformedByAdminId",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "WalletTransactions" AS A;
+CREATE OR REPLACE VIEW reporting.application_users AS
+SELECT
+    u."Id" AS user_id,
+    u."FullName" AS full_name,
+    u."Email" AS email,
+    u."PhoneNumber" AS phone_number,
+    u."Address" AS address,
+    COALESCE(SUM(w.balance), 0)::numeric(18,2) AS current_balance,
+    u."IsActive" AS is_active,
+    u."CreatedAt" AS created_at
+FROM public."AspNetUsers" AS u
+LEFT JOIN app.branch_wallets AS w
+    ON w.user_id = u."Id"
+GROUP BY
+    u."Id",
+    u."FullName",
+    u."Email",
+    u."PhoneNumber",
+    u."Address",
+    u."IsActive",
+    u."CreatedAt";
 
-        CREATE OR REPLACE VIEW "view_TC_Top_Up_Request" AS
-        SELECT
-            A."Id",
-            A."UserId",
-            A."Amount",
-            A."TransferContent",
-            A."TransactionReferenceCode",
-            A."CreateIdempotencyKey",
-            A."LastReviewIdempotencyKey",
-            A."Channel",
-            A."ProofFileId",
-            A."Status",
-            A."RequiresAdminApproval",
-            A."ReviewedByAdminId",
-            A."ReviewedAt",
-            A."ReviewNote",
-            A."SecondReviewedByAdminId",
-            A."SecondReviewedAt",
-            A."SecondReviewNote",
-            A."ApprovedWalletTransactionId",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "TopUpRequests" AS A;
+CREATE OR REPLACE VIEW reporting.wallet_transactions AS
+SELECT
+    wt.id,
+    wt.branch_id,
+    wt.branch_wallet_id,
+    wt.user_id,
+    wt.transaction_type,
+    wt.amount,
+    wt.balance_before,
+    wt.balance_after,
+    wt.reference_type,
+    wt.reference_id,
+    wt.note,
+    wt.idempotency_key,
+    wt.performed_by_admin_id,
+    wt.created_at,
+    wt.updated_at
+FROM app.wallet_transactions AS wt;
 
-        CREATE OR REPLACE VIEW "view_XNK_Print_Job" AS
-        SELECT
-            A."Id",
-            A."UserId",
-            A."UploadedFileId",
-            A."PaperSize",
-            A."PrintSide",
-            A."ColorMode",
-            A."IsPhoto",
-            A."Copies",
-            A."TotalPages",
-            A."Notes",
-            A."DeliveryMethod",
-            A."DeliveryAddress",
-            A."UnitPrice",
-            A."SubTotal",
-            A."ShippingFee",
-            A."TotalAmount",
-            A."Status",
-            A."ConfirmedByOperatorId",
-            A."ConfirmedAt",
-            A."AssignedOperatorId",
-            A."LastStatusNote",
-            A."PaidAt",
-            A."PaidWalletTransactionId",
-            A."SubmitIdempotencyKey",
-            A."ProcessedByAdminId",
-            A."RefundedByUserId",
-            A."RefundedAt",
-            A."RefundReason",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "PrintJobs" AS A;
+CREATE OR REPLACE VIEW reporting.top_up_requests AS
+SELECT
+    t.id,
+    t.branch_id,
+    t.user_id,
+    t.amount,
+    t.transfer_content,
+    t.transaction_reference_code,
+    t.create_idempotency_key,
+    t.last_review_idempotency_key,
+    t.channel,
+    t.proof_file_id,
+    t.status,
+    t.requires_admin_approval,
+    t.reviewed_by_admin_id,
+    t.reviewed_at,
+    t.review_note,
+    t.second_reviewed_by_admin_id,
+    t.second_reviewed_at,
+    t.second_review_note,
+    t.approved_wallet_transaction_id,
+    t.created_at,
+    t.updated_at
+FROM app.top_up_requests AS t;
 
-        CREATE OR REPLACE VIEW "view_DM_Product" AS
-        SELECT
-            A."Id",
-            A."Name",
-            A."Description",
-            A."Price",
-            A."StockQuantity",
-            A."ImageUrl",
-            A."IsActive",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "Products" AS A;
+CREATE OR REPLACE VIEW reporting.print_job_details AS
+SELECT
+    p.id,
+    p.branch_id,
+    b.name AS branch_name,
+    p.user_id,
+    p.uploaded_file_id,
+    f.original_file_name,
+    p.paper_size,
+    p.print_side,
+    p.color_mode,
+    p.is_photo,
+    p.copies,
+    p.total_pages,
+    p.notes,
+    p.delivery_method,
+    p.delivery_address,
+    p.unit_price,
+    p.sub_total,
+    p.shipping_fee,
+    p.total_amount,
+    p.status,
+    p.confirmed_by_operator_id,
+    p.confirmed_at,
+    p.assigned_operator_id,
+    p.last_status_note,
+    p.paid_at,
+    p.paid_wallet_transaction_id,
+    p.submit_idempotency_key,
+    p.processed_by_admin_id,
+    p.refunded_by_user_id,
+    p.refunded_at,
+    p.refund_reason,
+    p.created_at,
+    p.updated_at
+FROM app.print_jobs AS p
+JOIN app.shop_branches AS b
+    ON b.id = p.branch_id
+JOIN app.uploaded_files AS f
+    ON f.id = p.uploaded_file_id;
 
-        CREATE OR REPLACE VIEW "view_XNK_Product_Order" AS
-        SELECT
-            A."Id",
-            A."UserId",
-            A."TotalAmount",
-            A."DeliveryMethod",
-            A."DeliveryAddress",
-            A."Notes",
-            A."OrderIdempotencyKey",
-            A."Status",
-            A."ProcessedByOperatorId",
-            A."ProcessedAt",
-            A."ProcessNote",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "ProductOrders" AS A;
+CREATE OR REPLACE VIEW reporting.product_order_details AS
+SELECT
+    o.id AS order_id,
+    o.branch_id,
+    b.name AS branch_name,
+    o.user_id,
+    o.total_amount,
+    o.delivery_method,
+    o.delivery_address,
+    o.notes,
+    o.order_idempotency_key,
+    o.status,
+    o.processed_by_operator_id,
+    o.processed_at,
+    o.process_note,
+    i.id AS item_id,
+    i.product_id,
+    p.name AS product_name,
+    i.quantity,
+    i.unit_price,
+    i.line_total,
+    o.created_at,
+    o.updated_at
+FROM app.product_orders AS o
+JOIN app.shop_branches AS b
+    ON b.id = o.branch_id
+JOIN app.product_order_items AS i
+    ON i.product_order_id = o.id
+JOIN app.products AS p
+    ON p.id = i.product_id;
 
-        CREATE OR REPLACE VIEW "view_XNK_Product_Order_Item" AS
-        SELECT
-            A."Id",
-            A."ProductOrderId",
-            A."ProductId",
-            A."Quantity",
-            A."UnitPrice",
-            A."LineTotal",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "ProductOrderItems" AS A;
+CREATE OR REPLACE VIEW reporting.current_inventory AS
+SELECT
+    p.id AS product_id,
+    p.branch_id,
+    b.name AS branch_name,
+    p.name,
+    p.description,
+    p.price,
+    p.stock_quantity,
+    p.image_url,
+    p.is_active,
+    p.created_at,
+    p.updated_at
+FROM app.products AS p
+JOIN app.shop_branches AS b
+    ON b.id = p.branch_id;
 
-        CREATE OR REPLACE VIEW "view_XNK_Product_Stock_Movement" AS
-        SELECT
-            A."Id",
-            A."ProductId",
-            A."ActorUserId",
-            A."MovementType",
-            A."QuantityChanged",
-            A."StockBefore",
-            A."StockAfter",
-            A."Note",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "ProductStockMovements" AS A;
+CREATE OR REPLACE VIEW reporting.support_service_order_details AS
+SELECT
+    o.id AS order_id,
+    o.branch_id,
+    b.name AS branch_name,
+    o.user_id,
+    o.support_service_id,
+    s.name AS support_service_name,
+    o.quantity,
+    o.unit_price,
+    o.total_amount,
+    o.notes,
+    o.order_idempotency_key,
+    o.status,
+    o.processed_by_operator_id,
+    o.processed_at,
+    o.process_note,
+    o.created_at,
+    o.updated_at
+FROM app.support_service_orders AS o
+JOIN app.shop_branches AS b
+    ON b.id = o.branch_id
+JOIN app.support_services AS s
+    ON s.id = o.support_service_id;
 
-        CREATE OR REPLACE VIEW "view_DM_Support_Service" AS
-        SELECT
-            A."Id",
-            A."Name",
-            A."Description",
-            A."UnitPrice",
-            A."FeeType",
-            A."IsActive",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "SupportServices" AS A;
+CREATE OR REPLACE VIEW reporting.branch_wallet_reconciliation AS
+SELECT
+    w.id AS wallet_id,
+    w.user_id,
+    u."Email" AS email,
+    w.branch_id,
+    b.name AS branch_name,
+    w.balance AS current_balance,
+    COALESCE(SUM(t.amount), 0)::numeric(18,2) AS ledger_balance,
+    (w.balance - COALESCE(SUM(t.amount), 0))::numeric(18,2) AS difference
+FROM app.branch_wallets AS w
+JOIN public."AspNetUsers" AS u
+    ON u."Id" = w.user_id
+JOIN app.shop_branches AS b
+    ON b.id = w.branch_id
+LEFT JOIN app.wallet_transactions AS t
+    ON t.branch_wallet_id = w.id
+GROUP BY
+    w.id,
+    w.user_id,
+    u."Email",
+    w.branch_id,
+    b.name,
+    w.balance;
 
-        CREATE OR REPLACE VIEW "view_XNK_Support_Service_Order" AS
-        SELECT
-            A."Id",
-            A."UserId",
-            A."SupportServiceId",
-            A."Quantity",
-            A."UnitPrice",
-            A."TotalAmount",
-            A."Notes",
-            A."OrderIdempotencyKey",
-            A."Status",
-            A."ProcessedByOperatorId",
-            A."ProcessedAt",
-            A."ProcessNote",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "SupportServiceOrders" AS A;
+CREATE OR REPLACE VIEW vi.doi_soat_vi_chi_nhanh AS
+SELECT
+    wallet_id AS ma_vi,
+    user_id AS ma_nguoi_dung,
+    email AS email,
+    branch_id AS ma_chi_nhanh,
+    branch_name AS ten_chi_nhanh,
+    current_balance AS so_du_hien_tai,
+    ledger_balance AS so_du_theo_giao_dich,
+    difference AS chenh_lech
+FROM reporting.branch_wallet_reconciliation;
 
-        CREATE OR REPLACE VIEW "view_Log_Audit_Log" AS
-        SELECT
-            A."Id",
-            A."ActorUserId",
-            A."Action",
-            A."EntityName",
-            A."EntityId",
-            A."Details",
-            A."IpAddress",
-            A."PreviousHash",
-            A."RecordHash",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "AuditLogs" AS A;
+CREATE OR REPLACE VIEW vi.chi_tiet_don_in AS
+SELECT
+    id AS ma_don_in,
+    branch_id AS ma_chi_nhanh,
+    branch_name AS ten_chi_nhanh,
+    user_id AS ma_nguoi_dung,
+    original_file_name AS ten_file_goc,
+    total_amount AS tong_tien,
+    status AS trang_thai,
+    created_at AS ngay_tao,
+    updated_at AS ngay_cap_nhat
+FROM reporting.print_job_details;
 
-        CREATE OR REPLACE VIEW "view_DM_Pricing_Rule" AS
-        SELECT
-            A."Id",
-            A."PaperSize",
-            A."PrintSide",
-            A."ColorMode",
-            A."IsPhoto",
-            A."UnitPrice",
-            A."IsActive",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "PricingRules" AS A;
+CREATE OR REPLACE VIEW vi.chi_tiet_don_hang AS
+SELECT
+    order_id AS ma_don_hang,
+    branch_id AS ma_chi_nhanh,
+    branch_name AS ten_chi_nhanh,
+    user_id AS ma_nguoi_dung,
+    product_id AS ma_san_pham,
+    product_name AS ten_san_pham,
+    quantity AS so_luong,
+    line_total AS thanh_tien,
+    status AS trang_thai,
+    created_at AS ngay_tao
+FROM reporting.product_order_details;
 
-        CREATE OR REPLACE VIEW "view_Sys_Uploaded_File_Metadata" AS
-        SELECT
-            A."Id",
-            A."OwnerUserId",
-            A."OriginalFileName",
-            A."StoredFileName",
-            A."RelativePath",
-            A."Size",
-            A."ContentType",
-            A."IsForPrintJob",
-            A."CreatedAt",
-            A."UpdatedAt"
-        FROM "UploadedFileMetadatas" AS A;
+CREATE OR REPLACE VIEW vi.ton_kho_hien_tai AS
+SELECT
+    product_id AS ma_san_pham,
+    branch_id AS ma_chi_nhanh,
+    branch_name AS ten_chi_nhanh,
+    name AS ten_san_pham,
+    stock_quantity AS ton_kho,
+    is_active AS dang_hoat_dong,
+    updated_at AS ngay_cap_nhat
+FROM reporting.current_inventory;
 
-        CREATE OR REPLACE FUNCTION "FQ_101_USR_sp_sel_List"()
-        RETURNS SETOF "view_Sys_Application_User"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "FullName",
-                "Email",
-                "PhoneNumber",
-                "Address",
-                "CurrentBalance",
-                "IsActive",
-                "CreatedAt"
-            FROM "view_Sys_Application_User"
-            ORDER BY "CreatedAt" DESC;
-        $$;
+CREATE OR REPLACE FUNCTION operations.get_branch_wallet_balance(
+    p_user_id varchar,
+    p_branch_id uuid
+)
+RETURNS numeric(18,2)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+AS $$
+    SELECT COALESCE((
+        SELECT w.balance
+        FROM app.branch_wallets AS w
+        WHERE w.user_id = p_user_id
+            AND w.branch_id = p_branch_id
+            AND w.is_deleted = 0
+    ), 0)::numeric(18,2);
+$$;
 
-        CREATE OR REPLACE FUNCTION "FQ_101_USR_sp_sel_Get_By_ID"(p_strAuto_ID text)
-        RETURNS SETOF "view_Sys_Application_User"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "FullName",
-                "Email",
-                "PhoneNumber",
-                "Address",
-                "CurrentBalance",
-                "IsActive",
-                "CreatedAt"
-            FROM "view_Sys_Application_User"
-            WHERE "Id" = p_strAuto_ID;
-        $$;
+CREATE OR REPLACE FUNCTION operations.reconcile_branch_wallet(
+    p_branch_id uuid
+)
+RETURNS TABLE (
+    wallet_id uuid,
+    user_id varchar,
+    branch_id uuid,
+    current_balance numeric(18,2),
+    ledger_balance numeric(18,2),
+    difference numeric(18,2)
+)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+AS $$
+    SELECT
+        r.wallet_id,
+        r.user_id,
+        r.branch_id,
+        r.current_balance,
+        r.ledger_balance,
+        r.difference
+    FROM reporting.branch_wallet_reconciliation AS r
+    WHERE r.branch_id = p_branch_id
+    ORDER BY abs(r.difference) DESC, r.user_id;
+$$;
 
-        CREATE OR REPLACE FUNCTION "FQ_110_PRD_sp_sel_List"()
-        RETURNS SETOF "view_DM_Product"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "Name",
-                "Description",
-                "Price",
-                "StockQuantity",
-                "ImageUrl",
-                "IsActive",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_DM_Product"
-            ORDER BY "CreatedAt" DESC;
-        $$;
+CREATE OR REPLACE FUNCTION vi.lay_so_du_vi_chi_nhanh(
+    p_nguoi_dung_id varchar,
+    p_chi_nhanh_id uuid
+)
+RETURNS numeric(18,2)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+AS $$
+    SELECT operations.get_branch_wallet_balance(
+        p_nguoi_dung_id,
+        p_chi_nhanh_id
+    );
+$$;
 
-        CREATE OR REPLACE FUNCTION "FQ_110_PRD_sp_sel_Get_By_ID"(p_iAuto_ID uuid)
-        RETURNS SETOF "view_DM_Product"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "Name",
-                "Description",
-                "Price",
-                "StockQuantity",
-                "ImageUrl",
-                "IsActive",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_DM_Product"
-            WHERE "Id" = p_iAuto_ID;
-        $$;
+CREATE OR REPLACE FUNCTION vi.doi_soat_vi_chi_nhanh(
+    p_chi_nhanh_id uuid
+)
+RETURNS TABLE (
+    ma_vi uuid,
+    ma_nguoi_dung varchar,
+    ma_chi_nhanh uuid,
+    so_du_hien_tai numeric(18,2),
+    so_du_theo_giao_dich numeric(18,2),
+    chenh_lech numeric(18,2)
+)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+AS $$
+    SELECT
+        wallet_id AS ma_vi,
+        user_id AS ma_nguoi_dung,
+        branch_id AS ma_chi_nhanh,
+        current_balance AS so_du_hien_tai,
+        ledger_balance AS so_du_theo_giao_dich,
+        difference AS chenh_lech
+    FROM operations.reconcile_branch_wallet(p_chi_nhanh_id);
+$$;
 
-        CREATE OR REPLACE FUNCTION "FQ_111_PRC_sp_sel_List"()
-        RETURNS SETOF "view_DM_Pricing_Rule"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "PaperSize",
-                "PrintSide",
-                "ColorMode",
-                "IsPhoto",
-                "UnitPrice",
-                "IsActive",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_DM_Pricing_Rule"
-            ORDER BY "PaperSize", "ColorMode", "PrintSide";
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_111_PRC_sp_sel_Get_By_ID"(p_iAuto_ID uuid)
-        RETURNS SETOF "view_DM_Pricing_Rule"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "PaperSize",
-                "PrintSide",
-                "ColorMode",
-                "IsPhoto",
-                "UnitPrice",
-                "IsActive",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_DM_Pricing_Rule"
-            WHERE "Id" = p_iAuto_ID;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_112_SVS_sp_sel_List"()
-        RETURNS SETOF "view_DM_Support_Service"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "Name",
-                "Description",
-                "UnitPrice",
-                "FeeType",
-                "IsActive",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_DM_Support_Service"
-            ORDER BY "CreatedAt" DESC;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_112_SVS_sp_sel_Get_By_ID"(p_iAuto_ID uuid)
-        RETURNS SETOF "view_DM_Support_Service"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "Name",
-                "Description",
-                "UnitPrice",
-                "FeeType",
-                "IsActive",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_DM_Support_Service"
-            WHERE "Id" = p_iAuto_ID;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_201_WLT_sp_sel_List"()
-        RETURNS SETOF "view_TC_Wallet_Transaction"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "TransactionType",
-                "Amount",
-                "BalanceBefore",
-                "BalanceAfter",
-                "ReferenceType",
-                "ReferenceId",
-                "Note",
-                "IdempotencyKey",
-                "PerformedByAdminId",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_TC_Wallet_Transaction"
-            ORDER BY "CreatedAt" DESC;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_201_WLT_sp_sel_List_By_User_ID"(p_strUser_ID text)
-        RETURNS SETOF "view_TC_Wallet_Transaction"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "TransactionType",
-                "Amount",
-                "BalanceBefore",
-                "BalanceAfter",
-                "ReferenceType",
-                "ReferenceId",
-                "Note",
-                "IdempotencyKey",
-                "PerformedByAdminId",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_TC_Wallet_Transaction"
-            WHERE "UserId" = p_strUser_ID
-            ORDER BY "CreatedAt" DESC;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_202_TOP_sp_sel_List"()
-        RETURNS SETOF "view_TC_Top_Up_Request"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "Amount",
-                "TransferContent",
-                "TransactionReferenceCode",
-                "CreateIdempotencyKey",
-                "LastReviewIdempotencyKey",
-                "Channel",
-                "ProofFileId",
-                "Status",
-                "RequiresAdminApproval",
-                "ReviewedByAdminId",
-                "ReviewedAt",
-                "ReviewNote",
-                "SecondReviewedByAdminId",
-                "SecondReviewedAt",
-                "SecondReviewNote",
-                "ApprovedWalletTransactionId",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_TC_Top_Up_Request"
-            ORDER BY "CreatedAt" DESC;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_202_TOP_sp_sel_Get_By_ID"(p_iAuto_ID uuid)
-        RETURNS SETOF "view_TC_Top_Up_Request"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "Amount",
-                "TransferContent",
-                "TransactionReferenceCode",
-                "CreateIdempotencyKey",
-                "LastReviewIdempotencyKey",
-                "Channel",
-                "ProofFileId",
-                "Status",
-                "RequiresAdminApproval",
-                "ReviewedByAdminId",
-                "ReviewedAt",
-                "ReviewNote",
-                "SecondReviewedByAdminId",
-                "SecondReviewedAt",
-                "SecondReviewNote",
-                "ApprovedWalletTransactionId",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_TC_Top_Up_Request"
-            WHERE "Id" = p_iAuto_ID;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_301_PRJ_sp_sel_List"()
-        RETURNS SETOF "view_XNK_Print_Job"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "UploadedFileId",
-                "PaperSize",
-                "PrintSide",
-                "ColorMode",
-                "IsPhoto",
-                "Copies",
-                "TotalPages",
-                "Notes",
-                "DeliveryMethod",
-                "DeliveryAddress",
-                "UnitPrice",
-                "SubTotal",
-                "ShippingFee",
-                "TotalAmount",
-                "Status",
-                "ConfirmedByOperatorId",
-                "ConfirmedAt",
-                "AssignedOperatorId",
-                "LastStatusNote",
-                "PaidAt",
-                "PaidWalletTransactionId",
-                "SubmitIdempotencyKey",
-                "ProcessedByAdminId",
-                "RefundedByUserId",
-                "RefundedAt",
-                "RefundReason",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_XNK_Print_Job"
-            ORDER BY "CreatedAt" DESC;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_301_PRJ_sp_sel_Get_By_ID"(p_iAuto_ID uuid)
-        RETURNS SETOF "view_XNK_Print_Job"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "UploadedFileId",
-                "PaperSize",
-                "PrintSide",
-                "ColorMode",
-                "IsPhoto",
-                "Copies",
-                "TotalPages",
-                "Notes",
-                "DeliveryMethod",
-                "DeliveryAddress",
-                "UnitPrice",
-                "SubTotal",
-                "ShippingFee",
-                "TotalAmount",
-                "Status",
-                "ConfirmedByOperatorId",
-                "ConfirmedAt",
-                "AssignedOperatorId",
-                "LastStatusNote",
-                "PaidAt",
-                "PaidWalletTransactionId",
-                "SubmitIdempotencyKey",
-                "ProcessedByAdminId",
-                "RefundedByUserId",
-                "RefundedAt",
-                "RefundReason",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_XNK_Print_Job"
-            WHERE "Id" = p_iAuto_ID;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_401_POR_sp_sel_List"()
-        RETURNS SETOF "view_XNK_Product_Order"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "TotalAmount",
-                "DeliveryMethod",
-                "DeliveryAddress",
-                "Notes",
-                "OrderIdempotencyKey",
-                "Status",
-                "ProcessedByOperatorId",
-                "ProcessedAt",
-                "ProcessNote",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_XNK_Product_Order"
-            ORDER BY "CreatedAt" DESC;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_401_POR_sp_sel_Get_By_ID"(p_iAuto_ID uuid)
-        RETURNS SETOF "view_XNK_Product_Order"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "TotalAmount",
-                "DeliveryMethod",
-                "DeliveryAddress",
-                "Notes",
-                "OrderIdempotencyKey",
-                "Status",
-                "ProcessedByOperatorId",
-                "ProcessedAt",
-                "ProcessNote",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_XNK_Product_Order"
-            WHERE "Id" = p_iAuto_ID;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_402_POI_sp_sel_List_By_Order_ID"(p_iOrder_ID uuid)
-        RETURNS SETOF "view_XNK_Product_Order_Item"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "ProductOrderId",
-                "ProductId",
-                "Quantity",
-                "UnitPrice",
-                "LineTotal",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_XNK_Product_Order_Item"
-            WHERE "ProductOrderId" = p_iOrder_ID
-            ORDER BY "CreatedAt";
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_501_SVO_sp_sel_List"()
-        RETURNS SETOF "view_XNK_Support_Service_Order"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "SupportServiceId",
-                "Quantity",
-                "UnitPrice",
-                "TotalAmount",
-                "Notes",
-                "OrderIdempotencyKey",
-                "Status",
-                "ProcessedByOperatorId",
-                "ProcessedAt",
-                "ProcessNote",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_XNK_Support_Service_Order"
-            ORDER BY "CreatedAt" DESC;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_501_SVO_sp_sel_Get_By_ID"(p_iAuto_ID uuid)
-        RETURNS SETOF "view_XNK_Support_Service_Order"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "UserId",
-                "SupportServiceId",
-                "Quantity",
-                "UnitPrice",
-                "TotalAmount",
-                "Notes",
-                "OrderIdempotencyKey",
-                "Status",
-                "ProcessedByOperatorId",
-                "ProcessedAt",
-                "ProcessNote",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_XNK_Support_Service_Order"
-            WHERE "Id" = p_iAuto_ID;
-        $$;
-
-        CREATE OR REPLACE FUNCTION "FQ_601_FIL_sp_sel_List_By_User_ID"(p_strUser_ID text)
-        RETURNS SETOF "view_Sys_Uploaded_File_Metadata"
-        LANGUAGE sql
-        STABLE
-        AS $$
-            SELECT
-                "Id",
-                "OwnerUserId",
-                "OriginalFileName",
-                "StoredFileName",
-                "RelativePath",
-                "Size",
-                "ContentType",
-                "IsForPrintJob",
-                "CreatedAt",
-                "UpdatedAt"
-            FROM "view_Sys_Uploaded_File_Metadata"
-            WHERE "OwnerUserId" = p_strUser_ID
-            ORDER BY "CreatedAt" DESC;
-        $$;
-
-        CREATE OR REPLACE PROCEDURE "FQ_110_PRD_sp_del_Deactivate"(p_iAuto_ID uuid)
-        LANGUAGE plpgsql
-        AS $$
-        BEGIN
-            UPDATE "Products"
-            SET "IsActive" = FALSE, "UpdatedAt" = NOW()
-            WHERE "Id" = p_iAuto_ID;
-        END;
-        $$;
-
-        CREATE OR REPLACE PROCEDURE "FQ_112_SVS_sp_del_Deactivate"(p_iAuto_ID uuid)
-        LANGUAGE plpgsql
-        AS $$
-        BEGIN
-            UPDATE "SupportServices"
-            SET "IsActive" = FALSE, "UpdatedAt" = NOW()
-            WHERE "Id" = p_iAuto_ID;
-        END;
-        $$;
-
+COMMENT ON VIEW reporting.branch_wallet_reconciliation IS
+    'Branch wallet reconciliation - Đối soát ví theo chi nhánh';
+COMMENT ON VIEW reporting.print_job_details IS
+    'Print job details - Chi tiết đơn in';
+COMMENT ON VIEW reporting.product_order_details IS
+    'Product order details - Chi tiết đơn hàng sản phẩm';
+COMMENT ON VIEW reporting.current_inventory IS
+    'Current inventory - Tồn kho hiện tại';
+COMMENT ON FUNCTION operations.get_branch_wallet_balance(varchar, uuid) IS
+    'Get branch wallet balance - Lấy số dư ví theo người dùng và chi nhánh';
+COMMENT ON FUNCTION operations.reconcile_branch_wallet(uuid) IS
+    'Reconcile branch wallet - Đối soát ví theo chi nhánh';

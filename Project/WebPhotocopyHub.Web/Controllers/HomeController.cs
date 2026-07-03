@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebPhotocopyHub.Application.Contracts;
+using WebPhotocopyHub.Web.Diagnostics;
 using WebPhotocopyHub.Web.Models;
 
 namespace WebPhotocopyHub.Web.Controllers;
@@ -58,11 +59,15 @@ public class HomeController : Controller
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
+    public IActionResult Error(string? correlationId = null)
     {
+        var safeCorrelationId = CorrelationIdContext.IsSafeValue(correlationId)
+            ? correlationId
+            : CorrelationIdContext.GetOrCreate(HttpContext);
+
         return View(new ErrorViewModel
         {
-            RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            RequestId = safeCorrelationId
         });
     }
 }

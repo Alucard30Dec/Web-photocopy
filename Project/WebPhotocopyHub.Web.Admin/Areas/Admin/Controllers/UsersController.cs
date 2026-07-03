@@ -463,7 +463,9 @@ public class UsersController : Controller
 
     [HttpGet]
     [SystemPermissionAction(SystemPermissionActions.Edit)]
-    public async Task<IActionResult> AdjustBalance(string userId)
+    public async Task<IActionResult> AdjustBalance(
+        string userId,
+        CancellationToken cancellationToken)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
@@ -471,6 +473,7 @@ public class UsersController : Controller
             return NotFound();
         }
 
+        user.BranchWalletBalance = await _walletService.GetCurrentBalanceAsync(userId, cancellationToken);
         ViewBag.TargetUser = user;
         return View(new ManualAdjustBalanceViewModel { UserId = userId });
     }
@@ -489,6 +492,7 @@ public class UsersController : Controller
             return NotFound();
         }
 
+        user.BranchWalletBalance = await _walletService.GetCurrentBalanceAsync(model.UserId, cancellationToken);
         ViewBag.TargetUser = user;
         if (!ModelState.IsValid)
         {

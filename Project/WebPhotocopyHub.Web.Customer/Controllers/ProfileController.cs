@@ -80,6 +80,41 @@ public class ProfileController : Controller
         return RedirectToAction(nameof(Index), BranchRouteValues());
     }
 
+    [HttpGet("ChangePassword")]
+    public IActionResult ChangePassword()
+    {
+        return View(new WebPhotocopyHub.Web.Models.ChangePasswordViewModel());
+    }
+
+    [HttpPost("ChangePassword")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePassword(WebPhotocopyHub.Web.Models.ChangePasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _userManager.FindByIdAsync(User.GetUserId());
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
+        }
+
+        TempData["Success"] = "Đổi mật khẩu thành công.";
+        return RedirectToAction(nameof(Index), BranchRouteValues());
+    }
+
     private static ProfileViewModel ToViewModel(ApplicationUser user)
     {
         return new ProfileViewModel

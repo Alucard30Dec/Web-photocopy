@@ -49,7 +49,7 @@ public class MeApiController : ControllerBase
             return Unauthorized(new { message = "Bạn cần đăng nhập để dùng API này." });
         }
 
-        var transactions = await _walletService.GetUserTransactionsAsync(userId, cancellationToken);
+        var transactions = (await _walletService.GetUserTransactionsAsync(userId, 1, 1000, cancellationToken)).Items;
 
         var response = transactions
             .Select(transaction => new WalletTransactionResponse(
@@ -78,7 +78,7 @@ public class MeApiController : ControllerBase
             return Unauthorized(new { message = "Bạn cần đăng nhập để dùng API này." });
         }
 
-        var printJobs = await _printJobService.GetUserOrdersAsync(userId, cancellationToken);
+        var printJobs = (await _printJobService.GetUserOrdersAsync(userId, 1, 1000, cancellationToken)).Items;
 
         var response = printJobs
             .Select(job => new PrintJobResponse(

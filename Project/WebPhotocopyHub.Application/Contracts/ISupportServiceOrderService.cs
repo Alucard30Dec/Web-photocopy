@@ -11,7 +11,9 @@ public interface ISupportServiceOrderService
     Task<SupportService?> GetServiceByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<SupportService> UpsertServiceAsync(SupportService service, CancellationToken cancellationToken = default);
     Task<SupportServiceOrder> CreateOrderAsync(CreateSupportServiceOrderDto request, CancellationToken cancellationToken = default);
-    Task<List<SupportServiceOrder>> GetUserOrdersAsync(string userId, CancellationToken cancellationToken = default);
-    Task<List<SupportServiceOrder>> GetAllOrdersAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<SupportServiceOrder>> GetUserOrdersAsync(string userId, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+    Task<PagedResult<SupportServiceOrder>> GetAllOrdersAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+    Task<SupportServiceOrder?> GetOrderByIdAsync(Guid orderId, CancellationToken cancellationToken = default);
     Task UpdateOrderStatusAsync(Guid orderId, OrderStatus status, string actorUserId, string? note, CancellationToken cancellationToken = default);
+    Task CancelOrderAsync(Guid id, string userId, CancellationToken cancellationToken = default);
 }

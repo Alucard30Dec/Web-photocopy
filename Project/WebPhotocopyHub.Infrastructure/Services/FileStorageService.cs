@@ -1,5 +1,3 @@
-using Amazon.S3;
-using Amazon.S3.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,7 +16,6 @@ public class FileStorageService : IFileStorageService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly FileStorageOptions _options;
-    private readonly IAmazonS3 _s3Client;
     private readonly ILogger<FileStorageService> _logger;
     private readonly string _root;
 
@@ -26,22 +23,17 @@ public class FileStorageService : IFileStorageService
         ApplicationDbContext dbContext,
         IOptions<FileStorageOptions> options,
         IHostEnvironment hostEnvironment,
-        IAmazonS3 s3Client,
         ILogger<FileStorageService> logger)
     {
         _dbContext = dbContext;
         _options = options.Value;
-        _s3Client = s3Client;
         _logger = logger;
 
         _root = Path.IsPathRooted(_options.RootPath)
             ? _options.RootPath
             : Path.Combine(hostEnvironment.ContentRootPath, _options.RootPath);
 
-        if (!_options.UseS3)
-        {
-            Directory.CreateDirectory(_root);
-        }
+        Directory.CreateDirectory(_root);
     }
 
     public async Task<UploadedFileMetadata> SaveAsync(CreateUploadedFileDto request, CancellationToken cancellationToken = default)
@@ -62,14 +54,7 @@ public class FileStorageService : IFileStorageService
         var subDir = DateTime.UtcNow.ToString("yyyy/MM");
         var relativePath = Path.Combine(subDir, fileName).Replace('\\', '/');
 
-        if (_options.UseS3)
-        {
-            await SaveToS3Async(request, relativePath, cancellationToken);
-        }
-        else
-        {
-            await SaveToLocalDiskAsync(request, fileName, subDir, cancellationToken);
-        }
+        await SaveToLocalDiskAsync(request, fileName, subDir, cancellationToken);
 
         var metadata = new UploadedFileMetadata
         {
@@ -116,11 +101,6 @@ public class FileStorageService : IFileStorageService
     {
         var metadata = await GetMetadataAsync(id, cancellationToken)
             ?? throw new BusinessException("Không tìm thấy file.");
-
-        if (_options.UseS3)
-        {
-            return await OpenReadFromS3Async(metadata, cancellationToken);
-        }
 
         var fullPath = Path.Combine(_root, metadata.RelativePath.Replace('/', Path.DirectorySeparatorChar));
         if (!File.Exists(fullPath))
@@ -177,82 +157,6 @@ public class FileStorageService : IFileStorageService
         }
 
         await request.Content.CopyToAsync(fs, cancellationToken);
-    }
-
-    private async Task SaveToS3Async(
-        CreateUploadedFileDto request,
-        string relativePath,
-        CancellationToken cancellationToken)
-    {
-        var bucketName = _options.S3.BucketName;
-        if (string.IsNullOrWhiteSpace(bucketName))
-        {
-            throw new InvalidOperationException("Thiếu FileStorage:S3:BucketName khi FileStorage:Provider=S3.");
-        }
-
-        if (request.Content.CanSeek)
-        {
-            request.Content.Position = 0;
-        }
-
-        var key = BuildS3Key(relativePath);
-
-        var putRequest = new PutObjectRequest
-        {
-            BucketName = bucketName,
-            Key = key,
-            InputStream = request.Content,
-            ContentType = request.ContentType,
-            AutoCloseStream = false
-        };
-
-        putRequest.Metadata["original-file-name"] = request.OriginalFileName;
-        putRequest.Metadata["owner-user-id"] = request.OwnerUserId;
-        putRequest.Metadata["is-for-print-job"] = request.IsForPrintJob.ToString();
-
-        await _s3Client.PutObjectAsync(putRequest, cancellationToken);
-
-        _logger.LogInformation(
-            "Uploaded file object to S3-compatible storage. Bucket={BucketName} Key={ObjectKey} Size={Size}",
-            bucketName,
-            key,
-            request.Size);
-    }
-
-    private async Task<Stream> OpenReadFromS3Async(
-        UploadedFileMetadata metadata,
-        CancellationToken cancellationToken)
-    {
-        var bucketName = _options.S3.BucketName;
-        if (string.IsNullOrWhiteSpace(bucketName))
-        {
-            throw new InvalidOperationException("Thiếu FileStorage:S3:BucketName khi FileStorage:Provider=S3.");
-        }
-
-        var key = BuildS3Key(metadata.RelativePath);
-
-        try
-        {
-            using var response = await _s3Client.GetObjectAsync(bucketName, key, cancellationToken);
-            var memoryStream = new MemoryStream();
-            await response.ResponseStream.CopyToAsync(memoryStream, cancellationToken);
-            memoryStream.Position = 0;
-            return memoryStream;
-        }
-        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            throw new BusinessException("File object không tồn tại trong storage.");
-        }
-    }
-
-    private string BuildS3Key(string relativePath)
-    {
-        var normalizedRelativePath = relativePath.Replace('\\', '/').TrimStart('/');
-        var prefix = (_options.S3.KeyPrefix ?? string.Empty).Replace('\\', '/').Trim('/');
-
-        return string.IsNullOrWhiteSpace(prefix)
-            ? normalizedRelativePath
-            : $"{prefix}/{normalizedRelativePath}";
     }
 
     private void ValidateUpload(CreateUploadedFileDto request)

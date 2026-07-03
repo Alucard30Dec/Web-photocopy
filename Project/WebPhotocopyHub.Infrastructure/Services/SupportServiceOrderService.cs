@@ -121,24 +121,61 @@ public class SupportServiceOrderService : ISupportServiceOrderService
         return order;
     }
 
-    public Task<List<SupportServiceOrder>> GetUserOrdersAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<SupportServiceOrder>> GetUserOrdersAsync(string userId, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
     {
-        return _dbContext.SupportServiceOrders
+        var query = _dbContext.SupportServiceOrders
             .AsNoTracking()
             .Include(x => x.SupportService)
-            .Where(x => x.UserId == userId)
+            .Where(x => x.UserId == userId);
+            
+        var totalCount = await query.CountAsync(cancellationToken);
+        
+        var items = await query
             .OrderByDescending(x => x.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+            
+        return new PagedResult<SupportServiceOrder>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<List<SupportServiceOrder>> GetAllOrdersAsync(CancellationToken cancellationToken = default)
+    public async Task<PagedResult<SupportServiceOrder>> GetAllOrdersAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.SupportServiceOrders
+            .AsNoTracking()
+            .Include(x => x.User)
+            .Include(x => x.SupportService);
+            
+        var totalCount = await query.CountAsync(cancellationToken);
+        
+        var items = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+            
+        return new PagedResult<SupportServiceOrder>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+    }
+
+    public Task<SupportServiceOrder?> GetOrderByIdAsync(Guid orderId, CancellationToken cancellationToken = default)
     {
         return _dbContext.SupportServiceOrders
             .AsNoTracking()
             .Include(x => x.User)
             .Include(x => x.SupportService)
-            .OrderByDescending(x => x.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == orderId, cancellationToken);
     }
 
     public async Task UpdateOrderStatusAsync(
@@ -156,6 +193,43 @@ public class SupportServiceOrderService : ISupportServiceOrderService
         order.ProcessedAt = DateTime.UtcNow;
         order.ProcessNote = note;
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task CancelOrderAsync(Guid id, string userId, CancellationToken cancellationToken = default)
+    {
+        var order = await _dbContext.SupportServiceOrders.FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+            ?? throw new BusinessException("Không tìm thấy đơn dịch vụ.");
+
+        if (order.UserId != userId)
+        {
+            throw new BusinessException("Bạn không có quyền huỷ đơn này.");
+        }
+
+        if (order.Status != OrderStatus.Submitted)
+        {
+            throw new BusinessException("Chỉ có thể huỷ đơn khi đơn chưa được xử lý.");
+        }
+
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        order.Status = OrderStatus.Cancelled;
+        order.ProcessNote = "Khách hàng tự huỷ";
+
+        // Refund to wallet
+        await _walletService.CreditAsync(new WalletOperationRequestDto
+        {
+            UserId = order.UserId,
+            Amount = order.TotalAmount,
+            TransactionType = WalletTransactionType.Refund,
+            ReferenceType = nameof(SupportServiceOrder),
+            ReferenceId = order.Id,
+            Note = $"Hoàn tiền huỷ đơn dịch vụ hỗ trợ {order.Id}",
+            IdempotencyKey = $"supportorder-cancel-refund-{order.Id:N}",
+            PerformedByAdminId = userId
+        }, cancellationToken);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
     }
 
     private static string? NormalizeIdempotencyKey(string? key)

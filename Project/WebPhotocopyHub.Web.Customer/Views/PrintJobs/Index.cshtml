@@ -2,13 +2,13 @@
     Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
 }
 
-@model List<PrintJob>
+@model WebPhotocopyHub.Application.DTOs.PagedResult<PrintJob>
 @{
     ViewData["Title"] = "Đơn in của tôi";
 
-    var processingCount = Model.Count(x => x.Status == PrintJobStatus.Processing);
-    var readyCount = Model.Count(x => x.Status == PrintJobStatus.ReadyForPickup);
-    var completedCount = Model.Count(x => x.Status == PrintJobStatus.Completed);
+    var processingCount = Model.Items.Count(x => x.Status == PrintJobStatus.Processing);
+    var readyCount = Model.Items.Count(x => x.Status == PrintJobStatus.ReadyForPickup);
+    var completedCount = Model.Items.Count(x => x.Status == PrintJobStatus.Completed);
 }
 
 <section class="cu-page">
@@ -24,7 +24,7 @@
         </div>
         <aside class="cu-hero-card">
             <span class="cu-card-label">Tổng đơn</span>
-            <strong>@Model.Count</strong>
+            <strong>@Model.TotalCount</strong>
             <small>@processingCount đang xử lý · @readyCount sẵn sàng nhận · @completedCount hoàn thành</small>
         </aside>
     </section>
@@ -49,7 +49,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                @if (Model.Count == 0)
+                @if (Model.Items.Count == 0)
                 {
                     <tr>
                         <td colspan="5">
@@ -61,7 +61,7 @@
                         </td>
                     </tr>
                 }
-                @foreach (var item in Model)
+                @foreach (var item in Model.Items)
                 {
                     var detailLabel = item.Status == PrintJobStatus.Completed ? "Xem lại" : "Chi tiết";
 
@@ -88,5 +88,27 @@
                 </tbody>
             </table>
         </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="cu-pagination mt-4 d-flex justify-content-center">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")">
+                            <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs?page={Model.PageNumber - 1}")" tabindex="-1">Trước</a>
+                        </li>
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs?page={i}")">@i</a>
+                            </li>
+                        }
+                        <li class="page-item @(!Model.HasNextPage ? "disabled" : "")">
+                            <a class="page-link" href="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs?page={Model.PageNumber + 1}")">Sau</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     </section>
 </section>

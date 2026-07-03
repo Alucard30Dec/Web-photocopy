@@ -106,24 +106,52 @@ public class PrintJobService : IPrintJobService
         return job;
     }
 
-    public Task<List<PrintJob>> GetUserOrdersAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<PrintJob>> GetUserOrdersAsync(string userId, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
     {
-        return _dbContext.PrintJobs
+        var query = _dbContext.PrintJobs
             .AsNoTracking()
             .Include(x => x.UploadedFile)
-            .Where(x => x.UserId == userId)
+            .Where(x => x.UserId == userId);
+            
+        var totalCount = await query.CountAsync(cancellationToken);
+        
+        var items = await query
             .OrderByDescending(x => x.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+            
+        return new PagedResult<PrintJob>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<List<PrintJob>> GetAllOrdersAsync(CancellationToken cancellationToken = default)
+    public async Task<PagedResult<PrintJob>> GetAllOrdersAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
     {
-        return _dbContext.PrintJobs
+        var query = _dbContext.PrintJobs
             .Include(x => x.User)
-            .Include(x => x.UploadedFile)
+            .Include(x => x.UploadedFile);
+            
+        var totalCount = await query.CountAsync(cancellationToken);
+        
+        var items = await query
             .OrderBy(x => x.Status)
             .ThenByDescending(x => x.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+            
+        return new PagedResult<PrintJob>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
     public Task<PrintJob?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -272,6 +300,36 @@ public class PrintJobService : IPrintJobService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
+    }
+
+    public async Task CancelOrderAsync(Guid id, string userId, CancellationToken cancellationToken = default)
+    {
+        var job = await _dbContext.PrintJobs.FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+            ?? throw new BusinessException("Không tìm thấy đơn in.");
+
+        if (job.UserId != userId)
+        {
+            throw new BusinessException("Bạn không có quyền huỷ đơn này.");
+        }
+
+        if (job.Status != PrintJobStatus.Draft && job.Status != PrintJobStatus.Submitted && job.Status != PrintJobStatus.ConfirmedByShop)
+        {
+            throw new BusinessException("Chỉ có thể huỷ đơn khi đơn chưa được thanh toán hoặc xử lý.");
+        }
+
+        job.Status = PrintJobStatus.Cancelled;
+        job.LastStatusNote = "Khách hàng tự huỷ";
+
+        _dbContext.AuditLogs.Add(new AuditLog
+        {
+            ActorUserId = userId,
+            Action = "CancelPrintJob",
+            EntityName = nameof(PrintJob),
+            EntityId = job.Id.ToString(),
+            Details = "Khách hàng huỷ đơn"
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static bool IsValidTransition(PrintJobStatus currentStatus, PrintJobStatus nextStatus)

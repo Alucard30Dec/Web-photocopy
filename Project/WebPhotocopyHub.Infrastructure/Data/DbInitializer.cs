@@ -49,14 +49,16 @@ public class DbInitializer : IDbInitializer
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await EnsureDatabaseReadyAsync(cancellationToken);
-        await EnsureBranchGovernanceSchemaAsync(cancellationToken);
-        await EnsureSystemAdministrationSchemaAsync(cancellationToken);
 
         await SeedRolesAsync();
         await SeedSystemAdministrationAsync(cancellationToken);
         await SeedAdminAsync();
         await SeedShopOperatorAsync();
         await SeedDefaultCustomerAccountsAsync();
+
+        // ChatGPT 2026-06-30: tao branch mac dinh truoc cac seed co khoa ngoai BranchId.
+        await EnsureBranchGovernanceSchemaAsync(cancellationToken);
+
         await SeedPricingAsync(cancellationToken);
         await SeedProductsAsync(cancellationToken);
         await SeedSupportServicesAsync(cancellationToken);
@@ -86,97 +88,37 @@ public class DbInitializer : IDbInitializer
 
         try
         {
-            await EnsureWebPhotocopyHubTablesCreatedAsync(cancellationToken);
+            if (!await _dbContext.Database.CanConnectAsync(cancellationToken))
+            {
+                throw new InvalidOperationException("PostgreSQL local không phản hồi kết nối.");
+            }
+
+            await EnsureSchemaCreatedAsync(cancellationToken);
         }
         catch (Exception ex) when (ContainsException<SocketException>(ex))
         {
             throw new InvalidOperationException(
-                "Không thể kết nối PostgreSQL/Supabase vì host không truy cập được từ máy hiện tại. " +
-                "Nếu bạn đang dùng host dạng db.<project-ref>.supabase.co thì đó là Direct Connection, thường cần IPv6 hoặc Supabase IPv4 add-on. " +
-                "Với máy/mạng IPv4-only, hãy dùng Shared Pooler - Session mode: postgres://postgres.<project-ref>:<password>@aws-<region>.pooler.supabase.com:5432/postgres. " +
-                "Không dùng placeholder [YOUR-PASSWORD], không dùng Database=DTBWebPhotocopyHub; Supabase hosted dùng database postgres.",
+                "Không thể kết nối PostgreSQL local. Hãy kiểm tra service PostgreSQL, host localhost, port 5432, database WebPhotocopyHub và connection string DefaultConnection.",
                 ex);
         }
         catch (Exception ex) when (LooksLikeDatabaseConnectionException(ex))
         {
             throw new InvalidOperationException(
-                "Không thể khởi tạo PostgreSQL/Supabase. Hãy kiểm tra ConnectionStrings:DefaultConnection hoặc WEBPHOTOCOPYHUB_POSTGRES_CONNECTION, SSL Mode, port, user, password và trạng thái Supabase project.",
+                "Không thể khởi tạo PostgreSQL local. Hãy kiểm tra ConnectionStrings:DefaultConnection và chạy SQL patch versioned trước khi start app.",
                 ex);
         }
     }
 
-    private async Task EnsureSystemAdministrationSchemaAsync(
-        CancellationToken cancellationToken)
+    private async Task EnsureSchemaCreatedAsync(CancellationToken cancellationToken)
     {
-        const string sql = """
-CREATE TABLE IF NOT EXISTS "SystemFunctions" (
-    "Id" uuid NOT NULL,
-    "Code" character varying(100) NOT NULL,
-    "Name" character varying(200) NOT NULL,
-    "Description" character varying(500) NULL,
-    "ParentId" uuid NULL,
-    "Area" character varying(50) NOT NULL,
-    "Controller" character varying(100) NULL,
-    "Action" character varying(100) NULL,
-    "IconKey" character varying(50) NOT NULL,
-    "RequiredBranchFeatureCode" character varying(100) NULL,
-    "SortOrder" integer NOT NULL,
-    "RequiresBranchSelection" boolean NOT NULL DEFAULT FALSE,
-    "IsMenuItem" boolean NOT NULL DEFAULT TRUE,
-    "IsActive" boolean NOT NULL DEFAULT TRUE,
-    "IsSystemFunction" boolean NOT NULL DEFAULT FALSE,
-    "SupportsView" boolean NOT NULL DEFAULT TRUE,
-    "SupportsCreate" boolean NOT NULL DEFAULT FALSE,
-    "SupportsEdit" boolean NOT NULL DEFAULT FALSE,
-    "SupportsDelete" boolean NOT NULL DEFAULT FALSE,
-    "SupportsExport" boolean NOT NULL DEFAULT FALSE,
-    "CreatedAt" timestamp with time zone NOT NULL,
-    "UpdatedAt" timestamp with time zone NULL,
-    CONSTRAINT "PK_SystemFunctions" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_SystemFunctions_SystemFunctions_ParentId"
-        FOREIGN KEY ("ParentId") REFERENCES "SystemFunctions" ("Id") ON DELETE RESTRICT
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_SystemFunctions_Code"
-    ON "SystemFunctions" ("Code");
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_SystemFunctions_Area_Controller"
-    ON "SystemFunctions" ("Area", "Controller")
-    WHERE "Controller" IS NOT NULL;
-CREATE INDEX IF NOT EXISTS "IX_SystemFunctions_ParentId_SortOrder"
-    ON "SystemFunctions" ("ParentId", "SortOrder");
+        var databaseCreator = _dbContext.GetService<IRelationalDatabaseCreator>();
+        if (await databaseCreator.HasTablesAsync(cancellationToken))
+        {
+            return;
+        }
 
-CREATE TABLE IF NOT EXISTS "ApplicationRoleProfiles" (
-    "RoleId" character varying(191) NOT NULL,
-    "DisplayName" character varying(150) NOT NULL,
-    "Description" character varying(500) NULL,
-    "IsSystemRole" boolean NOT NULL DEFAULT FALSE,
-    "IsActive" boolean NOT NULL DEFAULT TRUE,
-    "CreatedAt" timestamp with time zone NOT NULL,
-    "UpdatedAt" timestamp with time zone NULL,
-    CONSTRAINT "PK_ApplicationRoleProfiles" PRIMARY KEY ("RoleId"),
-    CONSTRAINT "FK_ApplicationRoleProfiles_AspNetRoles_RoleId"
-        FOREIGN KEY ("RoleId") REFERENCES "AspNetRoles" ("Id") ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS "RoleFunctionPermissions" (
-    "RoleId" character varying(191) NOT NULL,
-    "SystemFunctionId" uuid NOT NULL,
-    "CanView" boolean NOT NULL DEFAULT FALSE,
-    "CanCreate" boolean NOT NULL DEFAULT FALSE,
-    "CanEdit" boolean NOT NULL DEFAULT FALSE,
-    "CanDelete" boolean NOT NULL DEFAULT FALSE,
-    "CanExport" boolean NOT NULL DEFAULT FALSE,
-    CONSTRAINT "PK_RoleFunctionPermissions"
-        PRIMARY KEY ("RoleId", "SystemFunctionId"),
-    CONSTRAINT "FK_RoleFunctionPermissions_ApplicationRoleProfiles_RoleId"
-        FOREIGN KEY ("RoleId") REFERENCES "ApplicationRoleProfiles" ("RoleId") ON DELETE CASCADE,
-    CONSTRAINT "FK_RoleFunctionPermissions_SystemFunctions_SystemFunctionId"
-        FOREIGN KEY ("SystemFunctionId") REFERENCES "SystemFunctions" ("Id") ON DELETE CASCADE
-);
-CREATE INDEX IF NOT EXISTS "IX_RoleFunctionPermissions_SystemFunctionId"
-    ON "RoleFunctionPermissions" ("SystemFunctionId");
-""";
-
-        await _dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        // ChatGPT 2026-06-30: tao schema cho PostgreSQL local moi truoc khi seed Identity va du lieu mau.
+        await _dbContext.Database.EnsureCreatedAsync(cancellationToken);
     }
 
     private async Task SeedSystemAdministrationAsync(
@@ -652,8 +594,7 @@ CREATE INDEX IF NOT EXISTS "IX_RoleFunctionPermissions_SystemFunctionId"
         }
         catch (Exception ex) when (LooksLikeMissingWebPhotocopyHubTableException(ex))
         {
-            // ChatGPT fix 2026-06-03: Supabase has managed schemas, so EnsureCreated can skip app tables.
-            _logger.LogInformation("Supabase database has existing managed tables but WebPhotocopyHub tables are missing. Creating WebPhotocopyHub tables.");
+            _logger.LogInformation("PostgreSQL local database has Identity tables but WebPhotocopyHub tables are missing. Creating legacy bootstrap tables.");
 
             var databaseCreator = _dbContext.GetService<IRelationalDatabaseCreator>();
             await databaseCreator.CreateTablesAsync(cancellationToken);
@@ -663,182 +604,85 @@ CREATE INDEX IF NOT EXISTS "IX_RoleFunctionPermissions_SystemFunctionId"
 
     private async Task EnsureBranchGovernanceSchemaAsync(CancellationToken cancellationToken)
     {
-        const string primaryBranchId = "11111111-1111-1111-1111-111111111111";
-        var sql = $"""
-CREATE TABLE IF NOT EXISTS "Branches" (
-    "Id" uuid NOT NULL,
-    "Code" character varying(50) NOT NULL,
-    "Slug" character varying(80) NOT NULL,
-    "Name" character varying(200) NOT NULL,
-    "Address" character varying(500) NULL,
-    "PhoneNumber" character varying(50) NULL,
-    "Email" character varying(200) NULL,
-    "OpenHours" character varying(200) NULL,
-    "ShortDescription" character varying(1000) NULL,
-    "CustomerNote" character varying(1000) NULL,
-    "PopularServices" character varying(2000) NULL,
-    "QuickOptions" character varying(2000) NULL,
-    "IsActive" boolean NOT NULL DEFAULT TRUE,
-    "IsAcceptingOrders" boolean NOT NULL DEFAULT TRUE,
-    "RowVersion" bytea NOT NULL,
-    "CreatedAt" timestamp with time zone NOT NULL,
-    "UpdatedAt" timestamp with time zone NULL,
-    CONSTRAINT "PK_Branches" PRIMARY KEY ("Id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_Branches_Code" ON "Branches" ("Code");
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_Branches_Slug" ON "Branches" ("Slug");
+        var branchDefinitions = new[]
+        {
+            new Branch
+            {
+                Id = BranchDefaults.PrimaryBranchId,
+                Code = "TOAN",
+                Slug = "toanphotocopy",
+                Name = "Toàn Photocopy",
+                Address = "Đang cập nhật",
+                PhoneNumber = "Đang cập nhật",
+                OpenHours = "08:00 - 21:00 hằng ngày",
+                ShortDescription = "Cơ sở photocopy phục vụ gửi file, tạo đơn in và theo dõi trạng thái xử lý.",
+                CustomerNote = "Bạn có thể upload file trước và ghi chú đầy đủ yêu cầu in.",
+                PopularServices = "In tài liệu A4/A3;Photocopy;Đóng gáy;Scan tài liệu",
+                QuickOptions = "Upload file online;Tạo đơn in;Theo dõi trạng thái",
+                IsActive = true,
+                IsAcceptingOrders = true
+            },
+            new Branch
+            {
+                Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                Code = "DBP141",
+                Slug = "141-dien-bien-phu",
+                Name = "WebPhotocopyHub 141 Điện Biên Phủ",
+                Address = "141 Điện Biên Phủ",
+                PhoneNumber = "Đang cập nhật",
+                OpenHours = "08:00 - 21:00",
+                ShortDescription = "Cơ sở phục vụ khách hàng đặt in, upload file và theo dõi trạng thái đơn.",
+                CustomerNote = "Khách hàng gửi file trước để cơ sở kiểm tra và chuẩn bị nhanh hơn.",
+                PopularServices = "In và photocopy tài liệu;Upload file online;Đóng gáy và hoàn thiện",
+                QuickOptions = "Tạo đơn in;Xem sản phẩm;Dịch vụ hỗ trợ",
+                IsActive = true,
+                IsAcceptingOrders = true
+            },
+            new Branch
+            {
+                Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                Code = "CENTER",
+                Slug = "co-so-trung-tam",
+                Name = "WebPhotocopyHub Cơ sở trung tâm",
+                Address = "Khu vực trung tâm",
+                PhoneNumber = "Đang cập nhật",
+                OpenHours = "08:00 - 21:00",
+                ShortDescription = "Cơ sở trung tâm hỗ trợ đặt in, photocopy và đặt sản phẩm.",
+                CustomerNote = "Khách hàng có thể gửi file trước và theo dõi trạng thái trực tuyến.",
+                PopularServices = "In tài liệu;Photocopy;Đặt sản phẩm",
+                QuickOptions = "Tạo đơn in;Xem sản phẩm;Liên hệ cơ sở",
+                IsActive = true,
+                IsAcceptingOrders = true
+            }
+        };
 
-INSERT INTO "Branches" ("Id", "Code", "Slug", "Name", "Address", "PhoneNumber", "OpenHours", "ShortDescription", "CustomerNote", "PopularServices", "QuickOptions", "IsActive", "IsAcceptingOrders", "RowVersion", "CreatedAt")
-VALUES
-('11111111-1111-1111-1111-111111111111', 'TOAN', 'toanphotocopy', 'Toàn Photocopy', 'Đang cập nhật', 'Đang cập nhật', '08:00 - 21:00 hằng ngày', 'Cơ sở photocopy phục vụ gửi file, tạo đơn in và theo dõi trạng thái xử lý.', 'Bạn có thể upload file trước và ghi chú đầy đủ yêu cầu in.', 'In tài liệu A4/A3;Photocopy;Đóng gáy;Scan tài liệu', 'Upload file online;Tạo đơn in;Theo dõi trạng thái', TRUE, TRUE, decode(md5(random()::text || clock_timestamp()::text), 'hex'), NOW()),
-('22222222-2222-2222-2222-222222222222', 'DBP141', '141-dien-bien-phu', 'WebPhotocopyHub 141 Điện Biên Phủ', '141 Điện Biên Phủ', 'Đang cập nhật', '08:00 - 21:00', 'Cơ sở phục vụ khách hàng đặt in, upload file và theo dõi trạng thái đơn.', 'Khách hàng gửi file trước để cơ sở kiểm tra và chuẩn bị nhanh hơn.', 'In và photocopy tài liệu;Upload file online;Đóng gáy và hoàn thiện', 'Tạo đơn in;Xem sản phẩm;Dịch vụ hỗ trợ', TRUE, TRUE, decode(md5(random()::text || clock_timestamp()::text), 'hex'), NOW()),
-('33333333-3333-3333-3333-333333333333', 'CENTER', 'co-so-trung-tam', 'WebPhotocopyHub Cơ sở trung tâm', 'Khu vực trung tâm', 'Đang cập nhật', '08:00 - 21:00', 'Cơ sở trung tâm hỗ trợ đặt in, photocopy và đặt sản phẩm.', 'Khách hàng có thể gửi file trước và theo dõi trạng thái trực tuyến.', 'In tài liệu;Photocopy;Đặt sản phẩm', 'Tạo đơn in;Xem sản phẩm;Liên hệ cơ sở', TRUE, TRUE, decode(md5(random()::text || clock_timestamp()::text), 'hex'), NOW())
-ON CONFLICT ("Id") DO NOTHING;
+        foreach (var definition in branchDefinitions)
+        {
+            var current = await _dbContext.Branches.FirstOrDefaultAsync(
+                x => x.Id == definition.Id,
+                cancellationToken);
 
-CREATE TABLE IF NOT EXISTS "BranchFeatures" (
-    "BranchId" uuid NOT NULL,
-    "FeatureCode" character varying(100) NOT NULL,
-    "IsEnabled" boolean NOT NULL DEFAULT TRUE,
-    "UpdatedAt" timestamp with time zone NOT NULL,
-    "UpdatedByUserId" character varying(191) NULL,
-    CONSTRAINT "PK_BranchFeatures" PRIMARY KEY ("BranchId", "FeatureCode"),
-    CONSTRAINT "FK_BranchFeatures_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE CASCADE
-);
+            if (current is null)
+            {
+                _dbContext.Branches.Add(definition);
+                continue;
+            }
 
-CREATE TABLE IF NOT EXISTS "BranchRoles" (
-    "Id" uuid NOT NULL,
-    "BranchId" uuid NOT NULL,
-    "Name" character varying(100) NOT NULL,
-    "Description" character varying(500) NULL,
-    "IsSystemRole" boolean NOT NULL DEFAULT FALSE,
-    "IsActive" boolean NOT NULL DEFAULT TRUE,
-    "CreatedAt" timestamp with time zone NOT NULL,
-    "UpdatedAt" timestamp with time zone NULL,
-    CONSTRAINT "PK_BranchRoles" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_BranchRoles_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE CASCADE
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_BranchRoles_BranchId_Name" ON "BranchRoles" ("BranchId", "Name");
+            current.Code = definition.Code;
+            current.Slug = definition.Slug;
+            current.Name = definition.Name;
+            current.Address = definition.Address;
+            current.PhoneNumber = definition.PhoneNumber;
+            current.OpenHours = definition.OpenHours;
+            current.ShortDescription = definition.ShortDescription;
+            current.CustomerNote = definition.CustomerNote;
+            current.PopularServices = definition.PopularServices;
+            current.QuickOptions = definition.QuickOptions;
+            current.IsActive = definition.IsActive;
+            current.IsAcceptingOrders = definition.IsAcceptingOrders;
+        }
 
-CREATE TABLE IF NOT EXISTS "BranchRolePermissions" (
-    "BranchRoleId" uuid NOT NULL,
-    "PermissionCode" character varying(120) NOT NULL,
-    CONSTRAINT "PK_BranchRolePermissions" PRIMARY KEY ("BranchRoleId", "PermissionCode"),
-    CONSTRAINT "FK_BranchRolePermissions_BranchRoles_BranchRoleId" FOREIGN KEY ("BranchRoleId") REFERENCES "BranchRoles" ("Id") ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS "UserBranchMemberships" (
-    "Id" uuid NOT NULL,
-    "UserId" character varying(191) NOT NULL,
-    "BranchId" uuid NOT NULL,
-    "BranchRoleId" uuid NOT NULL,
-    "IsPrimary" boolean NOT NULL DEFAULT FALSE,
-    "IsActive" boolean NOT NULL DEFAULT TRUE,
-    "AssignedByUserId" character varying(191) NULL,
-    "CreatedAt" timestamp with time zone NOT NULL,
-    "UpdatedAt" timestamp with time zone NULL,
-    CONSTRAINT "PK_UserBranchMemberships" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_UserBranchMemberships_AspNetUsers_UserId" FOREIGN KEY ("UserId") REFERENCES "AspNetUsers" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_UserBranchMemberships_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_UserBranchMemberships_BranchRoles_BranchRoleId" FOREIGN KEY ("BranchRoleId") REFERENCES "BranchRoles" ("Id") ON DELETE RESTRICT
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_UserBranchMemberships_UserId_BranchId" ON "UserBranchMemberships" ("UserId", "BranchId");
-CREATE INDEX IF NOT EXISTS "IX_UserBranchMemberships_BranchId" ON "UserBranchMemberships" ("BranchId");
-CREATE INDEX IF NOT EXISTS "IX_UserBranchMemberships_BranchRoleId" ON "UserBranchMemberships" ("BranchRoleId");
-
-ALTER TABLE "WalletTransactions" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "TopUpRequests" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "UploadedFileMetadatas" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "PrintJobs" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "Products" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "ProductOrders" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "SupportServices" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "SupportServiceOrders" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "ProductStockMovements" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-ALTER TABLE "PricingRules" ADD COLUMN IF NOT EXISTS "BranchId" uuid;
-
-UPDATE "WalletTransactions" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "TopUpRequests" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "UploadedFileMetadatas" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "PrintJobs" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "Products" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "ProductOrders" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "SupportServices" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "SupportServiceOrders" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "ProductStockMovements" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-UPDATE "PricingRules" SET "BranchId" = '{primaryBranchId}' WHERE "BranchId" IS NULL;
-
-ALTER TABLE "WalletTransactions" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "TopUpRequests" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "UploadedFileMetadatas" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "PrintJobs" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "Products" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "ProductOrders" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "SupportServices" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "SupportServiceOrders" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "ProductStockMovements" ALTER COLUMN "BranchId" SET NOT NULL;
-ALTER TABLE "PricingRules" ALTER COLUMN "BranchId" SET NOT NULL;
-
-DO $branch_fk$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_WalletTransactions_Branches_BranchId') THEN
-        ALTER TABLE "WalletTransactions" ADD CONSTRAINT "FK_WalletTransactions_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_TopUpRequests_Branches_BranchId') THEN
-        ALTER TABLE "TopUpRequests" ADD CONSTRAINT "FK_TopUpRequests_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_UploadedFileMetadatas_Branches_BranchId') THEN
-        ALTER TABLE "UploadedFileMetadatas" ADD CONSTRAINT "FK_UploadedFileMetadatas_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_PrintJobs_Branches_BranchId') THEN
-        ALTER TABLE "PrintJobs" ADD CONSTRAINT "FK_PrintJobs_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_Products_Branches_BranchId') THEN
-        ALTER TABLE "Products" ADD CONSTRAINT "FK_Products_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductOrders_Branches_BranchId') THEN
-        ALTER TABLE "ProductOrders" ADD CONSTRAINT "FK_ProductOrders_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_SupportServices_Branches_BranchId') THEN
-        ALTER TABLE "SupportServices" ADD CONSTRAINT "FK_SupportServices_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_SupportServiceOrders_Branches_BranchId') THEN
-        ALTER TABLE "SupportServiceOrders" ADD CONSTRAINT "FK_SupportServiceOrders_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductStockMovements_Branches_BranchId') THEN
-        ALTER TABLE "ProductStockMovements" ADD CONSTRAINT "FK_ProductStockMovements_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_PricingRules_Branches_BranchId') THEN
-        ALTER TABLE "PricingRules" ADD CONSTRAINT "FK_PricingRules_Branches_BranchId" FOREIGN KEY ("BranchId") REFERENCES "Branches" ("Id") ON DELETE RESTRICT;
-    END IF;
-END $branch_fk$;
-
-CREATE INDEX IF NOT EXISTS "IX_WalletTransactions_BranchId_CreatedAt" ON "WalletTransactions" ("BranchId", "CreatedAt");
-CREATE INDEX IF NOT EXISTS "IX_TopUpRequests_BranchId_CreatedAt" ON "TopUpRequests" ("BranchId", "CreatedAt");
-CREATE INDEX IF NOT EXISTS "IX_UploadedFileMetadatas_BranchId_CreatedAt" ON "UploadedFileMetadatas" ("BranchId", "CreatedAt");
-CREATE INDEX IF NOT EXISTS "IX_PrintJobs_BranchId_Status_CreatedAt" ON "PrintJobs" ("BranchId", "Status", "CreatedAt");
-CREATE INDEX IF NOT EXISTS "IX_Products_BranchId_IsActive_Name" ON "Products" ("BranchId", "IsActive", "Name");
-CREATE INDEX IF NOT EXISTS "IX_ProductOrders_BranchId_Status_CreatedAt" ON "ProductOrders" ("BranchId", "Status", "CreatedAt");
-CREATE INDEX IF NOT EXISTS "IX_SupportServices_BranchId_IsActive_Name" ON "SupportServices" ("BranchId", "IsActive", "Name");
-CREATE INDEX IF NOT EXISTS "IX_SupportServiceOrders_BranchId_Status_CreatedAt" ON "SupportServiceOrders" ("BranchId", "Status", "CreatedAt");
-CREATE INDEX IF NOT EXISTS "IX_ProductStockMovements_BranchId_CreatedAt" ON "ProductStockMovements" ("BranchId", "CreatedAt");
-CREATE INDEX IF NOT EXISTS "IX_PricingRules_BranchId" ON "PricingRules" ("BranchId");
-
-DROP INDEX IF EXISTS "IX_WalletTransactions_UserId_TransactionType_IdempotencyKey";
-DROP INDEX IF EXISTS "IX_TopUpRequests_UserId_CreateIdempotencyKey";
-DROP INDEX IF EXISTS "IX_PrintJobs_UserId_SubmitIdempotencyKey";
-DROP INDEX IF EXISTS "IX_ProductOrders_UserId_OrderIdempotencyKey";
-DROP INDEX IF EXISTS "IX_SupportServiceOrders_UserId_OrderIdempotencyKey";
-DROP INDEX IF EXISTS "IX_PricingRules_PaperSize_PrintSide_ColorMode_IsPhoto";
-
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_WalletTransactions_BranchId_UserId_TransactionType_IdempotencyKey" ON "WalletTransactions" ("BranchId", "UserId", "TransactionType", "IdempotencyKey");
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_TopUpRequests_BranchId_UserId_CreateIdempotencyKey" ON "TopUpRequests" ("BranchId", "UserId", "CreateIdempotencyKey");
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_PrintJobs_BranchId_UserId_SubmitIdempotencyKey" ON "PrintJobs" ("BranchId", "UserId", "SubmitIdempotencyKey");
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_ProductOrders_BranchId_UserId_OrderIdempotencyKey" ON "ProductOrders" ("BranchId", "UserId", "OrderIdempotencyKey");
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_SupportServiceOrders_BranchId_UserId_OrderIdempotencyKey" ON "SupportServiceOrders" ("BranchId", "UserId", "OrderIdempotencyKey");
-CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_ColorMode_IsPhoto" ON "PricingRules" ("BranchId", "PaperSize", "PrintSide", "ColorMode", "IsPhoto");
-""";
-
-        await _dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SeedBranchGovernanceAsync(CancellationToken cancellationToken)
@@ -1004,8 +848,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_
                 EmailConfirmed = true,
                 FullName = fullName,
                 IsActive = true,
-                PhoneNumberConfirmed = true,
-                CurrentBalance = 0
+                PhoneNumberConfirmed = true
             };
 
             var result = await _userManager.CreateAsync(existing, password);
@@ -1065,8 +908,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_
                 EmailConfirmed = true,
                 FullName = fullName,
                 IsActive = true,
-                PhoneNumberConfirmed = true,
-                CurrentBalance = 0
+                PhoneNumberConfirmed = true
             };
 
             var result = await _userManager.CreateAsync(existing, password);
@@ -1163,8 +1005,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_
                     FullName = account.FullName,
                     PhoneNumber = account.PhoneNumber,
                     Address = account.Address,
-                    IsActive = true,
-                    CurrentBalance = 0
+                    IsActive = true
                 };
 
                 var createResult = await _userManager.CreateAsync(user, account.Password);
@@ -1365,13 +1206,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_
         SeedSampleProductOrders(customers, productsByName, runningBalancesByUserId, operatorUser);
         SeedSampleSupportOrders(customers, servicesByName, runningBalancesByUserId, operatorUser);
 
-        foreach (var customer in customers)
-        {
-            customer.CurrentBalance = runningBalancesByUserId.TryGetValue(customer.Id, out var balance)
-                ? balance
-                : 0;
-        }
-
         await _dbContext.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Đã seed dữ liệu mẫu đầy đủ để test cho môi trường hiện tại.");
     }
@@ -1402,8 +1236,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_
                     PhoneNumber = sample.Phone,
                     PhoneNumberConfirmed = true,
                     Address = sample.Address,
-                    IsActive = true,
-                    CurrentBalance = 0
+                    IsActive = true
                 };
 
                 var createResult = await _userManager.CreateAsync(existing, sample.Password);
@@ -1604,8 +1437,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_
         };
 
         var seedProductNameSet = seedProductNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var products = await _dbContext.Products.ToListAsync(cancellationToken);
+        var products = await _dbContext.Products
+            .Where(x => x.BranchId == BranchDefaults.PrimaryBranchId)
+            .ToListAsync(cancellationToken);
 
+        // ChatGPT 2026-06-30: sample seed dung primary branch de tranh trung ten san pham giua cac co so.
         return products
             .Where(x => seedProductNameSet.Contains(x.Name))
             .ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
@@ -1625,8 +1461,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_
         };
 
         var seedServiceNameSet = seedServiceNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var services = await _dbContext.SupportServices.ToListAsync(cancellationToken);
+        var services = await _dbContext.SupportServices
+            .Where(x => x.BranchId == BranchDefaults.PrimaryBranchId)
+            .ToListAsync(cancellationToken);
 
+        // ChatGPT 2026-06-30: sample seed dung primary branch de tranh trung ten dich vu giua cac co so.
         return services
             .Where(x => seedServiceNameSet.Contains(x.Name))
             .ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
@@ -2214,14 +2053,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_PricingRules_BranchId_PaperSize_PrintSide_
             balanceBefore = 0;
         }
 
+        var branchId = BranchDefaults.PrimaryBranchId;
+        var walletAccount = _dbContext.WalletAccounts.Local
+            .FirstOrDefault(x => x.BranchId == branchId && x.UserId == user.Id)
+            ?? _dbContext.WalletAccounts
+                .FirstOrDefault(x => x.BranchId == branchId && x.UserId == user.Id);
+
+        if (walletAccount is null)
+        {
+            walletAccount = new WalletAccount
+            {
+                BranchId = branchId,
+                UserId = user.Id,
+                Balance = balanceBefore,
+                Version = 1
+            };
+            _dbContext.WalletAccounts.Add(walletAccount);
+        }
+
         var balanceAfter = balanceBefore + signedAmount;
         if (balanceAfter < 0)
         {
             throw new InvalidOperationException($"Seed ví tạo số dư âm cho user {user.Email}.");
         }
 
+        walletAccount.Balance = balanceAfter;
+        walletAccount.Version += 1;
+
         var transaction = new WalletTransaction
         {
+            BranchId = branchId,
+            WalletAccountId = walletAccount.Id,
             UserId = user.Id,
             TransactionType = transactionType,
             Amount = signedAmount,

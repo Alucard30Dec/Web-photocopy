@@ -26,7 +26,7 @@ public class ProductOrdersController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var items = await _productOrderService.GetAllOrdersAsync(cancellationToken);
+        var items = (await _productOrderService.GetAllOrdersAsync(1, 1000, cancellationToken)).Items;
         return View(items);
     }
 

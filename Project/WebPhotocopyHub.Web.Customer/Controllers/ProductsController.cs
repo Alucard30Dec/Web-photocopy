@@ -98,23 +98,39 @@ public class ProductsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Orders(CancellationToken cancellationToken)
+    public async Task<IActionResult> Orders([FromQuery] int page = 1, CancellationToken cancellationToken = default)
     {
-        var orders = await _productOrderService.GetUserOrdersAsync(User.GetUserId(), cancellationToken);
+        var orders = await _productOrderService.GetUserOrdersAsync(User.GetUserId(), page, 10, cancellationToken);
         return View(orders);
     }
 
     [HttpGet]
     public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
     {
-        var orders = await _productOrderService.GetUserOrdersAsync(User.GetUserId(), cancellationToken);
-        var item = orders.FirstOrDefault(x => x.Id == id);
-        if (item is null)
+        var item = await _productOrderService.GetOrderByIdAsync(id, cancellationToken);
+        if (item is null || item.UserId != User.GetUserId())
         {
             return NotFound();
         }
 
         return View(item);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _productOrderService.CancelOrderAsync(id, User.GetUserId(), cancellationToken);
+            TempData["Success"] = "Đã huỷ đơn hàng thành công.";
+        }
+        catch (BusinessException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Details), new { id, branchSlug = RouteData.Values["branchSlug"]?.ToString() });
     }
 
     private object? BranchRouteValues()

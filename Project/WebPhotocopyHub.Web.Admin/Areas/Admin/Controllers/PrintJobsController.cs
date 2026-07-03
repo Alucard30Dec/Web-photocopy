@@ -39,7 +39,7 @@ public class PrintJobsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var items = await _printJobService.GetAllOrdersAsync(cancellationToken);
+        var items = (await _printJobService.GetAllOrdersAsync(1, 1000, cancellationToken)).Items;
         return View(items);
     }
 

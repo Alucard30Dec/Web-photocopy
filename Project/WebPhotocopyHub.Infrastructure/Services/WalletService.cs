@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using WebPhotocopyHub.Application.Common;
 using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Application.DTOs;
+using WebPhotocopyHub.Domain.Constants;
 using WebPhotocopyHub.Domain.Entities;
-using WebPhotocopyHub.Domain.Enums;
 using WebPhotocopyHub.Infrastructure.Data;
 
 namespace WebPhotocopyHub.Infrastructure.Services;
@@ -12,41 +12,72 @@ namespace WebPhotocopyHub.Infrastructure.Services;
 public class WalletService : IWalletService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IBranchContext _branchContext;
 
-    public WalletService(ApplicationDbContext dbContext)
+    public WalletService(ApplicationDbContext dbContext, IBranchContext branchContext)
     {
         _dbContext = dbContext;
+        _branchContext = branchContext;
     }
 
     public async Task<decimal> GetCurrentBalanceAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var user = await _dbContext.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+        await EnsureUserExistsAsync(userId, cancellationToken);
+        var branchId = GetCurrentBranchId();
 
-        if (user is null)
+        return await _dbContext.WalletAccounts
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.BranchId == branchId)
+            .Select(x => (decimal?)x.Balance)
+            .FirstOrDefaultAsync(cancellationToken) ?? 0;
+    }
+
+    public async Task<PagedResult<WalletTransaction>> GetUserTransactionsAsync(string userId, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
+    {
+        var branchId = GetCurrentBranchId();
+        var query = _dbContext.WalletTransactions
+            .AsNoTracking()
+            .Where(x => x.BranchId == branchId && x.UserId == userId);
+            
+        var totalCount = await query.CountAsync(cancellationToken);
+        
+        var items = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+            
+        return new PagedResult<WalletTransaction>
         {
-            throw new BusinessException("Tài khoản không tồn tại.");
-        }
-
-        return user.CurrentBalance;
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<List<WalletTransaction>> GetUserTransactionsAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<WalletTransaction>> GetAllTransactionsAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
     {
-        return _dbContext.WalletTransactions
+        var branchId = GetCurrentBranchId();
+        var query = _dbContext.WalletTransactions
             .AsNoTracking()
-            .Where(x => x.UserId == userId)
+            .Where(x => x.BranchId == branchId);
+            
+        var totalCount = await query.CountAsync(cancellationToken);
+        
+        var items = await query
             .OrderByDescending(x => x.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
-    }
-
-    public Task<List<WalletTransaction>> GetAllTransactionsAsync(CancellationToken cancellationToken = default)
-    {
-        return _dbContext.WalletTransactions
-            .AsNoTracking()
-            .OrderByDescending(x => x.CreatedAt)
-            .ToListAsync(cancellationToken);
+            
+        return new PagedResult<WalletTransaction>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
     public Task<WalletTransaction> CreditAsync(WalletOperationRequestDto request, CancellationToken cancellationToken = default)
@@ -95,6 +126,7 @@ public class WalletService : IWalletService
         bool ensureNonNegative,
         CancellationToken cancellationToken)
     {
+        var branchId = GetCurrentBranchId();
         var normalizedIdempotencyKey = NormalizeIdempotencyKey(request.IdempotencyKey);
         var hasOuterTransaction = _dbContext.Database.CurrentTransaction is not null;
         await using var tx = hasOuterTransaction
@@ -107,6 +139,7 @@ public class WalletService : IWalletService
             {
                 var existing = await _dbContext.WalletTransactions
                     .FirstOrDefaultAsync(x =>
+                        x.BranchId == branchId &&
                         x.UserId == request.UserId &&
                         x.TransactionType == request.TransactionType &&
                         x.IdempotencyKey == normalizedIdempotencyKey, cancellationToken);
@@ -124,26 +157,43 @@ public class WalletService : IWalletService
                 }
             }
 
-            var user = await _dbContext.Users
-                .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+            await EnsureUserExistsAsync(request.UserId, cancellationToken);
 
-            if (user is null)
+            var account = await _dbContext.WalletAccounts
+                .FirstOrDefaultAsync(x => x.BranchId == branchId && x.UserId == request.UserId, cancellationToken);
+
+            var accountCreated = false;
+            if (account is null)
             {
-                throw new BusinessException("Tài khoản không tồn tại.");
+                account = new WalletAccount
+                {
+                    BranchId = branchId,
+                    UserId = request.UserId,
+                    Balance = 0,
+                    Version = 1
+                };
+                _dbContext.WalletAccounts.Add(account);
+                accountCreated = true;
             }
 
-            var before = user.CurrentBalance;
+            var before = account.Balance;
             var after = before + signedAmount;
 
             if (ensureNonNegative && after < 0)
             {
-                throw new BusinessException("Số dư ví không đủ để thực hiện giao dịch.");
+                throw new BusinessException("Số dư ví của chi nhánh không đủ để thực hiện giao dịch.");
             }
 
-            user.CurrentBalance = after;
+            account.Balance = after;
+            if (!accountCreated)
+            {
+                account.Version += 1;
+            }
 
             var transaction = new WalletTransaction
             {
+                BranchId = branchId,
+                WalletAccountId = account.Id,
                 UserId = request.UserId,
                 TransactionType = request.TransactionType,
                 Amount = signedAmount,
@@ -184,6 +234,19 @@ public class WalletService : IWalletService
 
             throw;
         }
+    }
+
+    private async Task EnsureUserExistsAsync(string userId, CancellationToken cancellationToken)
+    {
+        if (!await _dbContext.Users.AsNoTracking().AnyAsync(x => x.Id == userId, cancellationToken))
+        {
+            throw new BusinessException("Tài khoản không tồn tại.");
+        }
+    }
+
+    private Guid GetCurrentBranchId()
+    {
+        return _branchContext.BranchId ?? BranchDefaults.PrimaryBranchId;
     }
 
     private static string? NormalizeIdempotencyKey(string? key)

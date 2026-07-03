@@ -24,14 +24,14 @@ public class WalletTransactionsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var items = await _walletService.GetAllTransactionsAsync(cancellationToken);
+        var items = (await _walletService.GetAllTransactionsAsync(1, 1000, cancellationToken)).Items;
         return View(items);
     }
 
     [HttpGet]
     public async Task<IActionResult> ExportCsv(CancellationToken cancellationToken)
     {
-        var items = await _walletService.GetAllTransactionsAsync(cancellationToken);
+        var items = (await _walletService.GetAllTransactionsAsync(1, 10000, cancellationToken)).Items;
         var bytes = _reportService.BuildWalletTransactionsCsv(items);
         return File(bytes, "text/csv; charset=utf-8", $"wallet-transactions-{DateTime.UtcNow:yyyyMMddHHmmss}.csv");
     }

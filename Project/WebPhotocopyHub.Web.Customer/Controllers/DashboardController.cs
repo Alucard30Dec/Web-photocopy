@@ -36,10 +36,10 @@ public class DashboardController : Controller
     {
         var userId = User.GetUserId();
 
-        var printJobs = await _printJobService.GetUserOrdersAsync(userId, cancellationToken);
-        var productOrders = await _productOrderService.GetUserOrdersAsync(userId, cancellationToken);
-        var supportOrders = await _supportServiceOrderService.GetUserOrdersAsync(userId, cancellationToken);
-        var transactions = await _walletService.GetUserTransactionsAsync(userId, cancellationToken);
+        var printJobs = (await _printJobService.GetUserOrdersAsync(userId, 1, 1000, cancellationToken)).Items;
+        var productOrders = (await _productOrderService.GetUserOrdersAsync(userId, 1, 1000, cancellationToken)).Items;
+        var supportOrders = (await _supportServiceOrderService.GetUserOrdersAsync(userId, 1, 1000, cancellationToken)).Items;
+        var transactions = (await _walletService.GetUserTransactionsAsync(userId, 1, 1000, cancellationToken)).Items;
         var topUpRequests = await _topUpService.GetUserRequestsAsync(userId, cancellationToken);
 
         var vm = new DashboardViewModel

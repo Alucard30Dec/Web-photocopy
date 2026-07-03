@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,17 +18,20 @@ public class AccountController : Controller
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly ILogger<AccountController> _logger;
+    private readonly WebPhotocopyHub.Application.Contracts.IEmailSender _emailSender;
 
     public AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         RoleManager<IdentityRole> roleManager,
-        ILogger<AccountController> logger)
+        ILogger<AccountController> logger,
+        WebPhotocopyHub.Application.Contracts.IEmailSender emailSender)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _roleManager = roleManager;
         _logger = logger;
+        _emailSender = emailSender;
     }
 
     [HttpGet("/{branchSlug}/Register")]
@@ -89,8 +93,7 @@ public class AccountController : Controller
                 Address = model.Address,
                 EmailConfirmed = true,
                 PhoneNumberConfirmed = !string.IsNullOrWhiteSpace(model.PhoneNumber),
-                IsActive = true,
-                CurrentBalance = 0
+                IsActive = true
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -256,23 +259,14 @@ public class AccountController : Controller
                 fullName = email;
             }
 
-            existingUser = new ApplicationUser
-            {
-                FullName = fullName,
-                Email = email,
-                UserName = email,
-                EmailConfirmed = true,
-                IsActive = true,
-                CurrentBalance = 0
-            };
+            var baseUserName = email.Split('@')[0];
 
-            var createResult = await _userManager.CreateAsync(existingUser);
-            if (!createResult.Succeeded)
-            {
-                TempData["Error"] = "Không thể tạo tài khoản từ Google/Gmail.";
-                AddIdentityErrors(createResult);
-                return LocalRedirect($"/{branch.Slug}/Register");
-            }
+            TempData["ExternalLogin_Email"] = email;
+            TempData["ExternalLogin_FullName"] = fullName;
+            TempData["ExternalLogin_UserName"] = baseUserName;
+            TempData["ExternalLogin_ProviderDisplayName"] = info.ProviderDisplayName;
+
+            return LocalRedirect($"/{branch.Slug}/ExternalLoginConfirmation?returnUrl={Uri.EscapeDataString(safeReturnUrl)}");
         }
 
         if (!existingUser.IsActive)
@@ -302,6 +296,120 @@ public class AccountController : Controller
         await _signInManager.SignInAsync(existingUser, isPersistent: false, info.LoginProvider);
         TempData["Success"] = "Đăng nhập Google/Gmail thành công.";
         return LocalRedirect(safeReturnUrl);
+    }
+
+    [HttpGet("/{branchSlug}/ExternalLoginConfirmation")]
+    public IActionResult ExternalLoginConfirmation(string branchSlug, string? returnUrl = null)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null)
+        {
+            return NotFound();
+        }
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+
+        var email = TempData["ExternalLogin_Email"]?.ToString();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            TempData["Error"] = "Không tìm thấy thông tin đăng nhập bên ngoài.";
+            return LocalRedirect($"/{branch.Slug}/Login");
+        }
+
+        var model = new ExternalLoginConfirmationViewModel
+        {
+            Email = email,
+            FullName = TempData["ExternalLogin_FullName"]?.ToString() ?? "",
+            UserName = TempData["ExternalLogin_UserName"]?.ToString() ?? "",
+            ProviderDisplayName = TempData["ExternalLogin_ProviderDisplayName"]?.ToString(),
+            ReturnUrl = returnUrl
+        };
+
+        // Keep TempData values for postback if needed, though they are now in the model.
+        TempData.Keep("ExternalLogin_Email");
+        TempData.Keep("ExternalLogin_FullName");
+        TempData.Keep("ExternalLogin_UserName");
+        TempData.Keep("ExternalLogin_ProviderDisplayName");
+
+        return View(model);
+    }
+
+    [HttpPost("/{branchSlug}/ExternalLoginConfirmation")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExternalLoginConfirmation(string branchSlug, ExternalLoginConfirmationViewModel model)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null)
+        {
+            return NotFound();
+        }
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+
+        if (!ModelState.IsValid)
+        {
+            TempData.Keep("ExternalLogin_Email");
+            return View(model);
+        }
+
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info is null)
+        {
+            TempData["Error"] = "Lỗi trong quá trình xác thực bên ngoài. Vui lòng thử lại.";
+            return LocalRedirect($"/{branch.Slug}/Login");
+        }
+
+        var email = model.Email.Trim();
+        var userName = model.UserName.Trim();
+
+        if (await _userManager.FindByEmailAsync(email) is not null)
+        {
+            ModelState.AddModelError(nameof(model.Email), "Gmail/Email này đã được sử dụng.");
+            return View(model);
+        }
+
+        if (await _userManager.FindByNameAsync(userName) is not null)
+        {
+            ModelState.AddModelError(nameof(model.UserName), "Tên đăng nhập này đã được sử dụng.");
+            return View(model);
+        }
+
+        var user = new ApplicationUser
+        {
+            FullName = model.FullName.Trim(),
+            Email = email,
+            UserName = userName,
+            PhoneNumber = model.PhoneNumber,
+            Address = model.Address,
+            EmailConfirmed = true,
+            IsActive = true
+        };
+
+        var createResult = await _userManager.CreateAsync(user);
+        if (createResult.Succeeded)
+        {
+            var roleResult = await EnsureCustomerRoleAndAssignAsync(user);
+            if (!roleResult.Succeeded)
+            {
+                TempData["Error"] = "Không thể gán quyền khách hàng.";
+                return LocalRedirect($"/{branch.Slug}/Login");
+            }
+
+            var addLoginResult = await _userManager.AddLoginAsync(user, info);
+            if (addLoginResult.Succeeded)
+            {
+                await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
+                TempData["Success"] = "Tạo tài khoản và liên kết thành công.";
+                return LocalRedirect(BuildSafeReturnUrl(model.ReturnUrl, $"/{branch.Slug}/Dashboard"));
+            }
+
+            TempData["Error"] = "Không thể liên kết tài khoản đăng nhập ngoài.";
+        }
+
+        AddIdentityErrors(createResult);
+        return View(model);
     }
 
     [Authorize]
@@ -431,5 +539,98 @@ public class AccountController : Controller
             "PasswordRequiresUpper" => "Mật khẩu cần có ít nhất 1 chữ hoa.",
             _ => error.Description
         };
+    }
+    [HttpGet("/{branchSlug}/ForgotPassword")]
+    public IActionResult ForgotPassword(string branchSlug)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null) return NotFound();
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+        return View();
+    }
+
+    [HttpPost("/{branchSlug}/ForgotPassword")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> ForgotPassword(string branchSlug, ForgotPasswordViewModel model)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null) return NotFound();
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+
+        if (!ModelState.IsValid) return View(model);
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null || !user.IsActive)
+        {
+            // Don't reveal that the user does not exist or is not confirmed
+            TempData["Success"] = "Vui lòng kiểm tra email của bạn để lấy liên kết đặt lại mật khẩu.";
+            return Redirect($"/{branch.Slug}/Login");
+        }
+
+        var code = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var callbackUrl = Url.Action(
+            "ResetPassword",
+            "Account",
+            new { branchSlug = branch.Slug, code },
+            protocol: Request.Scheme);
+
+        await _emailSender.SendEmailAsync(
+            model.Email,
+            "Đặt lại mật khẩu - WebPhotocopyHub",
+            $"Vui lòng đặt lại mật khẩu của bạn bằng cách nhấp vào <a href='{HtmlEncoder.Default.Encode(callbackUrl ?? string.Empty)}'>đường dẫn này</a>.");
+
+        TempData["Success"] = "Vui lòng kiểm tra email của bạn để lấy liên kết đặt lại mật khẩu.";
+        return Redirect($"/{branch.Slug}/Login");
+    }
+
+    [HttpGet("/{branchSlug}/ResetPassword")]
+    public IActionResult ResetPassword(string branchSlug, string code = null)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null) return NotFound();
+        if (code == null) return BadRequest("A code must be supplied for password reset.");
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+        
+        var model = new ResetPasswordViewModel { Token = code };
+        return View(model);
+    }
+
+    [HttpPost("/{branchSlug}/ResetPassword")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> ResetPassword(string branchSlug, ResetPasswordViewModel model)
+    {
+        var branch = ShopBranchCatalog.Find(branchSlug);
+        if (branch is null) return NotFound();
+
+        ViewData["Branch"] = branch;
+        ViewData["LoginScope"] = "Khách hàng";
+
+        if (!ModelState.IsValid) return View(model);
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+        {
+            // Don't reveal that the user does not exist
+            TempData["Success"] = "Mật khẩu của bạn đã được đặt lại thành công.";
+            return Redirect($"/{branch.Slug}/Login");
+        }
+
+        var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+        if (result.Succeeded)
+        {
+            TempData["Success"] = "Mật khẩu của bạn đã được đặt lại thành công. Vui lòng đăng nhập.";
+            return Redirect($"/{branch.Slug}/Login");
+        }
+
+        AddIdentityErrors(result);
+        return View(model);
     }
 }

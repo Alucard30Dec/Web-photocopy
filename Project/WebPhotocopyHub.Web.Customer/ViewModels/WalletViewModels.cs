@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using WebPhotocopyHub.Application.DTOs;
 using WebPhotocopyHub.Domain.Entities;
 
 namespace WebPhotocopyHub.Web.Customer.Models;
@@ -7,7 +8,7 @@ namespace WebPhotocopyHub.Web.Customer.Models;
 public class WalletIndexViewModel
 {
     public decimal CurrentBalance { get; set; }
-    public List<WalletTransaction> Transactions { get; set; } = new();
+    public PagedResult<WalletTransaction> Transactions { get; set; } = new();
 }
 
 public class CreateTopUpRequestViewModel

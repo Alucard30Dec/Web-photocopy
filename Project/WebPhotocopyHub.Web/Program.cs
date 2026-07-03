@@ -21,6 +21,7 @@ using WebPhotocopyHub.Web.Models;
 using WebPhotocopyHub.Web.HealthChecks;
 using WebPhotocopyHub.Web.Authorization;
 using WebPhotocopyHub.Web.Admin.Authorization;
+using WebPhotocopyHub.Web.Diagnostics;
 using WebPhotocopyHub.Infrastructure.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,6 +36,17 @@ builder.Logging.AddJsonConsole(options =>
 
 builder.Services.AddWebPhotocopyHubDataAccess(builder.Configuration);
 builder.Services.AddWebPhotocopyHubReports();
+builder.Services.AddExceptionHandler<WebPhotocopyHubExceptionHandler>();
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        var correlationId = CorrelationIdContext.GetOrCreate(context.HttpContext);
+        context.ProblemDetails.Extensions["correlationId"] = correlationId;
+        context.ProblemDetails.Extensions["traceId"] =
+            Activity.Current?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier;
+    };
+});
 
 builder.Services
     .AddHealthChecks()
@@ -186,22 +198,59 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.Events.OnRedirectToLogin = context =>
     {
+        if (CorrelationIdContext.IsApiRequest(context.HttpContext))
+        {
+            return WriteApiStatusProblemAsync(
+                context.HttpContext,
+                StatusCodes.Status401Unauthorized,
+                "Chưa đăng nhập.",
+                "Bạn cần đăng nhập để dùng chức năng này.",
+                "unauthorized");
+        }
+
         context.Response.Redirect(BuildLoginRedirectPath(context.HttpContext));
+        return Task.CompletedTask;
+    };
+
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        if (CorrelationIdContext.IsApiRequest(context.HttpContext))
+        {
+            return WriteApiStatusProblemAsync(
+                context.HttpContext,
+                StatusCodes.Status403Forbidden,
+                "Không có quyền truy cập.",
+                "Bạn không có quyền thực hiện thao tác này.",
+                "forbidden");
+        }
+
+        context.Response.Redirect(options.AccessDeniedPath);
         return Task.CompletedTask;
     };
 });
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+var facebookAppId = builder.Configuration["Authentication:Facebook:AppId"];
+var facebookAppSecret = builder.Configuration["Authentication:Facebook:AppSecret"];
+
+var authBuilder = builder.Services.AddAuthentication();
 
 if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
 {
-    builder.Services
-        .AddAuthentication()
-        .AddGoogle(options =>
-        {
-            options.ClientId = googleClientId;
-            options.ClientSecret = googleClientSecret;
-        });
+    authBuilder.AddGoogle(options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+    });
+}
+
+if (!string.IsNullOrWhiteSpace(facebookAppId) && !string.IsNullOrWhiteSpace(facebookAppSecret))
+{
+    authBuilder.AddFacebook(options =>
+    {
+        options.AppId = facebookAppId;
+        options.AppSecret = facebookAppSecret;
+    });
 }
 builder.Services.Configure<SecurityStampValidatorOptions>(options =>
 {
@@ -222,14 +271,36 @@ if (GetBooleanConfigWithLegacyFallback(app.Configuration, "WEBPHOTOCOPYHUB_SEED_
     return;
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages(async statusCodeContext =>
+{
+    var httpContext = statusCodeContext.HttpContext;
+    if (!CorrelationIdContext.IsApiRequest(httpContext))
+    {
+        return;
+    }
+
+    if (httpContext.Response.HasStarted)
+    {
+        return;
+    }
+
+    var statusCode = httpContext.Response.StatusCode;
+    if (statusCode < StatusCodes.Status400BadRequest)
+    {
+        return;
+    }
+
+    await WriteApiStatusProblemAsync(
+        httpContext,
+        statusCode,
+        GetStatusCodeTitle(statusCode),
+        GetStatusCodeDetail(statusCode),
+        GetStatusCodeErrorCode(statusCode));
+});
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
-}
-else
-{
-    app.UseDeveloperExceptionPage();
 }
 
 var swaggerEnabled = app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled");
@@ -455,15 +526,81 @@ app.Run();
 
 static string GetCorrelationId(HttpContext context)
 {
-    const string headerName = "X-Correlation-ID";
+    return CorrelationIdContext.GetOrCreate(context);
+}
 
-    if (context.Request.Headers.TryGetValue(headerName, out var incoming) &&
-        !string.IsNullOrWhiteSpace(incoming.FirstOrDefault()))
+static Task WriteApiStatusProblemAsync(
+    HttpContext context,
+    int statusCode,
+    string title,
+    string detail,
+    string code)
+{
+    var correlationId = CorrelationIdContext.GetOrCreate(context);
+
+    context.Response.StatusCode = statusCode;
+    context.Response.ContentType = "application/problem+json; charset=utf-8";
+    context.Response.Headers[CorrelationIdContext.HeaderName] = correlationId;
+
+    var problemDetails = new ProblemDetails
     {
-        return incoming.First()!;
-    }
+        Status = statusCode,
+        Title = title,
+        Detail = detail,
+        Type = "/problems/" + code,
+        Instance = context.Request.Path
+    };
 
-    return Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
+    problemDetails.Extensions["code"] = code;
+    problemDetails.Extensions["correlationId"] = correlationId;
+    problemDetails.Extensions["traceId"] = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
+
+    return context.Response.WriteAsJsonAsync(problemDetails);
+}
+
+static string GetStatusCodeTitle(int statusCode)
+{
+    return statusCode switch
+    {
+        StatusCodes.Status400BadRequest => "Request không hợp lệ.",
+        StatusCodes.Status401Unauthorized => "Chưa đăng nhập.",
+        StatusCodes.Status403Forbidden => "Không có quyền truy cập.",
+        StatusCodes.Status404NotFound => "Không tìm thấy dữ liệu.",
+        StatusCodes.Status409Conflict => "Xung đột dữ liệu.",
+        StatusCodes.Status413PayloadTooLarge => "File hoặc request quá dung lượng.",
+        StatusCodes.Status429TooManyRequests => "Quá nhiều yêu cầu.",
+        _ => "Có lỗi xảy ra."
+    };
+}
+
+static string GetStatusCodeDetail(int statusCode)
+{
+    return statusCode switch
+    {
+        StatusCodes.Status400BadRequest => "Request không hợp lệ.",
+        StatusCodes.Status401Unauthorized => "Bạn cần đăng nhập để dùng chức năng này.",
+        StatusCodes.Status403Forbidden => "Bạn không có quyền thực hiện thao tác này.",
+        StatusCodes.Status404NotFound => "Không tìm thấy dữ liệu được yêu cầu.",
+        StatusCodes.Status409Conflict => "Dữ liệu đã thay đổi hoặc trạng thái không còn phù hợp.",
+        StatusCodes.Status413PayloadTooLarge => "File hoặc request vượt quá giới hạn cho phép.",
+        StatusCodes.Status429TooManyRequests => "Vui lòng thử lại sau ít phút.",
+        _ => "Hệ thống gặp lỗi không mong muốn. Vui lòng cung cấp correlation ID khi cần hỗ trợ."
+    };
+}
+
+static string GetStatusCodeErrorCode(int statusCode)
+{
+    return statusCode switch
+    {
+        StatusCodes.Status400BadRequest => "bad_request",
+        StatusCodes.Status401Unauthorized => "unauthorized",
+        StatusCodes.Status403Forbidden => "forbidden",
+        StatusCodes.Status404NotFound => "not_found",
+        StatusCodes.Status409Conflict => "conflict",
+        StatusCodes.Status413PayloadTooLarge => "payload_too_large",
+        StatusCodes.Status429TooManyRequests => "too_many_requests",
+        _ => "unexpected_error"
+    };
 }
 
 static bool IsCustomerLocalLandingPath(PathString path)

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 using WebPhotocopyHub.Domain.Common;
 
 namespace WebPhotocopyHub.Domain.Entities;
@@ -7,7 +8,13 @@ public class ApplicationUser : IdentityUser, IHasRowVersion
 {
     public string FullName { get; set; } = string.Empty;
     public string? Address { get; set; }
+
+    [Obsolete("Legacy balance kept for migration/rollback only. Use WalletAccount per branch as the balance source.")]
     public decimal CurrentBalance { get; set; }
+
+    [NotMapped]
+    public decimal BranchWalletBalance { get; set; }
+
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public byte[] RowVersion { get; set; } = Guid.NewGuid().ToByteArray();

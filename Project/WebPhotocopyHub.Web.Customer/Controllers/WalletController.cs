@@ -33,13 +33,13 @@ public class WalletController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index([FromQuery] int page = 1, CancellationToken cancellationToken = default)
     {
         var userId = User.GetUserId();
         var vm = new WalletIndexViewModel
         {
             CurrentBalance = await _walletService.GetCurrentBalanceAsync(userId, cancellationToken),
-            Transactions = await _walletService.GetUserTransactionsAsync(userId, cancellationToken)
+            Transactions = await _walletService.GetUserTransactionsAsync(userId, page, 10, cancellationToken)
         };
 
         return View(vm);

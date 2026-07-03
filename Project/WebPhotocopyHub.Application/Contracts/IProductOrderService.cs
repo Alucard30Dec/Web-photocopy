@@ -13,7 +13,9 @@ public interface IProductOrderService
     Task AdjustStockAsync(AdjustProductStockDto request, CancellationToken cancellationToken = default);
     Task<Product> UpsertProductAsync(Product product, CancellationToken cancellationToken = default);
     Task<ProductOrder> CreateOrderAsync(CreateProductOrderDto request, CancellationToken cancellationToken = default);
-    Task<List<ProductOrder>> GetUserOrdersAsync(string userId, CancellationToken cancellationToken = default);
-    Task<List<ProductOrder>> GetAllOrdersAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<ProductOrder>> GetUserOrdersAsync(string userId, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+    Task<PagedResult<ProductOrder>> GetAllOrdersAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+    Task<ProductOrder?> GetOrderByIdAsync(Guid orderId, CancellationToken cancellationToken = default);
     Task UpdateOrderStatusAsync(Guid orderId, OrderStatus status, string actorUserId, string? note, CancellationToken cancellationToken = default);
+    Task CancelOrderAsync(Guid id, string userId, CancellationToken cancellationToken = default);
 }

@@ -11,6 +11,7 @@
     var maxBatchSize = 100 * 1024 * 1024;
     var pageCountUrl = form.dataset.pageCountUrl || "";
     var officePreviewUrl = form.dataset.officePreviewUrl || "";
+    var calculatePriceUrl = form.dataset.calculatePriceUrl || "";
     var antiForgeryToken = form.querySelector('input[name="__RequestVerificationToken"]');
     var allowedExtensions = ["pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx", "ppt", "pptx"];
     var imageExtensions = ["jpg", "jpeg", "png"];
@@ -44,7 +45,8 @@
         copies: document.getElementById("summaryCopies"),
         pages: document.getElementById("summaryPages"),
         volume: document.getElementById("summaryVolume"),
-        delivery: document.getElementById("summaryDelivery")
+        delivery: document.getElementById("summaryDelivery"),
+        totalAmount: document.getElementById("summaryTotalAmount")
     };
 
     var deliveryAddressWrap = document.getElementById("deliveryAddressWrap");
@@ -1233,7 +1235,61 @@
             summary.delivery.textContent = getSelectedLabel(controls.deliveryMethod);
         }
 
+        if (summary.totalAmount) {
+            calculatePriceDebounced(fileCount, pages.knownPages, copies);
+        }
+
         updateSubmitAvailability();
+    }
+
+    var priceCalcTimeout = null;
+    function calculatePriceDebounced(fileCount, knownPages, copies) {
+        if (priceCalcTimeout) {
+            clearTimeout(priceCalcTimeout);
+        }
+
+        if (fileCount === 0 || knownPages === 0 || !calculatePriceUrl) {
+            if (summary.totalAmount) summary.totalAmount.textContent = "0 đ";
+            return;
+        }
+
+        if (summary.totalAmount) {
+            summary.totalAmount.textContent = "Đang tính...";
+        }
+
+        priceCalcTimeout = setTimeout(function () {
+            var avgPages = Math.max(1, Math.round(knownPages / fileCount));
+            var requestData = {
+                paperSize: parseInt(controls.paperSize.value, 10),
+                printSide: parseInt(controls.printSide.value, 10),
+                colorMode: parseInt(controls.colorMode.value, 10),
+                isPhoto: controls.isPhoto.checked,
+                copies: copies,
+                totalPages: avgPages,
+                deliveryMethod: parseInt(controls.deliveryMethod.value, 10)
+            };
+
+            fetch(calculatePriceUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": antiForgeryToken ? antiForgeryToken.value : ""
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(function (response) {
+                if (!response.ok) throw new Error("Price calculation failed");
+                return response.json();
+            })
+            .then(function (data) {
+                if (summary.totalAmount && data.totalAmount !== undefined) {
+                    summary.totalAmount.textContent = "Từ " + data.totalAmount.toLocaleString("vi-VN") + " đ";
+                }
+            })
+            .catch(function (error) {
+                if (summary.totalAmount) summary.totalAmount.textContent = "Không tính được";
+            });
+        }, 500);
     }
 
     function activatePreset(button) {

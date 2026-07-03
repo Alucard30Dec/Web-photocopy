@@ -44,7 +44,7 @@ public class BranchController : Controller
 
         if (isSignedIn)
         {
-            var userPrintJobs = await _printJobService.GetUserOrdersAsync(User.GetUserId(), cancellationToken);
+            var userPrintJobs = (await _printJobService.GetUserOrdersAsync(User.GetUserId(), 1, 1000, cancellationToken)).Items;
             recentPrintJobs = userPrintJobs
                 .OrderByDescending(x => x.CreatedAt)
                 .Take(3)

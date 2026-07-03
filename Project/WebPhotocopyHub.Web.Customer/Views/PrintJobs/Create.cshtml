@@ -29,7 +29,7 @@
 
     <div class="print-workspace print-workspace--create">
         <div class="print-form-shell">
-            <form asp-route="shop-branch-customer" asp-route-branchSlug="@branchSlug" asp-route-controller="PrintJobs" asp-route-action="Create" method="post" enctype="multipart/form-data" id="printJobForm" data-page-count-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/ReadUploadPageCount")" data-office-preview-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/PreviewOfficeUpload")" novalidate>
+            <form asp-route="shop-branch-customer" asp-route-branchSlug="@branchSlug" asp-route-controller="PrintJobs" asp-route-action="Create" method="post" enctype="multipart/form-data" id="printJobForm" data-page-count-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/ReadUploadPageCount")" data-office-preview-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/PreviewOfficeUpload")" data-calculate-price-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/CalculatePrice")" novalidate>
                 <input asp-for="IdempotencyKey" type="hidden" />
                 <div asp-validation-summary="All" class="alert alert-danger print-validation-summary" role="alert"></div>
 
@@ -211,6 +211,7 @@
             <div class="summary-line"><span>Tổng trang đã biết</span><span class="summary-value" id="summaryPages">0</span></div>
             <div class="summary-line"><span>Tổng lượt trang in</span><span class="summary-value" id="summaryVolume">0</span></div>
             <div class="summary-line"><span>Nhận hàng</span><span class="summary-value" id="summaryDelivery">-</span></div>
+            <div class="summary-line mt-3 pt-3 border-top"><span>Ước tính giá mỗi đơn</span><strong class="summary-value text-primary" id="summaryTotalAmount">0 đ</strong></div>
 
             <div class="summary-note">
                 <strong>Lưu ý nghiệp vụ</strong>

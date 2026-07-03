@@ -21,6 +21,10 @@
     var googleConfigured =
         !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientId"]) &&
         !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientSecret"]);
+
+    var facebookConfigured =
+        !string.IsNullOrWhiteSpace(Configuration["Authentication:Facebook:AppId"]) &&
+        !string.IsNullOrWhiteSpace(Configuration["Authentication:Facebook:AppSecret"]);
 }
 
 <section class="customer-auth-page">
@@ -43,28 +47,28 @@
             <p>Dùng Gmail/email hoặc tên đăng nhập đã đăng ký.</p>
         </div>
 
-        @if (googleConfigured)
-        {
-            <form action="@externalLoginUrl" method="post" class="customer-google-form">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="provider" value="Google" />
-                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                <button class="customer-google-button" type="submit">
-                    <span class="customer-google-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-google"></use></svg></span>
-                    Tiếp tục với Google/Gmail
-                </button>
-            </form>
+            <div class="d-flex gap-2 mb-3">
+                <form action="@externalLoginUrl" method="post" class="customer-google-form flex-grow-1">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="provider" value="Google" />
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <button class="customer-google-button w-100" type="submit">
+                        <span class="customer-google-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-google"></use></svg></span>
+                        Google
+                    </button>
+                </form>
+                
+                <form action="@externalLoginUrl" method="post" class="customer-google-form flex-grow-1">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="provider" value="Facebook" />
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <button class="customer-google-button w-100" type="submit" style="background-color: #1877f2; color: white; border: none;">
+                        Facebook
+                    </button>
+                </form>
+            </div>
 
             <div class="customer-auth-divider"><span>hoặc đăng nhập bằng mật khẩu</span></div>
-        }
-
-        @if (!googleConfigured)
-        {
-            <div class="customer-google-disabled">
-                <strong>Đăng nhập nhanh bằng Gmail chưa được cấu hình</strong>
-                <span>Điền Google ClientId/ClientSecret theo hướng dẫn bên dưới để bật nút Google.</span>
-            </div>
-        }
 
         <form action="@formAction" method="post" class="customer-auth-form" novalidate>
             @Html.AntiForgeryToken()
@@ -83,11 +87,12 @@
                 <span asp-validation-for="Password" class="text-danger small"></span>
             </div>
 
-            <div class="customer-auth-row">
-                <label class="form-check">
+            <div class="customer-auth-row d-flex justify-content-between align-items-center mb-3">
+                <label class="form-check mb-0">
                     <input asp-for="RememberMe" class="form-check-input" />
                     <span class="form-check-label">@Html.DisplayNameFor(x => x.RememberMe)</span>
                 </label>
+                <a href="/@branchSlug/ForgotPassword" class="text-decoration-none">Quên mật khẩu?</a>
             </div>
 
             <button class="customer-primary-action w-100" type="submit"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-box-arrow-in-right"></use></svg>Đăng nhập khách hàng</button>

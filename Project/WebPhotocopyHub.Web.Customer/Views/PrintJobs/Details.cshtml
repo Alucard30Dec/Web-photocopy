@@ -22,6 +22,12 @@
             <div class="cu-actions">
                 <a class="btn btn-outline-secondary" href="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs")">Quay lại danh sách</a>
                 <a class="btn btn-primary" href="@CustomerBranchContext.ToPath(ViewContext, $"PrintJobs/DownloadFile/{Model.UploadedFileId}")">Tải lại file</a>
+                @if (Model.Status == PrintJobStatus.Draft || Model.Status == PrintJobStatus.Submitted || Model.Status == PrintJobStatus.ConfirmedByShop)
+                {
+                    <form asp-action="Cancel" asp-route-id="@Model.Id" asp-route-branchSlug="@ViewContext.RouteData.Values["branchSlug"]" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn huỷ đơn này? (Sẽ hoàn tiền về ví nếu đã thanh toán)');">
+                        <button type="submit" class="btn btn-danger">Huỷ đơn</button>
+                    </form>
+                }
             </div>
         </div>
         <aside class="cu-hero-card">

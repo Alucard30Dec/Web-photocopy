@@ -1,12 +1,8 @@
-using System.Data.Common;
-using Amazon;
-using Amazon.Runtime;
-using Amazon.S3;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Npgsql;
 using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Domain.Entities;
 using WebPhotocopyHub.Infrastructure.Data;
@@ -17,7 +13,7 @@ namespace WebPhotocopyHub.Infrastructure;
 
 public static class DependencyInjection
 {
-    private const string DefaultApplicationName = "DTBWebPhotocopyHub";
+    private const string DefaultApplicationName = "WebPhotocopyHub";
 
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
@@ -25,49 +21,13 @@ public static class DependencyInjection
         services.Configure<BusinessOptions>(configuration.GetSection(BusinessOptions.SectionName));
         services.Configure<OfficePreviewOptions>(configuration.GetSection(OfficePreviewOptions.SectionName));
 
-        var connectionString = ResolvePostgreSqlConnectionString(configuration);
+        var connectionString = ResolveLocalPostgreSqlConnectionString(configuration);
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             options.UseNpgsql(
                 connectionString,
                 npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
-        });
-
-        services.AddSingleton<IAmazonS3>(serviceProvider =>
-        {
-            var options = serviceProvider.GetRequiredService<IOptions<FileStorageOptions>>().Value;
-            var s3 = options.S3;
-
-            var config = new AmazonS3Config
-            {
-                ForcePathStyle = s3.ForcePathStyle,
-                UseHttp = s3.UseHttp
-            };
-
-            if (!string.IsNullOrWhiteSpace(s3.ServiceUrl))
-            {
-                config.ServiceURL = s3.ServiceUrl;
-            }
-
-            if (string.IsNullOrWhiteSpace(s3.ServiceUrl))
-            {
-                var regionName = string.IsNullOrWhiteSpace(s3.Region) || s3.Region.Equals("auto", StringComparison.OrdinalIgnoreCase)
-                    ? "ap-southeast-1"
-                    : s3.Region;
-
-                config.RegionEndpoint = RegionEndpoint.GetBySystemName(regionName);
-            }
-
-            if (!string.IsNullOrWhiteSpace(s3.AccessKeyId) &&
-                !string.IsNullOrWhiteSpace(s3.SecretAccessKey))
-            {
-                return new AmazonS3Client(
-                    new BasicAWSCredentials(s3.AccessKeyId, s3.SecretAccessKey),
-                    config);
-            }
-
-            return new AmazonS3Client(config);
         });
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -101,21 +61,16 @@ public static class DependencyInjection
         services.AddScoped<IWalletReconciliationService, WalletReconciliationService>();
         services.AddScoped<ISystemAdministrationService, SystemAdministrationService>();
         services.AddScoped<IDbInitializer, DbInitializer>();
+        services.AddScoped<IEmailSender, DummyEmailSender>();
 
         return services;
     }
 
-    private static string ResolvePostgreSqlConnectionString(IConfiguration configuration)
+    public static string ResolveLocalPostgreSqlConnectionString(IConfiguration configuration)
     {
         var candidates = new[]
         {
             configuration.GetConnectionString("DefaultConnection"),
-            configuration.GetConnectionString("PostgreSqlConnection"),
-            configuration["WEBPHOTOCOPYHUB_POSTGRES_CONNECTION"],
-            Environment.GetEnvironmentVariable("WEBPHOTOCOPYHUB_POSTGRES_CONNECTION"),
-            configuration["PHOTOCOPYHUB_POSTGRES_CONNECTION"],
-            Environment.GetEnvironmentVariable("PHOTOCOPYHUB_POSTGRES_CONNECTION"),
-            Environment.GetEnvironmentVariable("ConnectionStrings__PostgreSqlConnection"),
             Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
         };
 
@@ -125,7 +80,7 @@ public static class DependencyInjection
         {
             try
             {
-                var normalized = NormalizePostgreSqlConnectionString(candidate);
+                var normalized = NormalizeLocalPostgreSqlConnectionString(candidate);
                 if (!string.IsNullOrWhiteSpace(normalized))
                 {
                     return normalized;
@@ -146,15 +101,12 @@ public static class DependencyInjection
             : string.Empty;
 
         throw new InvalidOperationException(
-            "PostgreSQL/Supabase connection string chưa được cấu hình đúng. " +
-            "Hãy set ConnectionStrings:DefaultConnection hoặc WEBPHOTOCOPYHUB_POSTGRES_CONNECTION. " +
-            "Với Supabase hosted, nên dùng Session Pooler URI dạng " +
-            "postgres://postgres.<project-ref>:[YOUR-PASSWORD]@aws-...pooler.supabase.com:5432/postgres. " +
-            "Database trong Supabase hosted phải là postgres; DTBWebPhotocopyHub chỉ dùng làm Application Name." +
+            "PostgreSQL local connection string chưa được cấu hình đúng. " +
+            "Hãy set ConnectionStrings:DefaultConnection hoặc biến môi trường ConnectionStrings__DefaultConnection." +
             detail);
     }
 
-    private static string? NormalizePostgreSqlConnectionString(string? connectionString)
+    public static string? NormalizeLocalPostgreSqlConnectionString(string? connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
         {
@@ -162,18 +114,41 @@ public static class DependencyInjection
         }
 
         var trimmed = connectionString.Trim();
+        var builder = LooksLikePostgreSqlUri(trimmed)
+            ? ConvertPostgreSqlUriToBuilder(trimmed)
+            : new NpgsqlConnectionStringBuilder(trimmed);
 
-        if (LooksLikePostgreSqlUri(trimmed))
+        if (string.IsNullOrWhiteSpace(builder.Host))
         {
-            return ConvertPostgreSqlUriToNpgsqlConnectionString(trimmed);
+            throw new InvalidOperationException("Connection string PostgreSQL thiếu Host.");
         }
 
-        if (LooksLikePostgreSqlConnectionString(trimmed))
+        if (!IsLocalHost(builder.Host))
         {
-            return EnsureProviderDefaults(trimmed);
+            throw new InvalidOperationException("Ứng dụng chỉ được cấu hình PostgreSQL local qua localhost, 127.0.0.1 hoặc ::1.");
         }
 
-        return null;
+        if (builder.Port <= 0)
+        {
+            builder.Port = 5432;
+        }
+
+        if (string.IsNullOrWhiteSpace(builder.Database))
+        {
+            throw new InvalidOperationException("Connection string PostgreSQL thiếu Database.");
+        }
+
+        if (string.IsNullOrWhiteSpace(builder.Username))
+        {
+            throw new InvalidOperationException("Connection string PostgreSQL thiếu Username.");
+        }
+
+        if (string.IsNullOrWhiteSpace(builder.ApplicationName))
+        {
+            builder.ApplicationName = DefaultApplicationName;
+        }
+
+        return builder.ConnectionString;
     }
 
     private static bool LooksLikePostgreSqlUri(string connectionString)
@@ -183,22 +158,11 @@ public static class DependencyInjection
                 || uri.Scheme.Equals("postgres", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static string ConvertPostgreSqlUriToNpgsqlConnectionString(string connectionString)
+    private static NpgsqlConnectionStringBuilder ConvertPostgreSqlUriToBuilder(string connectionString)
     {
         if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
         {
-            throw new InvalidOperationException("PostgreSQL URI không hợp lệ. Hãy kiểm tra lại connection string Supabase.");
-        }
-
-        if (!uri.Scheme.Equals("postgresql", StringComparison.OrdinalIgnoreCase)
-            && !uri.Scheme.Equals("postgres", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("PostgreSQL URI phải bắt đầu bằng postgres:// hoặc postgresql://.");
-        }
-
-        if (string.IsNullOrWhiteSpace(uri.Host))
-        {
-            throw new InvalidOperationException("PostgreSQL URI thiếu host.");
+            throw new InvalidOperationException("PostgreSQL URI không hợp lệ.");
         }
 
         var userInfoParts = uri.UserInfo.Split(':', 2);
@@ -207,193 +171,27 @@ public static class DependencyInjection
             throw new InvalidOperationException("PostgreSQL URI thiếu username.");
         }
 
-        var database = uri.AbsolutePath.Trim('/');
-        if (string.IsNullOrWhiteSpace(database))
+        var builder = new NpgsqlConnectionStringBuilder
         {
-            database = "postgres";
-        }
-
-        var username = Uri.UnescapeDataString(userInfoParts[0]);
-        var password = userInfoParts.Length > 1
-            ? Uri.UnescapeDataString(userInfoParts[1])
-            : string.Empty;
-
-        var builder = new DbConnectionStringBuilder
-        {
-            ["Host"] = uri.IdnHost,
-            ["Port"] = uri.Port > 0 ? uri.Port : 5432,
-            ["Database"] = Uri.UnescapeDataString(database),
-            ["Username"] = username,
-            ["SSL Mode"] = "Require",
-            ["Trust Server Certificate"] = true,
-            ["Application Name"] = DefaultApplicationName
+            Host = uri.IdnHost,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Database = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/')),
+            Username = Uri.UnescapeDataString(userInfoParts[0]),
+            ApplicationName = DefaultApplicationName
         };
 
-        if (!string.IsNullOrEmpty(password))
+        if (userInfoParts.Length > 1)
         {
-            builder["Password"] = password;
+            builder.Password = Uri.UnescapeDataString(userInfoParts[1]);
         }
 
-        return EnsureProviderDefaults(builder.ConnectionString);
+        return builder;
     }
 
-    private static string EnsureProviderDefaults(string connectionString)
+    private static bool IsLocalHost(string host)
     {
-        var builder = new DbConnectionStringBuilder();
-
-        try
-        {
-            builder.ConnectionString = connectionString;
-        }
-        catch (ArgumentException ex)
-        {
-            throw new InvalidOperationException("Connection string PostgreSQL không parse được. Hãy copy lại connection string từ Supabase Connect.", ex);
-        }
-
-        NormalizeAlias(builder, "Server", "Host");
-        NormalizeAlias(builder, "User ID", "Username");
-        NormalizeAlias(builder, "User Id", "Username");
-        NormalizeAlias(builder, "UserID", "Username");
-        NormalizeAlias(builder, "User", "Username");
-        NormalizeAlias(builder, "Pwd", "Password");
-
-        var host = GetRequiredValue(builder, "Host", "Host");
-        var username = GetRequiredValue(builder, "Username", "Username");
-        var database = TryGetAnyString(builder, out var databaseValue, "Database")
-            ? databaseValue
-            : "postgres";
-
-        builder["Host"] = host;
-        builder["Username"] = username;
-        builder["Database"] = database;
-
-        if (!TryGetAnyString(builder, out _, "Port"))
-        {
-            builder["Port"] = 5432;
-        }
-
-        if (IsSupabaseHost(host))
-        {
-            if (!database.Equals("postgres", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(
-                    "Connection string Supabase đang dùng Database=" + database + ". " +
-                    "Với Supabase hosted, hãy dùng Database=postgres. " +
-                    "Tên DTBWebPhotocopyHub nên dùng làm project name hoặc Application Name, không dùng làm database name.");
-            }
-
-            var password = GetRequiredValue(builder, "Password", "Password");
-            if (password.Contains("[YOUR-PASSWORD]", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Connection string Supabase vẫn còn placeholder [YOUR-PASSWORD]. Hãy thay bằng database password thật.");
-            }
-
-            if (IsSupabaseDirectHost(host) && !IsDirectSupabaseHostAllowed())
-            {
-                throw new InvalidOperationException(
-                    "Bạn đang dùng Supabase Direct host '" + host + "'. Direct host dạng db.<project-ref>.supabase.co thường cần IPv6 hoặc Supabase IPv4 add-on. " +
-                    "Để chạy ổn trên Windows/local IPv4, hãy copy Session Pooler URI từ Supabase Dashboard > Connect > Session pooler, host dạng aws-<region>.pooler.supabase.com, port 5432. " +
-                    "Nếu bạn chắc chắn đã bật IPv4 add-on hoặc có IPv6, set WEBPHOTOCOPYHUB_ALLOW_SUPABASE_DIRECT=true để cho phép Direct host.");
-            }
-
-            builder["SSL Mode"] = "Require";
-
-            if (!TryGetAnyString(builder, out _, "Trust Server Certificate"))
-            {
-                builder["Trust Server Certificate"] = true;
-            }
-
-            if (!TryGetAnyString(builder, out _, "Application Name"))
-            {
-                builder["Application Name"] = DefaultApplicationName;
-            }
-        }
-
-        return builder.ConnectionString;
-    }
-
-    private static bool LooksLikePostgreSqlConnectionString(string connectionString)
-    {
-        if (connectionString.Contains(".db", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (connectionString.Contains("Filename=", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
-            || connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase)
-            || connectionString.Contains("Username=", StringComparison.OrdinalIgnoreCase)
-            || connectionString.Contains("User ID=", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void NormalizeAlias(DbConnectionStringBuilder builder, string sourceKey, string targetKey)
-    {
-        if (!builder.ContainsKey(targetKey) && builder.TryGetValue(sourceKey, out var rawValue) && rawValue is not null)
-        {
-            builder[targetKey] = rawValue;
-            builder.Remove(sourceKey);
-        }
-    }
-
-    private static string GetRequiredValue(DbConnectionStringBuilder builder, string displayName, params string[] keys)
-    {
-        if (TryGetAnyString(builder, out var value, keys))
-        {
-            return value;
-        }
-
-        throw new InvalidOperationException("Connection string PostgreSQL thiếu hoặc rỗng: " + displayName + ".");
-    }
-
-    private static bool TryGetAnyString(DbConnectionStringBuilder builder, out string value, params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (builder.TryGetValue(key, out var rawValue) && rawValue is not null)
-            {
-                value = rawValue.ToString() ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    return true;
-                }
-            }
-        }
-
-        value = string.Empty;
-        return false;
-    }
-
-    private static bool IsSupabaseHost(string host)
-    {
-        return host.Contains("supabase.co", StringComparison.OrdinalIgnoreCase)
-            || host.Contains("pooler.supabase.com", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsSupabaseDirectHost(string host)
-    {
-        return host.StartsWith("db.", StringComparison.OrdinalIgnoreCase)
-            && host.EndsWith(".supabase.co", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsDirectSupabaseHostAllowed()
-    {
-        var value = Environment.GetEnvironmentVariable("WEBPHOTOCOPYHUB_ALLOW_SUPABASE_DIRECT");
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            value = Environment.GetEnvironmentVariable("PHOTOCOPYHUB_ALLOW_SUPABASE_DIRECT");
-        }
-
-        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
     }
 }

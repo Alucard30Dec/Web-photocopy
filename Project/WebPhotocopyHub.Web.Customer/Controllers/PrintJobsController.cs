@@ -52,9 +52,9 @@ public class PrintJobsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index([FromQuery] int page = 1, CancellationToken cancellationToken = default)
     {
-        var items = await _printJobService.GetUserOrdersAsync(User.GetUserId(), cancellationToken);
+        var items = await _printJobService.GetUserOrdersAsync(User.GetUserId(), page, 10, cancellationToken);
         return View(items);
     }
 

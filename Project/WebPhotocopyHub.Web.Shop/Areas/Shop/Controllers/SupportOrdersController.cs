@@ -26,7 +26,7 @@ public class SupportOrdersController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var items = await _supportServiceOrderService.GetAllOrdersAsync(cancellationToken);
+        var items = (await _supportServiceOrderService.GetAllOrdersAsync(1, 1000, cancellationToken)).Items;
         return View(items);
     }
 

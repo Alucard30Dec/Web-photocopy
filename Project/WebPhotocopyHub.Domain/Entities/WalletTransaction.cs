@@ -7,6 +7,7 @@ namespace WebPhotocopyHub.Domain.Entities;
 public class WalletTransaction : BaseEntity, IBranchScopedEntity
 {
     public Guid BranchId { get; set; }
+    public Guid WalletAccountId { get; set; }
 
     [Required]
     [MaxLength(450)]
@@ -34,4 +35,5 @@ public class WalletTransaction : BaseEntity, IBranchScopedEntity
     public ApplicationUser? User { get; set; }
     public ApplicationUser? PerformedByAdmin { get; set; }
     public Branch? Branch { get; set; }
+    public WalletAccount? WalletAccount { get; set; }
 }

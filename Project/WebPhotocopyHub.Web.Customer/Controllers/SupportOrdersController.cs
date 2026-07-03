@@ -66,10 +66,39 @@ public class SupportOrdersController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> History(CancellationToken cancellationToken)
+    public async Task<IActionResult> History([FromQuery] int page = 1, CancellationToken cancellationToken = default)
     {
-        var orders = await _supportServiceOrderService.GetUserOrdersAsync(User.GetUserId(), cancellationToken);
+        var orders = await _supportServiceOrderService.GetUserOrdersAsync(User.GetUserId(), page, 10, cancellationToken);
         return View(orders);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
+    {
+        var item = await _supportServiceOrderService.GetOrderByIdAsync(id, cancellationToken);
+        if (item is null || item.UserId != User.GetUserId())
+        {
+            return NotFound();
+        }
+
+        return View(item);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _supportServiceOrderService.CancelOrderAsync(id, User.GetUserId(), cancellationToken);
+            TempData["Success"] = "Đã huỷ đơn dịch vụ thành công.";
+        }
+        catch (BusinessException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Details), new { id, branchSlug = RouteData.Values["branchSlug"]?.ToString() });
     }
 
     private object? BranchRouteValues()
