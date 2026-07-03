@@ -6,24 +6,72 @@ obj/
 
 # Visual Studio
 .vs/
+.vs_*/
 .vscode/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
+*.slnLaunch
 
 # Local secrets and environment files
 .env
 .env.*
+!.env.example
 appsettings.Local.json
 **/appsettings.Local.json
+**/appsettings.*.local.json
+**/appsettings.Secrets.json
+**/appsettings.Production.json
+**/appsettings.Staging.json
 *.local.json
+*.Local.json
+*.secrets.json
+*.Secrets.json
+pgpass.conf
+*.publishsettings
+*.pubxml.user
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+*credentials*.json
+*credential*.json
+google-services.json
+GoogleService-Info.plist
 WebPhotocopyHub.Web/LocalTools/
+
+# Runtime/local generated content
+_chatgpt_backups_WebPhotocopy/
+_codex_backups/
+docs/
+database/
+docs/_generated/
+database/_scratch/
+WebPhotocopyHub.Web/App_Data/uploads/
+WebPhotocopyHub.Web/App_Data/temp/
+storage/
+dtb/
+*.zip
+*.rar
+*.bak
+*.backup
+*.dump
+*.sql.gz
+*.tar.gz
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
 
 # OS/editor files
 Thumbs.db
 Desktop.ini
 .DS_Store
+.idea/
 
 # Logs and temporary files
 *.log

@@ -1,79 +1,123 @@
-# WebPhotocopy / PhotoCopyHub - Tài khoản test
+# Tài Khoản Test WebPhotocopyHub
 
-> File này dùng cho môi trường local/dev để đăng nhập kiểm thử.
-> Không dùng các tài khoản/mật khẩu này cho production.
-> Database dev đang dùng PostgreSQL/Supabase qua Session Pooler trong user-secrets/env; file này không lưu connection string database.
+File này dùng cho database local `WebPhotocopyHub`.
 
-## Trạng thái seed
+Không dùng các tài khoản/mật khẩu này cho production.
 
-- `SeedSampleData:Enabled=true`
-- Seed chạy bằng `PHOTOCOPYHUB_SEED_ONLY=true`
-- Dữ liệu mẫu dùng prefix/key `seed-*` để có thể chạy lại mà không nhân đôi dữ liệu mẫu.
-- Slug cơ sở test chính: `ToanPhotocopy`
+## Tóm Tắt Nhanh
 
-## Đường dẫn chính
-
-| Khu vực | URL |
-|---|---|
-| Trang chủ | https://localhost:7250/Home |
-| Danh sách cơ sở | https://localhost:7250/Shops |
-| Cơ sở Toàn Photocopy | https://localhost:7250/ToanPhotocopy |
-| Đăng nhập khách hàng | https://localhost:7250/ToanPhotocopy/Login |
-| Dashboard khách hàng | https://localhost:7250/ToanPhotocopy/Dashboard |
-| Đăng nhập shop/admin cơ sở | https://localhost:7250/ToanPhotocopy/Admin/Login |
-| Dashboard shop/admin cơ sở | https://localhost:7250/ToanPhotocopy/Admin |
-| Đăng nhập admin hệ thống | https://localhost:7250/Admin/Login |
-| Dashboard admin hệ thống | https://localhost:7250/Admin |
-| Swagger API | https://localhost:7250/swagger |
-| Health DB | https://localhost:7250/healthz/db |
-
-## Tài khoản test
-
-| Vai trò | Email | Mật khẩu | URL đăng nhập | Dữ liệu mẫu chính |
+| Nhóm | Email đăng nhập | Mật khẩu | Role hệ thống | Ghi chú |
 |---|---|---|---|---|
-| Admin hệ thống | admin@photocopyhub.local | Admin@123456 | https://localhost:7250/Admin/Login | Quản trị hệ thống, duyệt nạp ví lớn, quản lý người dùng, đối soát |
-| Nhân viên tiệm / ShopOperator | operator@photocopyhub.local | Operator@123456 | https://localhost:7250/ToanPhotocopy/Admin/Login | Nhận đơn, xác nhận file, cập nhật trạng thái, nạp tiền tại quầy |
-| Khách hàng mặc định | khachhang@photocopyhub.local | Customer@123 | https://localhost:7250/ToanPhotocopy/Login | Có yêu cầu nạp ví bị từ chối và đơn in mới gửi |
-| Khách hàng 01 | sinhvien01@photocopyhub.local | Student@123 | https://localhost:7250/ToanPhotocopy/Login | Có ví đã nạp, đơn in hoàn tất, đơn sản phẩm, đơn dịch vụ scan |
-| Khách hàng 02 | sinhvien02@photocopyhub.local | Student@123 | https://localhost:7250/ToanPhotocopy/Login | Có ví đã nạp, yêu cầu nạp đang chờ duyệt, đơn in đang xử lý, đơn đóng gáy |
-| Khách hàng 03 | sinhvien03@photocopyhub.local | Student@123 | https://localhost:7250/ToanPhotocopy/Login | Có yêu cầu nạp lớn chờ admin duyệt bước 2, đơn in đã xác nhận, đơn sản phẩm hoàn tất |
+| Admin | `admin@photocopyhub.local` | `Admin@123456` | `Admin` | Quản trị toàn hệ thống |
+| Nhân viên shop | `operator@photocopyhub.local` | `Operator@123456` | `ShopOperator` | Quản lý cả 3 chi nhánh |
+| Khách hàng | `sinhvien01@webphotocopyhub.local` | `Student@123` | `Customer` | Khách test đặt in |
+| Khách hàng | `sinhvien02@webphotocopyhub.local` | `Student@123` | `Customer` | Khách test đặt in |
+| Khách hàng | `sinhvien03@webphotocopyhub.local` | `Student@123` | `Customer` | Khách test đặt in |
+| Khách hàng | `khachhang@webphotocopyhub.local` | `Customer@123` | `Customer` | Khách hàng mặc định |
 
-## Dữ liệu mẫu đã seed
+## Shop Và Role Đang Gán
+
+| Mã shop | Slug | Tên shop | Tài khoản | Role tại shop | Chính |
+|---|---|---|---|---|---|
+| `TOAN` | `toanphotocopy` | Toàn Photocopy | `operator@photocopyhub.local` | Quản lý cơ sở | Có |
+| `DBP141` | `141-dien-bien-phu` | WebPhotocopyHub 141 Điện Biên Phủ | `operator@photocopyhub.local` | Quản lý cơ sở | Không |
+| `CENTER` | `co-so-trung-tam` | WebPhotocopyHub Cơ sở trung tâm | `operator@photocopyhub.local` | Quản lý cơ sở | Không |
+
+Tất cả shop hiện đang bật các tính năng:
+
+`PRINT_ORDERS`, `PRODUCT_SALES`, `SUPPORT_SERVICES`, `TOP_UPS`, `WALLET`, `INVENTORY`, `PRICING`, `REPORTS`.
+
+## Role Hệ Thống
+
+| Role | Mục đích | Tài khoản hiện có |
+|---|---|---|
+| `Admin` | Quản trị user, role, phân quyền, danh mục, cấu hình hệ thống, báo cáo tổng | `admin@photocopyhub.local` |
+| `ShopOperator` | Vận hành shop, xử lý đơn, duyệt nạp tiền, quản lý kho/dịch vụ theo chi nhánh được gán | `operator@photocopyhub.local` |
+| `Customer` | Đặt in, nạp ví, đặt sản phẩm/dịch vụ hỗ trợ | 4 tài khoản khách hàng |
+
+## Role Tại Mỗi Shop
+
+Các role dưới đây tồn tại tại cả 3 shop `TOAN`, `DBP141`, `CENTER`.
+
+| Role shop | Quyền chính |
+|---|---|
+| Quản lý cơ sở | Xem dashboard, xử lý đơn in, xem/tải file in, hoàn tiền đơn in, xử lý đơn sản phẩm, xử lý đơn dịch vụ hỗ trợ, nạp tiền tại quầy, duyệt nạp tiền, xem báo cáo, xem/điều chỉnh tồn kho |
+| Nhân viên in ấn | Xem dashboard, xem đơn in, xử lý đơn in, xem/tải file in |
+| Nhân viên kho | Xem dashboard, xem/điều chỉnh tồn kho, xem/xử lý đơn sản phẩm |
+| Thu ngân | Xem dashboard, xem/duyệt nạp tiền, nạp tiền tại quầy |
+| Chỉ xem báo cáo | Xem dashboard và báo cáo |
+
+## Đường Dẫn Đăng Nhập Gợi Ý
+
+Port local thường dùng: `https://localhost:7250`.
+
+| Nhóm | Đường dẫn |
+|---|---|
+| Trang chủ | `https://localhost:7250/Home` |
+| Danh sách shop | `https://localhost:7250/Shops` |
+| Admin hệ thống | `https://localhost:7250/Admin/Login` |
+| Shop TOAN | `https://localhost:7250/toanphotocopy` |
+| Khách hàng shop TOAN | `https://localhost:7250/toanphotocopy/Login` |
+| Shop operator TOAN | `https://localhost:7250/toanphotocopy/Admin/Login` |
+| Shop DBP141 | `https://localhost:7250/141-dien-bien-phu` |
+| Khách hàng shop DBP141 | `https://localhost:7250/141-dien-bien-phu/Login` |
+| Shop operator DBP141 | `https://localhost:7250/141-dien-bien-phu/Admin/Login` |
+| Shop CENTER | `https://localhost:7250/co-so-trung-tam` |
+| Khách hàng shop CENTER | `https://localhost:7250/co-so-trung-tam/Login` |
+| Shop operator CENTER | `https://localhost:7250/co-so-trung-tam/Admin/Login` |
+| Swagger API | `https://localhost:7250/swagger` |
+| Health DB | `https://localhost:7250/healthz/db` |
+
+## Dữ Liệu Mẫu Đang Có
 
 | Nhóm dữ liệu | Nội dung |
 |---|---|
-| Bảng giá in | 14 rule cho A5/A4/A3/A0, trắng đen/màu, một mặt/hai mặt, ảnh màu A4 |
-| Sản phẩm | 8 sản phẩm văn phòng phẩm, giấy, bìa, kẹp, sổ tay, mực dấu |
-| Dịch vụ hỗ trợ | 7 dịch vụ: đóng gáy, ép plastic, scan, đánh máy, bấm kim, cán màng, chỉnh file |
-| Ví/nạp tiền | Đủ trạng thái: đã duyệt, chờ duyệt, từ chối, chờ admin duyệt bước 2 |
-| Đơn in | Đủ trạng thái test chính: Submitted, ConfirmedByShop, Processing, Completed |
-| Đơn sản phẩm | Có đơn đang xử lý và hoàn tất, kèm stock movements |
-| Đơn dịch vụ | Có đơn đã hoàn tất và đơn mới gửi |
-| File upload | PDF mẫu trong `App_Data/uploads/seed` |
+| Chi nhánh | 3 shop: `TOAN`, `DBP141`, `CENTER` |
+| User | 1 admin, 1 shop operator, 4 customer |
+| Role shop | 5 role cho mỗi shop: Quản lý cơ sở, Nhân viên in ấn, Nhân viên kho, Thu ngân, Chỉ xem báo cáo |
+| Bảng giá in | Có rule theo khổ giấy, kiểu in, màu in, ảnh/tài liệu |
+| Sản phẩm | Có sản phẩm văn phòng phẩm/giấy/bìa/kẹp... theo chi nhánh |
+| Dịch vụ hỗ trợ | Có dịch vụ scan, đóng gáy, ép plastic, chỉnh file... |
+| Ví/nạp tiền | Có ví theo chi nhánh, giao dịch ví và yêu cầu nạp tiền |
+| Đơn in | Có đơn in ở nhiều trạng thái để test xử lý |
+| Đơn sản phẩm | Có đơn sản phẩm và lịch sử nhập/xuất/tồn kho |
+| Đơn dịch vụ | Có đơn dịch vụ hỗ trợ |
 
-## Flow test nhanh
-
-### Khách hàng
-
-1. Mở `https://localhost:7250/ToanPhotocopy/Login`.
-2. Đăng nhập bằng một trong các tài khoản khách hàng ở trên.
-3. Vào `https://localhost:7250/ToanPhotocopy/Dashboard`.
-4. Test các chức năng: tạo đơn in, xem đơn của tôi, nạp ví, mua sản phẩm, đặt dịch vụ hỗ trợ, cập nhật hồ sơ.
-
-### Tiệm photocopy
-
-1. Mở `https://localhost:7250/ToanPhotocopy/Admin/Login`.
-2. Đăng nhập bằng `operator@photocopyhub.local` / `Operator@123456`.
-3. Test các chức năng: nhận đơn, kiểm tra file, xác nhận thanh toán, cập nhật trạng thái đơn, xử lý nạp ví, tồn kho.
+## Flow Test Nhanh
 
 ### Admin hệ thống
 
 1. Mở `https://localhost:7250/Admin/Login`.
-2. Đăng nhập bằng `admin@photocopyhub.local` / `Admin@123456`.
-3. Test quản trị người dùng, ví, nạp tiền lớn cần duyệt bước 2, báo cáo và đối soát.
+2. Đăng nhập `admin@photocopyhub.local` / `Admin@123456`.
+3. Test quản trị người dùng, role, phân quyền, danh mục, báo cáo và đối soát.
 
-## Ghi chú xử lý lỗi
+### Nhân viên shop
 
-- Nếu đăng nhập báo sai mật khẩu, chạy lại seed-only để DbInitializer reset password test.
-- Nếu app không khởi động được do database, kiểm tra user-secrets đang dùng Session Pooler, không dùng Direct host `db.<project-ref>.supabase.co`.
-- Nếu ví lệch, chạy lại seed-only; các record `seed-*` sẽ được tái tạo và `CurrentBalance` của tài khoản test sẽ được tính lại theo ledger.
+1. Mở trang login theo shop, ví dụ `https://localhost:7250/toanphotocopy/Admin/Login`.
+2. Đăng nhập `operator@photocopyhub.local` / `Operator@123456`.
+3. Có thể dùng cùng tài khoản này cho `TOAN`, `DBP141`, hoặc `CENTER`.
+4. Test nhận đơn, kiểm tra file, cập nhật trạng thái đơn, duyệt nạp ví, quản lý tồn kho.
+
+### Khách hàng
+
+1. Mở trang đăng nhập theo slug shop, ví dụ `https://localhost:7250/toanphotocopy/Login`.
+2. Đăng nhập bằng một tài khoản customer trong bảng tóm tắt.
+3. Test tạo đơn in, nạp ví, mua sản phẩm, đặt dịch vụ hỗ trợ, xem lịch sử đơn.
+
+## Kiểm Tra Trong pgAdmin
+
+| Cần xem | Vị trí |
+|---|---|
+| Bảng TKS canonical | `WebPhotocopyHub` -> `Schemas` -> `public` -> `Tables` |
+| View TKS canonical | `WebPhotocopyHub` -> `Schemas` -> `public` -> `Views` |
+| Store/routine TKS | `WebPhotocopyHub` -> `Schemas` -> `public` -> `Functions` |
+| Bảng app cũ được clone | `WebPhotocopyHub` -> `Schemas` -> `app` -> `Tables` |
+| Bảng quyền hệ thống cũ | `WebPhotocopyHub` -> `Schemas` -> `system` -> `Tables` |
+| Audit cũ | `WebPhotocopyHub` -> `Schemas` -> `audit` -> `Tables` |
+
+## Lưu Ý
+
+- Email admin/operator đúng theo database hiện tại là `@photocopyhub.local`, không phải `@webphotocopyhub.local`.
+- Các mật khẩu trên là mật khẩu seed/test local, không dùng cho môi trường thật.
+- Nếu app được seed lại bằng cấu hình khác trong `appsettings` hoặc user-secrets, cần cập nhật lại file này theo database mới.
+- Nếu đăng nhập báo sai mật khẩu, kiểm tra app đang trỏ đúng database `WebPhotocopyHub` và không dùng cache/password cũ.
