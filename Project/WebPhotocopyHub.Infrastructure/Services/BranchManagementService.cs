@@ -348,6 +348,17 @@ public sealed class BranchManagementService : IBranchManagementService
 
                 _dbContext.BranchRoles.Add(role);
             }
+            else if (role.IsSystemRole)
+            {
+                var existingPermissions = role.Permissions
+                    .Select(x => x.PermissionCode)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var permission in template.Permissions.Where(x => !existingPermissions.Contains(x)))
+                {
+                    role.Permissions.Add(new BranchRolePermission { PermissionCode = permission });
+                }
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

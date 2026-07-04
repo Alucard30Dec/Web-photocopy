@@ -1,6 +1,7 @@
 @model List<SupportServiceOrder>
 @{
     ViewData["Title"] = "Đơn dịch vụ hỗ trợ";
+    var allowedStatuses = new[] { OrderStatus.Submitted, OrderStatus.Processing, OrderStatus.Completed, OrderStatus.Cancelled };
 }
 
 <section class="page-hero mb-3">
@@ -41,7 +42,7 @@
                         <form asp-action="UpdateStatus" method="post" class="d-flex flex-wrap gap-1">
                             <input type="hidden" name="OrderId" value="@item.Id" />
                             <select name="Status" class="form-select form-select-sm">
-                                @foreach (var status in Enum.GetValues<OrderStatus>())
+                                @foreach (var status in allowedStatuses)
                                 {
                                     if (status == item.Status)
                                     {
@@ -56,6 +57,14 @@
                             <input type="text" name="Note" class="form-control form-control-sm" placeholder="Ghi chú" />
                             <button type="submit" class="btn btn-sm btn-primary">Lưu</button>
                         </form>
+                        @if (item.Status is not OrderStatus.Cancelled and not OrderStatus.Refunded)
+                        {
+                            <form asp-action="Refund" method="post" class="d-flex flex-wrap gap-1 mt-2">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <input type="text" name="reason" class="form-control form-control-sm" maxlength="500" required placeholder="Lý do hoàn tiền" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Hoàn tiền</button>
+                            </form>
+                        }
                     </td>
                 </tr>
             }

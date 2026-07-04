@@ -9,7 +9,7 @@
         <h4>Điều chỉnh số dư ví</h4>
         @if (target is not null)
         {
-            <p>User: <strong>@target.Email</strong> | Số dư hiện tại: <strong>@target.BranchWalletBalance.ToString("N0") đ</strong></p>
+            <p>Khách hàng: <strong>@target.Email</strong> | Số dư hiện tại: <strong>@target.BranchWalletBalance.ToString("N0") đ</strong></p>
         }
 
         <form asp-action="AdjustBalance" method="post">

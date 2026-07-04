@@ -26,7 +26,6 @@
     var dashboardUrl = CustomerBranchContext.ToPath(ViewContext, "Dashboard");
     var printCreateUrl = CustomerBranchContext.ToPath(ViewContext, "PrintJobs/Create");
     var printJobsUrl = CustomerBranchContext.ToPath(ViewContext, "PrintJobs");
-    var printFilesUrl = CustomerBranchContext.ToPath(ViewContext, "PrintJobs/Files");
     var productsUrl = CustomerBranchContext.ToPath(ViewContext, "Products");
     var productOrdersUrl = CustomerBranchContext.ToPath(ViewContext, "Products/Orders");
     var supportCreateUrl = CustomerBranchContext.ToPath(ViewContext, "SupportOrders/Create");
@@ -157,10 +156,6 @@
                         <small>Theo dõi trạng thái xử lý và thanh toán.</small>
                     </a>
 
-                    <a class="customer-nav-item" href="@RequireLogin(printFilesUrl)">
-                        <strong>File đã gửi</strong>
-                        <small>Xem lại file đã upload.</small>
-                    </a>
                 </div>
             </div>
 
@@ -244,7 +239,7 @@
                         </div>
                     </div>
 
-                    <a class="customer-account-link" href="@RequireLogin(dashboardUrl)"><span class="customer-account-link-icon is-blue"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-speedometer2"></use></svg></span><div><strong>Dashboard</strong><small>Tổng quan đơn, ví và hoạt động.</small></div></a>
+                    <a class="customer-account-link" href="@RequireLogin(dashboardUrl)"><span class="customer-account-link-icon is-blue"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-speedometer2"></use></svg></span><div><strong>Tổng quan</strong><small>Tổng quan đơn, ví và hoạt động.</small></div></a>
                     <a class="customer-account-link" href="@RequireLogin(profileUrl)"><span class="customer-account-link-icon is-purple"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-person-gear"></use></svg></span><div><strong>Hồ sơ khách hàng</strong><small>Cập nhật thông tin cá nhân.</small></div></a>
                     <a class="customer-account-link" href="@RequireLogin(walletUrl)" hidden="@(!hasWallet)"><span class="customer-account-link-icon is-green"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg></span><div><strong>Ví & giao dịch</strong><small>Xem số dư và lịch sử thanh toán.</small></div></a>
                     <a class="customer-account-link" href="@RequireLogin(topUpUrl)" hidden="@(!hasTopUps)"><span class="customer-account-link-icon is-amber"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-plus-circle"></use></svg></span><div><strong>Nạp tiền</strong><small>Tạo yêu cầu nạp ví.</small></div></a>

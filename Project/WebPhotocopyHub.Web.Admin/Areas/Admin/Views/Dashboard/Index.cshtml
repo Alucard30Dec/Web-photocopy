@@ -100,10 +100,10 @@
     <aside class="adminops-panel adminops-control-panel">
         <header class="adminops-panel-header"><div><span class="adminops-eyebrow">Security &amp; observability</span><h2>Trạng thái kiểm soát</h2><p>Các chỉ báo kỹ thuật và truy vết quan trọng.</p></div></header>
         <div class="adminops-control-list">
-            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index"><span><i class="@healthClass" aria-hidden="true"></i>Health checks</span><strong class="@healthClass">@Model.HealthStatus</strong></a>
-            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index"><span><i class="is-info" aria-hidden="true"></i>API inventory</span><strong>@Model.ApiEndpointCount endpoints</strong></a>
-            <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index"><span><i class="@auditClass" aria-hidden="true"></i>Audit chain</span><strong class="@auditClass">@(Model.IsAuditChainValid ? "Hợp lệ" : "Cần kiểm tra")</strong></a>
-            <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index"><span><i class="is-neutral" aria-hidden="true"></i>Activity 24 giờ</span><strong>@Model.ActivityLast24Hours bản ghi</strong></a>
+            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index"><span><i class="@healthClass" aria-hidden="true"></i>Kiểm tra sức khỏe</span><strong class="@healthClass">@Model.HealthStatus</strong></a>
+            <a asp-area="Admin" asp-controller="SystemMonitoring" asp-action="Index"><span><i class="is-info" aria-hidden="true"></i>Danh mục API</span><strong>@Model.ApiEndpointCount endpoint</strong></a>
+            <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index"><span><i class="@auditClass" aria-hidden="true"></i>Chuỗi audit</span><strong class="@auditClass">@(Model.IsAuditChainValid ? "Hợp lệ" : "Cần kiểm tra")</strong></a>
+            <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index"><span><i class="is-neutral" aria-hidden="true"></i>Hoạt động 24 giờ</span><strong>@Model.ActivityLast24Hours bản ghi</strong></a>
         </div>
     </aside>
 </div>

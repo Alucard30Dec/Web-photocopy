@@ -8,7 +8,7 @@
     var adminAction = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
     var isAdminLoginPage = string.Equals(adminController, "Account", StringComparison.OrdinalIgnoreCase)
         && string.Equals(adminAction, "Login", StringComparison.OrdinalIgnoreCase);
-    var accountName = User.Identity?.Name ?? "System Admin";
+    var accountName = User.Identity?.Name ?? "Quản trị hệ thống";
     var adminNavigation = isAdminLoginPage
         ? Array.Empty<SystemNavigationItemDto>()
         : await SystemAdministrationService.GetNavigationAsync(User, Context.RequestAborted);
@@ -87,7 +87,7 @@
                         </span>
                         <span>
                             <strong>WebPhotocopyHub</strong>
-                            <small>System Administration</small>
+                            <small>Quản trị hệ thống</small>
                         </span>
                     </a>
 
@@ -156,7 +156,7 @@
                                 </span>
                                 <span class="adminmega-brand-copy">
                                     <strong>WebPhotocopyHub</strong>
-                                    <small>System Administration</small>
+                                    <small>Quản trị hệ thống</small>
                                 </span>
                             </a>
 
@@ -336,7 +336,7 @@
 
             <footer class="adminmega-footer">
                 <div class="container-fluid adminmega-container adminmega-footer-inner">
-                    <span>WebPhotocopyHub System Administration</span>
+                    <span>WebPhotocopyHub Quản trị hệ thống</span>
                     <span>Quản trị an toàn, có kiểm soát và truy vết.</span>
                 </div>
             </footer>

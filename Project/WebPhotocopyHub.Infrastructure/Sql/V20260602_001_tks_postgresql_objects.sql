@@ -1,6 +1,7 @@
 -- WebPhotocopyHub PostgreSQL reporting and operations objects.
--- Version: 20260602_001 refreshed for the 20260630 bilingual database naming standard.
--- Apply the database/patches/V20260630_001_database_bilingual_refactor.sql patch first.
+-- Version: 20260602_001 refreshed after the 20260704 canonical database scripts.
+-- Runtime currently uses the EF/PostgreSQL app/system/audit schemas; do not treat the canonical SQL as an EF migration.
+-- If you need the optional canonical objects, apply database/patches/V20260704_001_tks_canonical_webphotocopyhub.sql first.
 
 CREATE SCHEMA IF NOT EXISTS reporting;
 CREATE SCHEMA IF NOT EXISTS operations;

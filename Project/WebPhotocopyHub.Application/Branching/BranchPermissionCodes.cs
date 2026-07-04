@@ -9,8 +9,10 @@ public static class BranchPermissionCodes
     public const string PrintJobsFiles = "PrintJobs.Files";
     public const string ProductOrdersView = "ProductOrders.View";
     public const string ProductOrdersManage = "ProductOrders.Manage";
+    public const string ProductOrdersRefund = "ProductOrders.Refund";
     public const string SupportOrdersView = "SupportOrders.View";
     public const string SupportOrdersManage = "SupportOrders.Manage";
+    public const string SupportOrdersRefund = "SupportOrders.Refund";
     public const string InventoryView = "Inventory.View";
     public const string InventoryAdjust = "Inventory.Adjust";
     public const string TopUpsView = "TopUps.View";
@@ -27,8 +29,10 @@ public static class BranchPermissionCodes
         new BranchPermissionDefinition(PrintJobsFiles, "Xem/tải file in", "Xem trước và tải file khách hàng đã gửi."),
         new BranchPermissionDefinition(ProductOrdersView, "Xem đơn sản phẩm", "Xem đơn mua sản phẩm tại cơ sở."),
         new BranchPermissionDefinition(ProductOrdersManage, "Xử lý đơn sản phẩm", "Xác nhận, chuẩn bị và cập nhật đơn sản phẩm."),
+        new BranchPermissionDefinition(ProductOrdersRefund, "Hoàn tiền đơn sản phẩm", "Thực hiện hoàn tiền đơn mua sản phẩm."),
         new BranchPermissionDefinition(SupportOrdersView, "Xem đơn hỗ trợ", "Xem đơn dịch vụ hỗ trợ tại cơ sở."),
         new BranchPermissionDefinition(SupportOrdersManage, "Xử lý đơn hỗ trợ", "Xử lý và cập nhật đơn dịch vụ hỗ trợ."),
+        new BranchPermissionDefinition(SupportOrdersRefund, "Hoàn tiền đơn hỗ trợ", "Thực hiện hoàn tiền đơn dịch vụ hỗ trợ."),
         new BranchPermissionDefinition(InventoryView, "Xem tồn kho", "Xem sản phẩm và lịch sử tồn kho."),
         new BranchPermissionDefinition(InventoryAdjust, "Điều chỉnh tồn kho", "Nhập, xuất và điều chỉnh số lượng tồn kho."),
         new BranchPermissionDefinition(TopUpsView, "Xem giao dịch nạp tiền", "Xem yêu cầu nạp tiền và giao dịch liên quan."),

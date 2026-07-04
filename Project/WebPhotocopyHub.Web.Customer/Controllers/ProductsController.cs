@@ -5,6 +5,7 @@ using WebPhotocopyHub.Application.Common;
 using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Application.DTOs;
 using WebPhotocopyHub.Domain.Constants;
+using WebPhotocopyHub.Domain.Enums;
 using WebPhotocopyHub.Web;
 using WebPhotocopyHub.Web.Extensions;
 using WebPhotocopyHub.Web.Customer.Models;
@@ -46,6 +47,15 @@ public class ProductsController : Controller
     {
         var products = await _productOrderService.GetActiveProductsAsync(cancellationToken);
         var selectedItems = model.Items ?? new List<ProductOrderItemInputViewModel>();
+        var validSelectedItems = selectedItems
+            .Where(x => x.ProductId != Guid.Empty && x.Quantity > 0)
+            .ToList();
+
+        // Codex 2026-07-04: Shipping UI is locked until delivery workflow is developed; scope limited to customer product orders.
+        if (model.DeliveryMethod == DeliveryMethod.Shipping)
+        {
+            ModelState.AddModelError(nameof(model.DeliveryMethod), "Giao tận nơi chưa được phát triển. Vui lòng nhận đơn tại tiệm.");
+        }
 
         if (!ModelState.IsValid)
         {
@@ -70,7 +80,7 @@ public class ProductsController : Controller
                 DeliveryMethod = model.DeliveryMethod,
                 DeliveryAddress = model.DeliveryAddress,
                 Notes = model.Notes,
-                Items = selectedItems.Where(x => x.Quantity > 0)
+                Items = validSelectedItems
                     .Select(x => new CreateProductOrderItemDto
                     {
                         ProductId = x.ProductId,

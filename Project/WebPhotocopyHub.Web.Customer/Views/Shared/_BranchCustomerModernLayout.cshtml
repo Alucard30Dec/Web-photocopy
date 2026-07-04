@@ -1,0 +1,260 @@
+@using Microsoft.AspNetCore.Identity
+@using WebPhotocopyHub.Domain.Entities
+@using WebPhotocopyHub.Application.Branching
+@using WebPhotocopyHub.Application.Contracts
+@inject UserManager<ApplicationUser> UserManager
+@inject IBranchContext BranchContext
+@inject IBranchManagementService BranchManagementService
+@{
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var currentUser = isSignedIn ? await UserManager.GetUserAsync(User) : null;
+    var branch = CustomerBranchContext.GetBranch(ViewContext);
+    var branchSlug = CustomerBranchContext.GetSlug(ViewContext);
+    var branchHomeUrl = CustomerBranchContext.Home(ViewContext);
+    var loginUrl = CustomerBranchContext.ToPath(ViewContext, "Login");
+    var dashboardUrl = CustomerBranchContext.ToPath(ViewContext, "Dashboard");
+    var printCreateUrl = CustomerBranchContext.ToPath(ViewContext, "PrintJobs/Create");
+    var printJobsUrl = CustomerBranchContext.ToPath(ViewContext, "PrintJobs");
+    var filesUrl = CustomerBranchContext.ToPath(ViewContext, "PrintJobs/Files");
+    var productsUrl = CustomerBranchContext.ToPath(ViewContext, "Products");
+    var productOrdersUrl = CustomerBranchContext.ToPath(ViewContext, "Products/Orders");
+    var supportCreateUrl = CustomerBranchContext.ToPath(ViewContext, "SupportOrders/Create");
+    var supportHistoryUrl = CustomerBranchContext.ToPath(ViewContext, "SupportOrders/History");
+    var walletUrl = CustomerBranchContext.ToPath(ViewContext, "Wallet");
+    var topUpUrl = CustomerBranchContext.ToPath(ViewContext, "Wallet/TopUp");
+    var topUpHistoryUrl = CustomerBranchContext.ToPath(ViewContext, "Wallet/TopUpHistory");
+    var priceUrl = branchHomeUrl.TrimEnd('/') + "#customerPriceQuick";
+    var profileUrl = CustomerBranchContext.ToPath(ViewContext, "Profile");
+
+    var displayName = currentUser?.FullName;
+    if (string.IsNullOrWhiteSpace(displayName)) { displayName = User.Identity?.Name ?? "Khách hàng"; }
+
+    // Codex 2026-07-04: Match customer dashboard reference header; scope limited to customer modern layout display values.
+    var profileDisplayName = displayName;
+    var displayNameParts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    if (displayNameParts.Length >= 2)
+    {
+        profileDisplayName = displayNameParts[displayNameParts.Length - 2] + " " + displayNameParts[displayNameParts.Length - 1];
+    }
+
+    var headerOpenHours = string.IsNullOrWhiteSpace(branch.OpenHours) ? "08:00 - 21:00" : branch.OpenHours;
+    headerOpenHours = headerOpenHours
+        .Replace(" hằng ngày", "", StringComparison.OrdinalIgnoreCase)
+        .Replace(" hàng ngày", "", StringComparison.OrdinalIgnoreCase);
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - @branch.Name</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/_content/WebPhotocopyHub.Web.Customer/css/customer-dashboard-modern.css" asp-append-version="true" />
+    <style>
+        /* Codex 2026-07-04: Keep header links visually identical to the supplied dashboard mockup. */
+        a { text-decoration: none; }
+        .group:hover .dropdown-menu { display: block; }
+    </style>
+</head>
+<body class="bg-background font-body-md text-on-background flex antialiased">
+    <div class="flex-1 flex flex-col min-h-screen w-full">
+        <!-- TopNavBar with Toolbar -->
+        <div class="sticky top-0 z-40 w-full flex flex-col shadow-sm">
+            <header class="flex justify-between items-center w-full px-lg py-3 bg-surface-container-lowest/80 dark:bg-inverse-surface/80 backdrop-blur-md border-b border-outline-variant/30 h-20 transition-all duration-300">
+                <div class="flex items-center gap-lg">
+                    <button class="md:hidden text-on-surface p-2 -ml-2 rounded-full hover:bg-surface-container transition-colors" type="button" data-customer-mobile-toggle aria-controls="customer-mobile-menu" aria-expanded="false">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
+                    <a href="@branchHomeUrl" class="flex items-center gap-3 group cursor-pointer text-decoration-none">
+                        <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
+                            <span class="material-symbols-outlined text-white text-[24px]" style="font-variation-settings: 'FILL' 1;">print</span>
+                        </div>
+                        <div class="hidden sm:block">
+                            <h1 class="font-headline-md text-lg font-bold text-on-surface tracking-tight leading-none mb-0" style="margin-bottom:0">@branch.Name</h1>
+                            <p class="text-[10px] text-primary font-bold uppercase tracking-widest mt-0.5 mb-0" style="margin-bottom:0">Dịch vụ cao cấp</p>
+                        </div>
+                    </a>
+                </div>
+                
+                <nav class="hidden lg:flex items-center gap-8 flex-1 justify-center">
+                    <a class="customer-header-menu__button customer-header-menu__link" href="@branchHomeUrl">
+                        <span class="material-symbols-outlined customer-header-menu__icon" aria-hidden="true">home</span>
+                        <span>Trang chủ</span>
+                    </a>
+
+                    <!-- Codex 2026-07-04: Header comboboxes are real accessible menus with complete customer routes. -->
+                    <div class="customer-header-menu customer-menu" data-customer-menu>
+                        <button class="customer-menu__trigger customer-header-menu__button" type="button" aria-haspopup="true" aria-expanded="false">
+                            <span class="material-symbols-outlined customer-header-menu__icon" aria-hidden="true">print</span>
+                            <span>Đơn in</span>
+                            <span class="material-symbols-outlined text-[18px] customer-header-menu__chevron" aria-hidden="true">expand_more</span>
+                        </button>
+                        <div class="customer-menu__panel customer-header-menu__panel" role="menu" aria-label="Đơn in">
+                            <a class="customer-menu-row" href="@printCreateUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-blue"><span class="material-symbols-outlined">print</span></span>
+                                <span><strong>Tạo đơn in</strong><small>Gửi file và cấu hình đơn in mới.</small></span>
+                            </a>
+                            <a class="customer-menu-row" href="@printJobsUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-teal"><span class="material-symbols-outlined">fact_check</span></span>
+                                <span><strong>Đơn của tôi</strong><small>Theo dõi xử lý, thanh toán và nhận hàng.</small></span>
+                            </a>
+                            <a class="customer-menu-row" href="@filesUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-purple"><span class="material-symbols-outlined">folder_open</span></span>
+                                <span><strong>File đã tải lên</strong><small>Xem lại file in đã gửi vào hệ thống.</small></span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="customer-header-menu customer-menu" data-customer-menu>
+                        <button class="customer-menu__trigger customer-header-menu__button" type="button" aria-haspopup="true" aria-expanded="false">
+                            <span class="material-symbols-outlined customer-header-menu__icon" aria-hidden="true">inventory_2</span>
+                            <span>Sản phẩm</span>
+                            <span class="material-symbols-outlined text-[18px] customer-header-menu__chevron" aria-hidden="true">expand_more</span>
+                        </button>
+                        <div class="customer-menu__panel customer-header-menu__panel" role="menu" aria-label="Sản phẩm">
+                            <a class="customer-menu-row" href="@productsUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-purple"><span class="material-symbols-outlined">inventory_2</span></span>
+                                <span><strong>Mua sản phẩm</strong><small>Giấy, bìa, văn phòng phẩm tại cơ sở.</small></span>
+                            </a>
+                            <a class="customer-menu-row" href="@productOrdersUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-blue"><span class="material-symbols-outlined">shopping_bag</span></span>
+                                <span><strong>Đơn sản phẩm</strong><small>Kiểm tra đơn và trạng thái giao nhận.</small></span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="customer-header-menu customer-menu" data-customer-menu>
+                        <button class="customer-menu__trigger customer-header-menu__button" type="button" aria-haspopup="true" aria-expanded="false">
+                            <span class="material-symbols-outlined customer-header-menu__icon" aria-hidden="true">support_agent</span>
+                            <span>Bảng giá &amp; hỗ trợ</span>
+                            <span class="material-symbols-outlined text-[18px] customer-header-menu__chevron" aria-hidden="true">expand_more</span>
+                        </button>
+                        <div class="customer-menu__panel customer-header-menu__panel customer-header-menu__panel--wide" role="menu" aria-label="Bảng giá và hỗ trợ">
+                            <a class="customer-menu-row" href="@priceUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-amber"><span class="material-symbols-outlined">sell</span></span>
+                                <span><strong>Bảng giá in</strong><small>Xem giá giấy, màu, khổ in và dịch vụ.</small></span>
+                            </a>
+                            <a class="customer-menu-row" href="@supportCreateUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-teal"><span class="material-symbols-outlined">support_agent</span></span>
+                                <span><strong>Tạo yêu cầu hỗ trợ</strong><small>Scan, đóng gáy, ép plastic, xử lý file.</small></span>
+                            </a>
+                            <a class="customer-menu-row" href="@supportHistoryUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-blue"><span class="material-symbols-outlined">history</span></span>
+                                <span><strong>Lịch sử hỗ trợ</strong><small>Xem các yêu cầu dịch vụ đã gửi.</small></span>
+                            </a>
+                            <a class="customer-menu-row" href="@topUpUrl" role="menuitem">
+                                <span class="customer-menu-row__icon is-green"><span class="material-symbols-outlined">add_card</span></span>
+                                <span><strong>Nạp tiền vào ví</strong><small>Tạo yêu cầu nạp tiền để thanh toán nhanh.</small></span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+                
+                <div class="flex items-center gap-md">
+                    <div class="hidden xl:flex flex-col items-end mr-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span class="text-xs font-bold text-green-600 uppercase tracking-tighter">Đang mở cửa</span>
+                        </div>
+                            <span class="text-[10px] text-on-surface-variant font-medium">@headerOpenHours</span>
+                    </div>
+                    
+                    <div class="h-8 w-[1px] bg-outline-variant/30 hidden xl:block mx-2"></div>
+                    
+                    <div class="flex items-center gap-2">
+                        @if (isSignedIn)
+                        {
+                            @await Component.InvokeAsync("CustomerHeaderNotifications", new { branchSlug })
+
+                            <div class="customer-account-menu customer-menu" data-customer-menu>
+                                <button class="customer-menu__trigger customer-user-button flex items-center gap-3 p-1.5 pr-3 rounded-full bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/20 transition-all group" type="button" aria-haspopup="true" aria-expanded="false">
+                                    <span class="relative">
+                                        <img alt="User Profile Avatar" class="w-8 h-8 rounded-full object-cover border border-white shadow-sm" src="~/_content/WebPhotocopyHub.Web.Customer/images/customer-dashboard-avatar.jpg" asp-append-version="true" />
+                                        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                                    </span>
+                                    <span class="text-left hidden sm:block">
+                                        <span class="font-bold text-xs text-on-surface leading-none mb-0 customer-user-button__name">@profileDisplayName</span>
+                                        <span class="text-[10px] text-on-surface-variant mt-0.5 mb-0 customer-user-button__tier">Khách hàng VIP</span>
+                                    </span>
+                                    <span class="material-symbols-outlined text-on-surface-variant text-[18px] customer-menu__chevron">keyboard_arrow_down</span>
+                                </button>
+
+                                <div class="customer-menu__panel customer-account-panel" role="menu" aria-label="Tài khoản khách hàng">
+                                    <div class="customer-account-panel__head">
+                                        <img alt="User Profile Avatar" src="~/_content/WebPhotocopyHub.Web.Customer/images/customer-dashboard-avatar.jpg" asp-append-version="true" />
+                                        <div>
+                                            <strong>@displayName</strong>
+                                            <small>@(currentUser?.Email ?? User.Identity?.Name)</small>
+                                        </div>
+                                    </div>
+                                    <a class="customer-menu-row" href="@dashboardUrl" role="menuitem">
+                                        <span class="customer-menu-row__icon is-blue"><span class="material-symbols-outlined">dashboard</span></span>
+                                        <span><strong>Tổng quan</strong><small>Tổng quan đơn, ví và hỗ trợ.</small></span>
+                                    </a>
+                                    <a class="customer-menu-row" href="@profileUrl" role="menuitem">
+                                        <span class="customer-menu-row__icon is-purple"><span class="material-symbols-outlined">person</span></span>
+                                        <span><strong>Hồ sơ cá nhân</strong><small>Cập nhật thông tin tài khoản.</small></span>
+                                    </a>
+                                    <a class="customer-menu-row" href="@walletUrl" role="menuitem">
+                                        <span class="customer-menu-row__icon is-green"><span class="material-symbols-outlined">account_balance_wallet</span></span>
+                                        <span><strong>Ví &amp; giao dịch</strong><small>Xem số dư và lịch sử thanh toán.</small></span>
+                                    </a>
+                                    <a class="customer-menu-row" href="@topUpHistoryUrl" role="menuitem">
+                                        <span class="customer-menu-row__icon is-amber"><span class="material-symbols-outlined">payments</span></span>
+                                        <span><strong>Lịch sử nạp tiền</strong><small>Theo dõi yêu cầu nạp ví.</small></span>
+                                    </a>
+                                    <form asp-controller="Account" asp-action="Logout" asp-area="" method="post" class="customer-account-logout">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="returnUrl" value="@branchHomeUrl" />
+                                        <button type="submit" role="menuitem">
+                                            <span class="customer-menu-row__icon is-rose"><span class="material-symbols-outlined">logout</span></span>
+                                            <span><strong>Đăng xuất</strong><small>Thoát khỏi tài khoản khách hàng.</small></span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <a class="customer-login-button-modern" href="@(loginUrl + "?returnUrl=" + System.Uri.EscapeDataString(dashboardUrl))">
+                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">login</span>
+                                <span>Đăng nhập</span>
+                            </a>
+                        }
+                    </div>
+                </div>
+            </header>
+            <div id="customer-mobile-menu" class="customer-mobile-nav" data-customer-mobile-panel hidden>
+                <div class="customer-mobile-nav__section">
+                    <a href="@branchHomeUrl"><span class="material-symbols-outlined" aria-hidden="true">home</span>Trang chủ</a>
+                    <a href="@dashboardUrl"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span>Tổng quan</a>
+                    <a href="@printCreateUrl"><span class="material-symbols-outlined" aria-hidden="true">print</span>Tạo đơn in</a>
+                    <a href="@printJobsUrl"><span class="material-symbols-outlined" aria-hidden="true">fact_check</span>Đơn in của tôi</a>
+                    <a href="@filesUrl"><span class="material-symbols-outlined" aria-hidden="true">folder_open</span>File đã tải lên</a>
+                </div>
+                <div class="customer-mobile-nav__section">
+                    <a href="@productsUrl"><span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>Mua sản phẩm</a>
+                    <a href="@productOrdersUrl"><span class="material-symbols-outlined" aria-hidden="true">shopping_bag</span>Đơn sản phẩm</a>
+                    <a href="@supportCreateUrl"><span class="material-symbols-outlined" aria-hidden="true">support_agent</span>Tạo yêu cầu hỗ trợ</a>
+                    <a href="@supportHistoryUrl"><span class="material-symbols-outlined" aria-hidden="true">history</span>Lịch sử hỗ trợ</a>
+                </div>
+                <div class="customer-mobile-nav__section">
+                    <a href="@walletUrl"><span class="material-symbols-outlined" aria-hidden="true">account_balance_wallet</span>Ví &amp; giao dịch</a>
+                    <a href="@topUpUrl"><span class="material-symbols-outlined" aria-hidden="true">add_card</span>Nạp tiền</a>
+                    <a href="@profileUrl"><span class="material-symbols-outlined" aria-hidden="true">person</span>Hồ sơ cá nhân</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="customer-alert-region">
+            <partial name="_Alert" />
+        </div>
+
+        @RenderBody()
+
+    </div>
+    <script src="~/_content/WebPhotocopyHub.Web.Customer/js/customer-header-modern.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

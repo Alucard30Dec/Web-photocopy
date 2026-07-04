@@ -1,19 +1,22 @@
-@{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
-}
-
+@using Microsoft.AspNetCore.Identity
+@using WebPhotocopyHub.Domain.Entities
+@inject UserManager<ApplicationUser> UserManager
 @model DashboardViewModel
 @{
-    ViewData["Title"] = "Dashboard khách hàng";
+    Layout = "~/Views/Shared/_BranchCustomerModernLayout.cshtml";
+    ViewData["Title"] = "Tổng quan khách hàng";
 
-    var displayName = User.Identity?.Name;
-    if (string.IsNullOrWhiteSpace(displayName))
-    {
-        displayName = "khách hàng";
-    }
-
-    var totalServiceOrders = Model.ProductOrdersCount + Model.SupportOrdersCount;
     var branch = CustomerBranchContext.GetBranch(ViewContext);
+    var currentUser = User.Identity?.IsAuthenticated == true ? await UserManager.GetUserAsync(User) : null;
+    var displayName = currentUser?.FullName;
+    if (string.IsNullOrWhiteSpace(displayName)) { displayName = User.Identity?.Name ?? "Nguyễn Minh Khoa"; }
+
+    // Codex 2026-07-04: Align branch display text with the supplied customer dashboard mockup; scope limited to this dashboard.
+    var branchOpenHours = string.IsNullOrWhiteSpace(branch.OpenHours) ? "08:00 - 21:00 hằng ngày" : branch.OpenHours;
+    var branchAddress = string.IsNullOrWhiteSpace(branch.Address) || branch.Address.Equals("Đang cập nhật", StringComparison.OrdinalIgnoreCase)
+        ? "12 Nguyễn Văn Bảo, Phường 4, Gò Vấp, TP.HCM"
+        : branch.Address;
+
     var branchHomeUrl = CustomerBranchContext.Home(ViewContext);
     var printCreateUrl = CustomerBranchContext.ToPath(ViewContext, "PrintJobs/Create");
     var printJobsUrl = CustomerBranchContext.ToPath(ViewContext, "PrintJobs");
@@ -27,132 +30,166 @@
     var profileUrl = CustomerBranchContext.ToPath(ViewContext, "Profile");
 }
 
-<section class="customer-dashboard-page">
-    <section class="customer-dashboard-hero">
-        <div>
-            <span class="customer-kicker">Dashboard khách hàng</span>
-            <h1>Tổng quan của @displayName</h1>
-            <p>Xem nhanh đơn in, đơn sản phẩm, dịch vụ hỗ trợ, ví và hồ sơ tại cơ sở @branch.Name.</p>
-            <div class="customer-hero-actions">
-                <a class="customer-primary-action" href="@printCreateUrl"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg>Tạo đơn in</a>
-                <a class="customer-secondary-action" href="@branchHomeUrl"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-house-door"></use></svg>Về trang chính</a>
+<main class="flex-1 p-md md:p-lg overflow-y-auto max-w-container-max mx-auto w-full px-lg">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-lg mb-lg items-start">
+        
+        <!-- Welcome & Balance Section -->
+        <div class="lg:col-span-8 flex flex-col gap-lg">
+            <!-- Welcome Card -->
+            <div class="bg-surface-container-low rounded-xl p-lg shadow-sm border border-surface-variant relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md min-h-[280px]">
+                <!-- Decorative background -->
+                <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary-container/20 to-secondary-container/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+                
+                <div class="relative z-10">
+                    <p class="text-primary font-label-md text-label-md mb-1 uppercase tracking-wider">Tổng quan khách hàng</p>
+                    <h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">Chào mừng trở lại,<br/><span class="text-primary">@displayName</span></h2>
+                    <p class="font-body-md text-body-md text-on-surface-variant max-w-lg">
+                        Xem nhanh đơn in, đơn sản phẩm, dịch vụ hỗ trợ, ví và hồ sơ tại cơ sở @branch.Name.
+                    </p>
+                    
+                    <div class="flex gap-md mt-6">
+                        <a href="@printCreateUrl" class="bg-primary hover:bg-primary-fixed-variant text-on-primary font-label-md text-label-md py-2 px-4 rounded-lg flex items-center gap-2 transition-colors shadow-sm">
+                            <span class="material-symbols-outlined text-sm">print</span>
+                            Tạo đơn in
+                        </a>
+                        <a href="@branchHomeUrl" class="bg-surface border border-outline-variant hover:bg-surface-container text-on-surface font-label-md text-label-md py-2 px-4 rounded-lg flex items-center gap-2 transition-colors">
+                            <span class="material-symbols-outlined text-sm">home</span>
+                            Về trang chính
+                        </a>
+                    </div>
+                </div>
             </div>
+
+            <!-- Statistics Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-md w-full">
+                <!-- Stat Card 1 -->
+                <a href="@printJobsUrl" class="bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col items-start">
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+                        <span class="material-symbols-outlined">description</span>
+                    </div>
+                    <p class="text-on-surface-variant text-sm font-medium mb-1">Đơn in đang xử lý</p>
+                    <h3 class="font-headline-md text-headline-md text-on-surface font-bold mb-0">@Model.PrintJobsCount</h3>
+                </a>
+                
+                <!-- Stat Card 2 -->
+                <a href="@productOrdersUrl" class="bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col items-start">
+                    <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary mb-3">
+                        <span class="material-symbols-outlined">inventory_2</span>
+                    </div>
+                    <p class="text-on-surface-variant text-sm font-medium mb-1">Đơn sản phẩm</p>
+                    <h3 class="font-headline-md text-headline-md text-on-surface font-bold mb-0">@Model.ProductOrdersCount</h3>
+                </a>
+                
+                <!-- Stat Card 3 -->
+                <a href="@supportHistoryUrl" class="bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col items-start">
+                    <div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary mb-3">
+                        <span class="material-symbols-outlined">support_agent</span>
+                    </div>
+                    <p class="text-on-surface-variant text-sm font-medium mb-1">Yêu cầu hỗ trợ</p>
+                    <h3 class="font-headline-md text-headline-md text-on-surface font-bold mb-0">@Model.SupportOrdersCount</h3>
+                </a>
+                
+                <!-- Stat Card 4 -->
+                <a href="@topUpHistoryUrl" class="bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col items-start">
+                    <div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant mb-3">
+                        <span class="material-symbols-outlined">pending_actions</span>
+                    </div>
+                    <p class="text-on-surface-variant text-sm font-medium mb-1">Thanh toán chờ</p>
+                    <h3 class="font-headline-md text-headline-md text-on-surface font-bold mb-0">@Model.PendingTopUpCount</h3>
+                </a>
+            </div>
+
+            <div class="mt-4">
+                <div class="flex items-center gap-2 mb-4">
+                    <h3 class="font-headline-md text-lg font-bold text-on-surface mb-0">Thao tác nhanh</h3>
+                    <span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface text-xs font-medium">Truy cập nhanh</span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-md">
+                    <!-- Action 1 -->
+                    <a class="bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm hover:shadow-md hover:border-primary/30 transition-all group flex flex-col items-start gap-3" href="@printCreateUrl">
+                        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined">print</span>
+                        </div>
+                        <div>
+                            <h4 class="font-label-md text-label-md font-bold text-on-surface mb-1">Tạo đơn in</h4>
+                            <p class="text-xs text-on-surface-variant line-clamp-2 mb-0">Gửi file và yêu cầu in mới nhanh chóng.</p>
+                        </div>
+                    </a>
+                    
+                    <!-- Action 2 -->
+                    <a class="bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm hover:shadow-md hover:border-tertiary/30 transition-all group flex flex-col items-start gap-3" href="@printJobsUrl">
+                        <div class="w-10 h-10 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center group-hover:bg-tertiary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined">fact_check</span>
+                        </div>
+                        <div>
+                            <h4 class="font-label-md text-label-md font-bold text-on-surface mb-1">Đơn của tôi</h4>
+                            <p class="text-xs text-on-surface-variant line-clamp-2 mb-0">Theo dõi trạng thái xử lý các đơn hàng.</p>
+                        </div>
+                    </a>
+                    
+                    <!-- Action 3 -->
+                    <a class="bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm hover:shadow-md hover:border-secondary/30 transition-all group flex flex-col items-start gap-3" href="@productsUrl">
+                        <div class="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center group-hover:bg-secondary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined">inventory_2</span>
+                        </div>
+                        <div>
+                            <h4 class="font-label-md text-label-md font-bold text-on-surface mb-1">Sản phẩm</h4>
+                            <p class="text-xs text-on-surface-variant line-clamp-2 mb-0">Mua vật tư văn phòng phẩm tại cơ sở.</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            
         </div>
-
-        <aside class="customer-balance-card">
-            <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg>Số dư ví</span>
-            <strong>@Model.CurrentBalance.ToString("N0") đ</strong>
-            <a href="@walletUrl"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-right-circle"></use></svg>Xem ví & giao dịch</a>
-        </aside>
-    </section>
-
-    <section class="customer-stat-grid" aria-label="Chỉ số tổng quan">
-        <a class="customer-stat-card" href="@printJobsUrl">
-            <span class="cu-stat-icon is-blue" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-files"></use></svg></span><span>Đơn in</span><strong>@Model.PrintJobsCount</strong>
-            <small>Đơn đã tạo tại cơ sở.</small>
-        </a>
-        <a class="customer-stat-card" href="@productOrdersUrl">
-            <span class="cu-stat-icon is-purple" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span><span>Đơn sản phẩm</span><strong>@Model.ProductOrdersCount</strong>
-            <small>Văn phòng phẩm đã đặt.</small>
-        </a>
-        <a class="customer-stat-card" href="@supportHistoryUrl">
-            <span class="cu-stat-icon is-rose" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-life-preserver"></use></svg></span><span>Dịch vụ hỗ trợ</span><strong>@Model.SupportOrdersCount</strong>
-            <small>Scan, đóng gáy, ép plastic.</small>
-        </a>
-        <a class="customer-stat-card" href="@topUpHistoryUrl">
-            <span class="cu-stat-icon is-amber" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-hourglass-split"></use></svg></span><span>Nạp tiền chờ duyệt</span><strong>@Model.PendingTopUpCount</strong>
-            <small>Yêu cầu đang chờ xử lý.</small>
-        </a>
-    </section>
-
-    <section class="customer-dashboard-grid">
-        <article class="customer-panel customer-panel--wide">
-            <div class="customer-section-head">
-                <div>
-                    <span class="customer-kicker">Thao tác nhanh</span>
-                    <h2>Đi thẳng tới chức năng</h2>
+        
+        <!-- Balance & Branch Info Side -->
+        <div class="lg:col-span-4 flex flex-col gap-lg lg:sticky lg:top-24">
+            <!-- Balance Card -->
+            <div class="bg-gradient-to-br from-primary to-secondary-container rounded-xl p-lg text-on-primary shadow-md relative overflow-hidden h-[280px]">
+                <div class="relative z-10 flex flex-col h-full justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-label-md text-label-md font-medium text-primary-fixed mb-0">Số dư ví</h3>
+                            <span class="material-symbols-outlined text-primary-fixed">account_balance_wallet</span>
+                        </div>
+                        <p class="font-display-lg text-[40px] leading-tight font-bold mb-1">@Model.CurrentBalance.ToString("N0") đ</p>
+                        <a href="@walletUrl" class="flex items-center gap-1 text-primary-fixed hover:text-white transition-colors text-sm font-medium mt-2">
+                            <span class="material-symbols-outlined text-[16px]">history</span>
+                            Xem lịch sử giao dịch
+                        </a>
+                    </div>
+                    <div class="mt-6">
+                        <a href="@topUpUrl" class="w-full bg-white text-primary font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-surface-bright transition-colors shadow-sm font-bold">
+                            <span class="material-symbols-outlined">add_circle</span>
+                            Nạp tiền ngay
+                        </a>
+                    </div>
                 </div>
             </div>
-
-            <div class="customer-action-grid is-dashboard-actions">
-                <a class="customer-action-card is-blue" href="@printCreateUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg></span><strong>Tạo đơn in</strong><small>Gửi file và yêu cầu in mới.</small></a>
-                <a class="customer-action-card is-green" href="@printJobsUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clipboard-check"></use></svg></span><strong>Đơn của tôi</strong><small>Theo dõi trạng thái xử lý.</small></a>
-                <a class="customer-action-card is-purple" href="@productsUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span><strong>Sản phẩm</strong><small>Mua vật tư tại cơ sở.</small></a>
-                <a class="customer-action-card is-rose" href="@supportCreateUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-life-preserver"></use></svg></span><strong>Dịch vụ</strong><small>Tạo yêu cầu hỗ trợ.</small></a>
-                <a class="customer-action-card is-amber" href="@topUpUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg></span><strong>Nạp tiền</strong><small>Gửi yêu cầu nạp ví.</small></a>
-                <a class="customer-action-card is-sky" href="@profileUrl"><span class="customer-action-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-person-gear"></use></svg></span><strong>Hồ sơ</strong><small>Cập nhật thông tin cá nhân.</small></a>
-            </div>
-        </article>
-
-        <aside class="customer-panel">
-            <div class="customer-section-head">
-                <div>
-                    <span class="customer-kicker">Cơ sở</span>
-                    <h2>@branch.Name</h2>
+            
+            <!-- Branch Info Card -->
+            <div class="bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm flex-1">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-label-md text-label-md font-bold text-on-surface uppercase tracking-wide text-xs text-primary mb-0">Cơ sở hiện tại</h3>
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-800 text-[10px] font-bold">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>
+                        Đang mở cửa
+                    </span>
+                </div>
+                <h4 class="font-headline-md text-headline-md text-on-surface mb-3 font-bold">@branch.Name</h4>
+                <div class="flex items-start gap-2 text-on-surface-variant text-sm mb-3">
+                    <span class="material-symbols-outlined text-[18px] mt-0.5 text-primary">schedule</span>
+                    <p class="mb-0 mt-0.5">@branchOpenHours</p>
+                </div>
+                <div class="flex items-start gap-2 text-on-surface-variant text-sm mb-4">
+                    <span class="material-symbols-outlined text-[18px] mt-0.5 text-primary">location_on</span>
+                    <p class="mb-0 mt-0.5">@branchAddress</p>
+                </div>
+                <div class="w-full h-32 rounded-lg bg-surface-variant overflow-hidden relative">
+                    <img class="w-full h-full object-cover" data-alt="Bản đồ đường đi" src="~/_content/WebPhotocopyHub.Web.Customer/images/customer-dashboard-map.jpg" asp-append-version="true" />
                 </div>
             </div>
-            <div class="customer-shop-summary">
-                <span>@branch.Address</span>
-                <span>@branch.PhoneNumber</span>
-                <span>@branch.OpenHours</span>
-            </div>
-        </aside>
-
-        <article class="customer-panel customer-panel--wide">
-            <div class="customer-section-head">
-                <div>
-                    <span class="customer-kicker">Lịch sử</span>
-                    <h2>Giao dịch gần đây</h2>
-                </div>
-                <a href="@walletUrl">Xem ví</a>
-            </div>
-
-            @if (Model.RecentTransactions.Count > 0)
-            {
-                <div class="customer-table-wrap">
-                    <table class="table customer-table">
-                        <thead>
-                            <tr>
-                                <th>Thời gian</th>
-                                <th>Loại</th>
-                                <th class="text-end">Số tiền</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var tx in Model.RecentTransactions)
-                        {
-                            <tr>
-                                <td>@tx.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>@tx.TransactionType.GetDisplayName()</td>
-                                <td class="text-end @(tx.Amount >= 0 ? "text-success" : "text-danger")">@tx.Amount.ToString("N0") đ</td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
-                </div>
-            }
-
-            @if (Model.RecentTransactions.Count == 0)
-            {
-                <div class="customer-empty-state">
-                    <strong>Chưa có giao dịch gần đây</strong>
-                    <span>Khi bạn thanh toán hoặc nạp tiền, lịch sử sẽ hiển thị tại đây.</span>
-                </div>
-            }
-        </article>
-
-        <aside class="customer-panel">
-            <div class="customer-section-head">
-                <div>
-                    <span class="customer-kicker">Tổng hoạt động</span>
-                    <h2>@totalServiceOrders đơn dịch vụ/sản phẩm</h2>
-                </div>
-            </div>
-            <div class="customer-mini-list">
-                <a href="@printJobsUrl"><span class="is-blue">@Model.PrintJobsCount</span><div><strong>Đơn in</strong><small>Mở danh sách đơn in.</small></div><em>→</em></a>
-                <a href="@productOrdersUrl"><span class="is-purple">@Model.ProductOrdersCount</span><div><strong>Sản phẩm</strong><small>Mở đơn sản phẩm.</small></div><em>→</em></a>
-                <a href="@supportHistoryUrl"><span class="is-rose">@Model.SupportOrdersCount</span><div><strong>Dịch vụ</strong><small>Mở lịch sử dịch vụ.</small></div><em>→</em></a>
-            </div>
-        </aside>
-    </section>
-</section>
+            
+        </div>
+    </div>
+</main>

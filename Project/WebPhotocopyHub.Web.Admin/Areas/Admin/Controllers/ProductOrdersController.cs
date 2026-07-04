@@ -47,7 +47,7 @@ public sealed class ProductOrdersController : Controller
 
         if (model.Status == OrderStatus.Refunded)
         {
-            TempData["Error"] = "Không thể chỉ đổi trạng thái thành Đã hoàn tiền vì service hiện tại chưa thực hiện hoàn ví cho loại đơn này.";
+            await RefundInternalAsync(model.OrderId, model.Note, cancellationToken);
             return RedirectToAction(nameof(Index));
         }
 
@@ -78,5 +78,41 @@ public sealed class ProductOrdersController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Refund(Guid id, string reason, CancellationToken cancellationToken)
+    {
+        await RefundInternalAsync(id, reason, cancellationToken);
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task RefundInternalAsync(Guid orderId, string? reason, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _productOrderService.RefundAsync(
+                orderId,
+                User.GetUserId(),
+                reason ?? string.Empty,
+                cancellationToken);
+
+            await _auditLogService.WriteAsync(new AuditLogEntryDto
+            {
+                ActorUserId = User.GetUserId(),
+                Action = "AdminRefundProductOrder",
+                EntityName = nameof(ProductOrder),
+                EntityId = orderId.ToString(),
+                Details = reason,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            }, cancellationToken);
+
+            TempData["Success"] = "Đã hoàn tiền đơn văn phòng phẩm.";
+        }
+        catch (BusinessException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
     }
 }

@@ -1,6 +1,28 @@
 @model List<TopUpRequest>
+@using WebPhotocopyHub.Domain.Constants
 @{
     ViewData["Title"] = "Duyệt nạp tiền";
+}
+@functions {
+    private static string ReviewerLabel(string? fullName, string? email, string? userId)
+    {
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            return fullName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            return email;
+        }
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return "Chưa có";
+        }
+
+        return userId.Length <= 8 ? $"Mã: {userId}" : $"Mã: {userId[..8]}...";
+    }
 }
 
 <section class="page-hero mb-3">
@@ -42,15 +64,15 @@
                         <span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span>
                     </td>
                     <td>
-                        <div>@item.ReviewedByAdminId</div>
+                        <div>@ReviewerLabel(item.ReviewedByAdmin?.FullName, item.ReviewedByAdmin?.Email, item.ReviewedByAdminId)</div>
                         <small class="text-muted">@item.ReviewedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
                     </td>
                     <td>
-                        <div>@item.SecondReviewedByAdminId</div>
+                        <div>@ReviewerLabel(item.SecondReviewedByAdmin?.FullName, item.SecondReviewedByAdmin?.Email, item.SecondReviewedByAdminId)</div>
                         <small class="text-muted">@item.SecondReviewedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
                     </td>
                     <td>
-                        @if (item.Status == TopUpStatus.Pending || (item.Status == TopUpStatus.PendingAdminApproval && User.IsInRole("Admin")))
+                        @if (item.Status == TopUpStatus.Pending || (item.Status == TopUpStatus.PendingAdminApproval && User.IsInRole(RoleConstants.Admin)))
                         {
                             <form asp-action="Review" method="post" class="d-flex flex-wrap gap-1">
                                 <input type="hidden" name="TopUpRequestId" value="@item.Id" />

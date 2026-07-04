@@ -62,9 +62,9 @@ public class PrintJobService : IPrintJobService
             throw new BusinessException("File in không tồn tại hoặc không thuộc tài khoản của bạn.");
         }
 
-        if (request.DeliveryMethod == DeliveryMethod.Shipping && string.IsNullOrWhiteSpace(request.DeliveryAddress))
+        if (request.DeliveryMethod == DeliveryMethod.Shipping)
         {
-            throw new BusinessException("Vui lòng nhập địa chỉ giao hàng.");
+            throw new BusinessException("Giao tận nơi đang tạm khóa. Vui lòng chọn nhận tại tiệm.");
         }
 
         var pricing = await _pricingService.CalculatePrintPriceAsync(new PricingCalculationRequestDto
@@ -176,6 +176,16 @@ public class PrintJobService : IPrintJobService
         if (status == PrintJobStatus.Refunded)
         {
             throw new BusinessException("Vui lòng dùng chức năng hoàn tiền để chuyển sang trạng thái Refunded.");
+        }
+
+        if (status == PrintJobStatus.Shipping)
+        {
+            throw new BusinessException("Giao tận nơi đang tạm khóa. Vui lòng chọn nhận tại tiệm.");
+        }
+
+        if (status == PrintJobStatus.Cancelled && job.PaidAt is not null)
+        {
+            throw new BusinessException("Đơn đã thanh toán cần dùng chức năng hoàn tiền.");
         }
 
         if (!IsValidTransition(job.Status, status) && !actorIsAdmin)

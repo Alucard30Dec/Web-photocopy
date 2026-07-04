@@ -1,15 +1,15 @@
 @if (TempData["Success"] is string success && !string.IsNullOrWhiteSpace(success))
 {
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @success
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="customer-alert customer-alert--success alert alert-success" role="alert">
+        <span>@success</span>
+        <button type="button" class="customer-alert__close btn-close" data-customer-alert-close data-bs-dismiss="alert" aria-label="Đóng thông báo"></button>
     </div>
 }
 
 @if (TempData["Error"] is string error && !string.IsNullOrWhiteSpace(error))
 {
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @error
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="customer-alert customer-alert--error alert alert-danger" role="alert">
+        <span>@error</span>
+        <button type="button" class="customer-alert__close btn-close" data-customer-alert-close data-bs-dismiss="alert" aria-label="Đóng thông báo"></button>
     </div>
 }

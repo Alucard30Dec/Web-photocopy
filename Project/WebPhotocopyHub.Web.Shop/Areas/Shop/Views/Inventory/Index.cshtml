@@ -30,8 +30,8 @@
                     <td>
                         <form asp-action="AdjustStock" method="post" class="d-flex flex-wrap gap-1">
                             <input type="hidden" name="ProductId" value="@item.Id" />
-                            <input type="number" name="QuantityDelta" class="form-control form-control-sm" placeholder="+/-" />
-                            <input type="text" name="Note" class="form-control form-control-sm" placeholder="Lý do" />
+                            <input type="number" name="QuantityDelta" min="-1000000" max="1000000" class="form-control form-control-sm" placeholder="+/- số lượng" required />
+                            <input type="text" name="Note" maxlength="500" class="form-control form-control-sm" placeholder="Lý do bắt buộc" required />
                             <button class="btn btn-sm btn-primary" type="submit">Lưu</button>
                         </form>
                     </td>

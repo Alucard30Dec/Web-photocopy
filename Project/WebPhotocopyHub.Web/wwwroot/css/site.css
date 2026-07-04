@@ -1469,6 +1469,14 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2
 .pc-btn--success { color: #fff; background: linear-gradient(135deg,var(--pc-green),#079b78); box-shadow: 0 18px 35px -24px rgba(15,175,134,.9); }
 .pc-btn--success:hover { color: #fff; transform: translateY(-1px); }
 .pc-btn--compact { min-width: 172px; min-height: 44px; padding: .72rem 1.15rem; font-size: .94rem; }
+.pc-access-denied { min-height: 520px; display: grid; place-items: center; padding: clamp(44px, 8vw, 96px) var(--pc-pad); background: linear-gradient(180deg,#f8fbff 0%,#eef6ff 100%); }
+.pc-access-denied__card { width: min(760px,100%); display: grid; justify-items: center; gap: 1rem; padding: clamp(28px,4.6vw,52px); text-align: center; border: 1px solid #dfe8f5; border-radius: 17px; background: rgba(255,255,255,.94); box-shadow: 0 28px 80px -56px rgba(35,63,115,.52); }
+.pc-access-denied__icon { width: 68px; height: 68px; display: inline-flex; align-items: center; justify-content: center; color: var(--pc-blue); background: #edf4ff; border: 1px solid #cfe0f7; border-radius: 17px; }
+.pc-access-denied__icon svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.pc-access-denied__kicker { color: var(--pc-blue); font-size: .82rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.pc-access-denied h1 { max-width: 620px; margin: 0; color: var(--pc-ink); font-family: var(--pc-heading); font-size: clamp(2rem,3vw,3rem); font-weight: 800; line-height: 1.16; letter-spacing: 0; }
+.pc-access-denied p { max-width: 590px; margin: 0; color: var(--pc-text); font-size: 1rem; line-height: 1.7; }
+.pc-access-denied__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .85rem; margin-top: .35rem; }
 .pc-hero__orb, .pc-hero__spark { position: absolute; z-index: 1; pointer-events: none; }
 .pc-hero__orb--one { width: 58px; height: 58px; left: 45.2%; top: 30%; border-radius: 50%; background: rgba(11,112,245,.075); }
 .pc-hero__orb--two { width: 280px; height: 172px; right: 6%; top: 29%; border-radius: 50%; background: rgba(11,112,245,.045); }

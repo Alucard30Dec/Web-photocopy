@@ -589,7 +589,8 @@ public class AccountController : Controller
     }
 
     [HttpGet("/{branchSlug}/ResetPassword")]
-    public IActionResult ResetPassword(string branchSlug, string code = null)
+    // Codex 2026-07-04: Mark reset token as nullable because the GET action handles missing code below; scope limited to password reset.
+    public IActionResult ResetPassword(string branchSlug, string? code = null)
     {
         var branch = ShopBranchCatalog.Find(branchSlug);
         if (branch is null) return NotFound();

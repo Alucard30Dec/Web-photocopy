@@ -2,6 +2,20 @@
     ViewData["Title"] = "Không có quyền";
 }
 
-<div class="alert alert-warning">
-    Bạn không có quyền truy cập chức năng này.
-</div>
+<section class="pc-access-denied">
+    <div class="pc-access-denied__card">
+        <span class="pc-access-denied__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M12 3 4.5 6.4v5.4c0 4.7 3.1 7.8 7.5 9.2 4.4-1.4 7.5-4.5 7.5-9.2V6.4L12 3Z" />
+                <path d="M9.5 12.2 11.2 14l3.6-4" />
+            </svg>
+        </span>
+        <span class="pc-access-denied__kicker">Truy cập bị giới hạn</span>
+        <h1>Bạn không có quyền truy cập chức năng này</h1>
+        <p>Tài khoản hiện tại chưa được cấp quyền cho khu vực vừa mở. Hãy quay lại trang phù hợp hoặc đăng nhập bằng tài khoản có đúng vai trò.</p>
+        <div class="pc-access-denied__actions">
+            <a class="pc-btn pc-btn--primary pc-btn--compact" asp-controller="Home" asp-action="Index">Về trang chủ</a>
+            <a class="pc-btn pc-btn--ghost pc-btn--compact" asp-controller="Home" asp-action="CustomerPortfolio">Khu khách hàng</a>
+        </div>
+    </div>
+</section>

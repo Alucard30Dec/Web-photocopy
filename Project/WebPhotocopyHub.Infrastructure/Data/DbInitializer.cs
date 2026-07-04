@@ -183,7 +183,7 @@ public class DbInitializer : IDbInitializer
             {
                 Id = dashboardId,
                 Code = "Dashboard",
-                Name = "Dashboard",
+                Name = "Tổng quan",
                 Description = "Tổng quan quản trị toàn hệ thống.",
                 Area = "Admin",
                 Controller = "Dashboard",
@@ -560,11 +560,17 @@ public class DbInitializer : IDbInitializer
                 continue;
             }
 
+            current.Name = definition.Name;
+            current.Description = definition.Description;
+            current.ParentId = definition.ParentId;
             current.Area = definition.Area;
             current.Controller = definition.Controller;
             current.Action = definition.Action;
+            current.IconKey = definition.IconKey;
             current.RequiredBranchFeatureCode = definition.RequiredBranchFeatureCode;
             current.RequiresBranchSelection = definition.RequiresBranchSelection;
+            current.SortOrder = definition.SortOrder;
+            current.IsMenuItem = definition.IsMenuItem;
             current.IsActive = true;
             current.IsSystemFunction = true;
             current.SupportsView = definition.SupportsView;
@@ -1688,7 +1694,6 @@ public class DbInitializer : IDbInitializer
         ApplicationUser operatorUser)
     {
         var now = DateTime.UtcNow;
-        var shippingFee = _configuration.GetValue<decimal?>("Business:ShippingFee") ?? 15000;
         var usersByEmail = customers.ToDictionary(x => x.Email ?? x.UserName ?? string.Empty, StringComparer.OrdinalIgnoreCase);
 
         var sinhVien01 = usersByEmail["sinhvien01@webphotocopyhub.local"];
@@ -1744,12 +1749,12 @@ public class DbInitializer : IDbInitializer
             Copies = 1,
             TotalPages = 24,
             Notes = "Seed: Trang 1 và trang kết luận cần màu sắc rõ.",
-            DeliveryMethod = DeliveryMethod.Shipping,
-            DeliveryAddress = "Quận 7, TP.HCM",
+            DeliveryMethod = DeliveryMethod.PickupAtStore,
+            DeliveryAddress = null,
             UnitPrice = 2500,
             SubTotal = 60000,
-            ShippingFee = shippingFee,
-            TotalAmount = 60000 + shippingFee,
+            ShippingFee = 0,
+            TotalAmount = 60000,
             Status = PrintJobStatus.Processing,
             ConfirmedByOperatorId = operatorUser.Id,
             ConfirmedAt = now.AddDays(-2),

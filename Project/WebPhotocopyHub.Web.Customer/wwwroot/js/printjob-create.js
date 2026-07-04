@@ -576,6 +576,7 @@
         if (uploadQueueEmpty) {
             uploadQueueEmpty.hidden = selectedUploadFiles.length > 0;
         }
+        uploadQueue.classList.toggle("has-upload-files", selectedUploadFiles.length > 0);
 
         selectedUploadFiles.forEach(function (file, index) {
             uploadQueue.appendChild(createUploadCard(file, index));
@@ -966,6 +967,11 @@
         createOfficePreviewRequest(file)
             .then(function (entry) {
                 updateOfficePageCount(file, entry.pageCount);
+                var cachedEntry = officePreviewCache.get(key);
+                if (cachedEntry === entry && activePreviewKey !== key) {
+                    revokeOfficePreviewEntry(entry);
+                    officePreviewCache.delete(key);
+                }
             })
             .catch(function (error) {
                 if (!error || error.name !== "AbortError") {
@@ -1043,13 +1049,14 @@
         var cachedEntry = officePreviewCache.get(key);
         if (cachedEntry) {
             updateOfficePageCount(file, cachedEntry.pageCount);
+            officePreviewCache.delete(key);
             showPreviewSource(
                 "pdf",
                 cachedEntry.objectUrl,
                 file.name,
                 formatSize(file.size),
                 "",
-                false
+                true
             );
             return;
         }
@@ -1074,14 +1081,24 @@
             updateOfficePageCount(file, entry.pageCount);
 
             if (activePreviewKey === key && previewDialog && previewDialog.open) {
+                var currentCachedEntry = officePreviewCache.get(key);
+                if (currentCachedEntry === entry) {
+                    officePreviewCache.delete(key);
+                }
                 showPreviewSource(
                     "pdf",
                     entry.objectUrl,
                     file.name,
                     formatSize(file.size),
                     "",
-                    false
+                    true
                 );
+            } else {
+                var staleCachedEntry = officePreviewCache.get(key);
+                if (staleCachedEntry === entry) {
+                    officePreviewCache.delete(key);
+                }
+                revokeOfficePreviewEntry(entry);
             }
         } catch (error) {
             if (error && error.name === "AbortError") {
@@ -1164,6 +1181,7 @@
     function pageSummary() {
         var knownPages = 0;
         var unknownFiles = 0;
+        var filePageCounts = [];
 
         selectedExistingCards().forEach(function (card) {
             var input = card.querySelector(".file-page-input");
@@ -1174,6 +1192,7 @@
             }
             if (pages > 0) {
                 knownPages += pages;
+                filePageCounts.push(pages);
             } else {
                 unknownFiles++;
             }
@@ -1186,13 +1205,15 @@
             var pageFrom = readPageNumber(uploadPageFroms.get(key) || "0");
             var pageTo = readPageNumber(uploadPageTos.get(key) || "0");
             if (status === "ready" && totalPages > 0 && pageFrom >= 1 && pageTo <= totalPages && pageFrom <= pageTo) {
-                knownPages += pageTo - pageFrom + 1;
+                var selectedPages = pageTo - pageFrom + 1;
+                knownPages += selectedPages;
+                filePageCounts.push(selectedPages);
             } else {
                 unknownFiles++;
             }
         });
 
-        return { knownPages: knownPages, unknownFiles: unknownFiles };
+        return { knownPages: knownPages, unknownFiles: unknownFiles, filePageCounts: filePageCounts };
     }
 
     function updateSummary() {
@@ -1236,20 +1257,34 @@
         }
 
         if (summary.totalAmount) {
-            calculatePriceDebounced(fileCount, pages.knownPages, copies);
+            calculatePriceDebounced(fileCount, pages.filePageCounts, copies, pages.unknownFiles);
         }
 
         updateSubmitAvailability();
     }
 
     var priceCalcTimeout = null;
-    function calculatePriceDebounced(fileCount, knownPages, copies) {
+    var priceCalcSequence = 0;
+    function calculatePriceDebounced(fileCount, filePageCounts, copies, unknownFiles) {
+        priceCalcSequence++;
+        var sequence = priceCalcSequence;
+
         if (priceCalcTimeout) {
             clearTimeout(priceCalcTimeout);
         }
 
-        if (fileCount === 0 || knownPages === 0 || !calculatePriceUrl) {
+        if (fileCount === 0) {
             if (summary.totalAmount) summary.totalAmount.textContent = "0 đ";
+            return;
+        }
+
+        if (unknownFiles > 0 || filePageCounts.length < fileCount) {
+            if (summary.totalAmount) summary.totalAmount.textContent = "Đang đọc số trang...";
+            return;
+        }
+
+        if (!calculatePriceUrl) {
+            if (summary.totalAmount) summary.totalAmount.textContent = "Chưa cấu hình giá";
             return;
         }
 
@@ -1258,38 +1293,55 @@
         }
 
         priceCalcTimeout = setTimeout(function () {
-            var avgPages = Math.max(1, Math.round(knownPages / fileCount));
-            var requestData = {
+            var requestTemplate = {
                 paperSize: parseInt(controls.paperSize.value, 10),
                 printSide: parseInt(controls.printSide.value, 10),
                 colorMode: parseInt(controls.colorMode.value, 10),
-                isPhoto: controls.isPhoto.checked,
+                isPhoto: controls.isPhoto ? controls.isPhoto.checked : false,
                 copies: copies,
-                totalPages: avgPages,
                 deliveryMethod: parseInt(controls.deliveryMethod.value, 10)
             };
 
-            fetch(calculatePriceUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "RequestVerificationToken": antiForgeryToken ? antiForgeryToken.value : ""
-                },
-                body: JSON.stringify(requestData)
-            })
-            .then(function (response) {
-                if (!response.ok) throw new Error("Price calculation failed");
-                return response.json();
-            })
-            .then(function (data) {
-                if (summary.totalAmount && data.totalAmount !== undefined) {
-                    summary.totalAmount.textContent = "Từ " + data.totalAmount.toLocaleString("vi-VN") + " đ";
-                }
-            })
-            .catch(function (error) {
-                if (summary.totalAmount) summary.totalAmount.textContent = "Không tính được";
-            });
+            Promise.all(filePageCounts.map(function (totalPages) {
+                var requestData = Object.assign({}, requestTemplate, {
+                    totalPages: Math.max(1, totalPages)
+                });
+
+                return fetch(calculatePriceUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": antiForgeryToken ? antiForgeryToken.value : ""
+                    },
+                    body: JSON.stringify(requestData)
+                })
+                    .then(function (response) {
+                        if (!response.ok) throw new Error("Price calculation failed");
+                        return response.json();
+                    });
+            }))
+                .then(function (results) {
+                    if (sequence !== priceCalcSequence || !summary.totalAmount) {
+                        return;
+                    }
+
+                    var totalAmount = results.reduce(function (total, data) {
+                        return total + (typeof data.totalAmount === "number" ? data.totalAmount : 0);
+                    }, 0);
+                    summary.totalAmount.textContent = totalAmount.toLocaleString("vi-VN") + " đ";
+                })
+                .catch(function () {
+                    if (sequence === priceCalcSequence && summary.totalAmount) {
+                        summary.totalAmount.textContent = "Không tính được";
+                    }
+                });
         }, 500);
+    }
+
+    function clearActivePreset() {
+        presetButtons.forEach(function (item) {
+            item.classList.remove("is-active");
+        });
     }
 
     function activatePreset(button) {
@@ -1412,9 +1464,6 @@
                     showClientError("Mỗi lần chỉ được chọn tối đa 5 tài liệu, gồm cả file mới và file đã upload.");
                 }
                 card.classList.toggle("is-selected", checkbox.checked);
-                if (checkbox.checked) {
-                    showExistingPreview(card);
-                }
                 updateSummary();
             });
         }
@@ -1453,16 +1502,27 @@
         });
     }
 
-    [controls.paperSize, controls.printSide, controls.colorMode, controls.copies, controls.deliveryMethod, controls.isPhoto].forEach(function (control) {
+    [controls.paperSize, controls.printSide, controls.colorMode, controls.copies, controls.isPhoto].forEach(function (control) {
         if (!control) {
             return;
         }
         control.addEventListener("change", function () {
+            clearActivePreset();
+            updateSummary();
+        });
+        control.addEventListener("input", function () {
+            clearActivePreset();
+            updateSummary();
+        });
+    });
+
+    if (controls.deliveryMethod) {
+        controls.deliveryMethod.addEventListener("change", function () {
             updateDeliveryVisibility();
             updateSummary();
         });
-        control.addEventListener("input", updateSummary);
-    });
+        controls.deliveryMethod.addEventListener("input", updateSummary);
+    }
 
     presetButtons.forEach(function (button) {
         button.addEventListener("click", function () {
@@ -1496,8 +1556,4 @@
     updateDeliveryVisibility();
     updateSummary();
 
-    var firstSelectedExisting = selectedExistingCards()[0];
-    if (firstSelectedExisting) {
-        showExistingPreview(firstSelectedExisting);
-    }
 })();

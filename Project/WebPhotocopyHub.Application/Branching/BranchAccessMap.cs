@@ -50,20 +50,26 @@ public static class BranchAccessMap
 
         if (controller.Equals("ProductOrders", StringComparison.OrdinalIgnoreCase))
         {
+            var permission = action.Equals("Refund", StringComparison.OrdinalIgnoreCase)
+                ? BranchPermissionCodes.ProductOrdersRefund
+                : action.Equals("UpdateStatus", StringComparison.OrdinalIgnoreCase)
+                    ? BranchPermissionCodes.ProductOrdersManage
+                    : BranchPermissionCodes.ProductOrdersView;
             return new BranchAccessRule(
                 BranchFeatureCodes.ProductSales,
-                action.Equals("UpdateStatus", StringComparison.OrdinalIgnoreCase)
-                    ? BranchPermissionCodes.ProductOrdersManage
-                    : BranchPermissionCodes.ProductOrdersView);
+                permission);
         }
 
         if (controller.Equals("SupportOrders", StringComparison.OrdinalIgnoreCase))
         {
+            var permission = action.Equals("Refund", StringComparison.OrdinalIgnoreCase)
+                ? BranchPermissionCodes.SupportOrdersRefund
+                : action.Equals("UpdateStatus", StringComparison.OrdinalIgnoreCase)
+                    ? BranchPermissionCodes.SupportOrdersManage
+                    : BranchPermissionCodes.SupportOrdersView;
             return new BranchAccessRule(
                 BranchFeatureCodes.SupportServices,
-                action.Equals("UpdateStatus", StringComparison.OrdinalIgnoreCase)
-                    ? BranchPermissionCodes.SupportOrdersManage
-                    : BranchPermissionCodes.SupportOrdersView);
+                permission);
         }
 
         if (controller.Equals("Inventory", StringComparison.OrdinalIgnoreCase))

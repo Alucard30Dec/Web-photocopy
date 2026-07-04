@@ -1,0 +1,63 @@
+@model CustomerHeaderNotificationsViewModel
+
+<div class="customer-header-notification customer-menu" data-customer-menu>
+    <button class="customer-icon-button customer-menu__trigger"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="customerNotificationMenu">
+        <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+        @if (Model.AttentionCount > 0)
+        {
+            <span class="customer-notification-badge" aria-label="@Model.AttentionCount thông báo cần chú ý">@Model.AttentionCount</span>
+        }
+    </button>
+
+    <section class="customer-menu__panel customer-notification-panel"
+             id="customerNotificationMenu"
+             role="menu"
+             aria-label="Thông báo khách hàng">
+        <header class="customer-notification-head">
+            <div>
+                <strong>Thông báo</strong>
+                <small>@(Model.AttentionCount > 0 ? $"{Model.AttentionCount} mục cần chú ý" : "Không có mục cần xử lý")</small>
+            </div>
+            <a href="@Model.AllNotificationsUrl">Tổng quan</a>
+        </header>
+
+        @if (Model.Items.Count == 0)
+        {
+            <div class="customer-notification-empty" role="status">
+                <span class="material-symbols-outlined" aria-hidden="true">notifications_off</span>
+                <strong>Chưa có thông báo</strong>
+                <small>Các cập nhật về đơn in, sản phẩm, hỗ trợ và ví sẽ xuất hiện tại đây.</small>
+            </div>
+        }
+        else
+        {
+            <div class="customer-notification-list">
+                @foreach (var item in Model.Items)
+                {
+                    <a class="customer-notification-item @(item.NeedsAttention ? "is-unread" : string.Empty)"
+                       href="@item.Url"
+                       role="menuitem">
+                        <span class="customer-notification-icon is-@item.Tone" aria-hidden="true">
+                            <span class="material-symbols-outlined">@item.Icon</span>
+                        </span>
+                        <span class="customer-notification-copy">
+                            <span class="customer-notification-title">
+                                <strong>@item.Title</strong>
+                                @if (item.NeedsAttention)
+                                {
+                                    <span></span>
+                                }
+                            </span>
+                            <small>@item.Description</small>
+                            <em>@item.TimeText</em>
+                        </span>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+</div>

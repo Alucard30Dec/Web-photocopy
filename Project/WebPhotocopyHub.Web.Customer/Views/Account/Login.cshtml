@@ -27,81 +27,743 @@
         !string.IsNullOrWhiteSpace(Configuration["Authentication:Facebook:AppSecret"]);
 }
 
-<section class="customer-auth-page">
-    <div class="customer-auth-hero">
-        <a class="customer-auth-brand" href="@homeUrl"><span class="customer-auth-brand-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer-fill"></use></svg></span>@branchName</a>
-        <span class="customer-kicker">Đăng nhập khách hàng</span>
-        <h1>Vào tài khoản để đặt in nhanh hơn</h1>
-        <p>Đăng nhập bằng Gmail/email hoặc tên đăng nhập để tạo đơn in, theo dõi đơn hàng, xem ví và cập nhật hồ sơ tại @branchName.</p>
-        <div class="customer-auth-pills">
-            <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-printer"></use></svg>Tạo đơn in</span>
-            <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clipboard-check"></use></svg>Theo dõi trạng thái</span>
-            <span><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-wallet2"></use></svg>Thanh toán theo đơn</span>
-        </div>
-    </div>
+@* Update by Codex 2026-07-04: match requested customer-login mockup and refine social icons/font. Scope: this customer login page only. *@
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 
-    <div class="customer-auth-card">
-        <div class="customer-auth-card-head">
-            <span class="customer-kicker">Tài khoản</span>
-            <h2>Đăng nhập</h2>
-            <p>Dùng Gmail/email hoặc tên đăng nhập đã đăng ký.</p>
+    body.customer-shell--unified {
+        background: #f7fbff;
+    }
+
+    .customer-shell--unified .customer-main {
+        width: 100%;
+        max-width: none;
+        padding: 0;
+    }
+
+    .exact-auth-container {
+        position: relative;
+        display: grid;
+        min-height: calc(100vh - 66px);
+        place-items: center;
+        overflow: hidden;
+        padding: 2rem 1rem;
+        font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', sans-serif;
+        background:
+            linear-gradient(140deg, rgba(237, 246, 255, .94), rgba(250, 253, 255, .96) 45%, rgba(244, 249, 255, .98)),
+            #f7fbff;
+    }
+
+    .exact-auth-container::before,
+    .exact-auth-container::after {
+        content: "";
+        position: absolute;
+        width: 9.5rem;
+        height: 8rem;
+        background-image: radial-gradient(rgba(148, 163, 184, .38) 1.25px, transparent 1.25px);
+        background-size: 14px 14px;
+        opacity: .46;
+        pointer-events: none;
+    }
+
+    .exact-auth-container::before {
+        left: max(1.5rem, 7vw);
+        top: 42%;
+    }
+
+    .exact-auth-container::after {
+        right: max(1.5rem, 8vw);
+        bottom: 16%;
+    }
+
+    .exact-auth-wrapper {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(340px, .94fr) minmax(390px, 1.06fr);
+        width: min(980px, calc(100% - 2rem));
+        min-height: 510px;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid rgba(226, 232, 240, .78);
+        border-radius: 24px;
+        box-shadow: 0 26px 70px rgba(15, 23, 42, .11);
+    }
+
+    .exact-auth-hero {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+        padding: 2.45rem 2.15rem;
+        color: #fff;
+        background:
+            linear-gradient(145deg, rgba(42, 112, 246, .96), rgba(84, 56, 232, .98)),
+            #315cf1;
+    }
+
+    .exact-auth-hero::after {
+        content: "";
+        position: absolute;
+        right: -7rem;
+        bottom: -6rem;
+        width: 18rem;
+        height: 18rem;
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .exact-printer-illustration {
+        position: relative;
+        z-index: 1;
+        width: 156px;
+        margin: 0 0 1.2rem;
+        filter: drop-shadow(0 16px 24px rgba(15, 23, 42, .22));
+    }
+
+    .exact-printer-illustration svg {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    .exact-auth-hero h1 {
+        position: relative;
+        z-index: 1;
+        margin: 0 0 .72rem;
+        color: #fff;
+        font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', sans-serif;
+        font-size: 2.05rem;
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.08;
+    }
+
+    .exact-auth-hero p {
+        position: relative;
+        z-index: 1;
+        max-width: 310px;
+        margin: 0 0 1.35rem;
+        color: rgba(255, 255, 255, .9);
+        font-size: .9rem;
+        line-height: 1.62;
+    }
+
+    .exact-features {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        max-width: 330px;
+        gap: .68rem;
+    }
+
+    .exact-feature-item {
+        display: flex;
+        align-items: center;
+        gap: .78rem;
+        min-height: 56px;
+        padding: .62rem .72rem;
+        color: #fff;
+        background: rgba(255, 255, 255, .11);
+        border: 1px solid rgba(255, 255, 255, .17);
+        border-radius: 8px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .exact-feature-icon {
+        display: grid;
+        width: 2.25rem;
+        height: 2.25rem;
+        flex: 0 0 2.25rem;
+        place-items: center;
+        color: #2563eb;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, .15);
+    }
+
+    .exact-feature-copy {
+        display: grid;
+        gap: .12rem;
+        min-width: 0;
+    }
+
+    .exact-feature-copy strong {
+        display: block;
+        color: #fff;
+        font-size: .78rem;
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 1.2;
+    }
+
+    .exact-feature-copy span {
+        display: block;
+        overflow: hidden;
+        color: rgba(255, 255, 255, .74);
+        font-size: .68rem;
+        line-height: 1.35;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .exact-auth-form-container {
+        display: grid;
+        align-content: center;
+        padding: 2.35rem 2.25rem;
+        background: #fff;
+        color: #111827;
+        font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+    }
+
+    .exact-auth-form-inner {
+        width: min(100%, 404px);
+        margin: 0 auto;
+    }
+
+    .exact-form-head {
+        margin-bottom: 1.25rem;
+    }
+
+    .exact-form-head h2 {
+        margin: 0 0 .24rem;
+        color: #0f172a;
+        font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', sans-serif;
+        font-size: 1.72rem;
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 1.16;
+    }
+
+    .exact-form-head p {
+        margin: 0;
+        color: #667085;
+        font-size: .82rem;
+        font-weight: 500;
+        line-height: 1.45;
+    }
+
+    .exact-social-logins {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .6rem;
+        margin-bottom: 1.05rem;
+    }
+
+    .exact-social-form {
+        display: flex;
+        min-width: 0;
+    }
+
+    .exact-btn-social {
+        display: inline-flex;
+        width: 100%;
+        min-height: 42px;
+        align-items: center;
+        justify-content: center;
+        gap: .42rem;
+        padding: 0 .56rem;
+        color: #172033;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', sans-serif;
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        line-height: 1.2;
+        text-decoration: none;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .exact-btn-social:hover,
+    .exact-btn-social:focus-visible {
+        border-color: #cbd5e1;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, .08);
+        outline: none;
+        transform: translateY(-1px);
+    }
+
+    .exact-btn-social > span:not(.exact-social-icon) {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .exact-social-icon {
+        display: inline-grid;
+        width: 1rem;
+        height: 1rem;
+        flex: 0 0 1rem;
+        place-items: center;
+    }
+
+    .exact-social-icon svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    .exact-social-icon--google {
+        padding: .02rem;
+    }
+
+    .exact-social-icon--facebook {
+        width: 1rem;
+        height: 1rem;
+        color: #fff;
+        background: #1877f2;
+        border-radius: 999px;
+        box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .08);
+    }
+
+    .exact-social-icon--facebook svg {
+        width: .43rem;
+        height: .78rem;
+        margin-top: .1rem;
+        fill: currentColor;
+    }
+
+    .exact-divider {
+        display: flex;
+        align-items: center;
+        gap: .7rem;
+        margin: 0 0 1.05rem;
+        color: #8a94a6;
+        font-size: .72rem;
+        line-height: 1.2;
+        text-align: center;
+    }
+
+    .exact-divider::before,
+    .exact-divider::after {
+        content: "";
+        height: 1px;
+        flex: 1;
+        background: #e5e7eb;
+    }
+
+    .exact-form-group {
+        margin-bottom: .98rem;
+    }
+
+    .exact-label {
+        display: block;
+        margin-bottom: .42rem;
+        color: #111827;
+        font-size: .74rem;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .exact-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .exact-input-icon {
+        position: absolute;
+        left: .92rem;
+        display: grid;
+        width: 1rem;
+        height: 1rem;
+        place-items: center;
+        color: #9ca3af;
+        pointer-events: none;
+    }
+
+    .exact-input {
+        width: 100%;
+        min-height: 42px;
+        padding: .68rem 2.5rem .68rem 2.45rem;
+        color: #111827;
+        background-color: #fff !important;
+        border: 1px solid #dfe5ee;
+        border-radius: 8px;
+        box-shadow: none;
+        font-size: .8rem;
+        font-weight: 500;
+        line-height: 1.25;
+        transition: border-color .16s ease, box-shadow .16s ease;
+    }
+
+    .exact-input:focus {
+        border-color: rgba(37, 99, 235, .72);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+        outline: none;
+    }
+
+    .exact-input::placeholder {
+        color: #9ca3af;
+    }
+
+    .exact-input:-webkit-autofill,
+    .exact-input:-webkit-autofill:hover,
+    .exact-input:-webkit-autofill:focus,
+    .exact-input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 40px #fff inset !important;
+    }
+
+    .exact-input-toggle {
+        position: absolute;
+        right: .74rem;
+        display: grid;
+        width: 1.5rem;
+        height: 1.5rem;
+        place-items: center;
+        padding: 0;
+        color: #9ca3af;
+        background: transparent;
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .exact-input-toggle:hover,
+    .exact-input-toggle:focus-visible {
+        color: #4b5563;
+        background: #f3f6fb;
+        outline: none;
+    }
+
+    .exact-validation {
+        display: block;
+        margin-top: .25rem;
+        font-size: .72rem;
+    }
+
+    .exact-checkbox-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        margin: -.05rem 0 1rem;
+        color: #4b5563;
+        font-size: .76rem;
+    }
+
+    .exact-checkbox-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: .44rem;
+        min-width: 0;
+        margin: 0;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .exact-checkbox-wrapper input[type="checkbox"] {
+        width: .9rem;
+        height: .9rem;
+        flex: 0 0 .9rem;
+        border-color: #cbd5e1;
+        border-radius: 4px;
+        accent-color: #2563eb;
+        cursor: pointer;
+    }
+
+    .exact-forgot-link {
+        flex: 0 0 auto;
+        color: #2563eb;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .exact-forgot-link:hover {
+        color: #1d4ed8;
+        text-decoration: underline;
+    }
+
+    .exact-btn-submit {
+        display: inline-flex;
+        width: 100%;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        padding: 0 1rem;
+        color: #fff;
+        background: linear-gradient(180deg, #3b76f6, #2563eb);
+        border: 0;
+        border-radius: 8px;
+        box-shadow: 0 14px 26px rgba(37, 99, 235, .24);
+        font-size: .86rem;
+        font-weight: 700;
+        line-height: 1.2;
+        cursor: pointer;
+        transition: box-shadow .16s ease, transform .16s ease, filter .16s ease;
+    }
+
+    .exact-btn-submit:hover,
+    .exact-btn-submit:focus-visible {
+        box-shadow: 0 16px 30px rgba(37, 99, 235, .28);
+        filter: saturate(1.04);
+        outline: none;
+        transform: translateY(-1px);
+    }
+
+    .exact-register-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .3rem;
+        margin-top: 1.15rem;
+        color: #6b7280;
+        font-size: .78rem;
+        font-weight: 500;
+        text-align: center;
+        text-decoration: none;
+    }
+
+    .exact-register-link span {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .exact-register-link:hover span {
+        text-decoration: underline;
+    }
+
+    @@media (max-width: 980px) {
+        .exact-auth-wrapper {
+            grid-template-columns: 1fr;
+            width: min(560px, calc(100% - 1.25rem));
+            min-height: 0;
+        }
+
+        .exact-auth-hero {
+            display: none;
+        }
+
+        .exact-auth-form-container {
+            padding: 2rem 1.5rem;
+        }
+    }
+
+    @@media (max-width: 520px) {
+        .exact-auth-container {
+            min-height: calc(100vh - 64px);
+            padding: .85rem .65rem;
+        }
+
+        .exact-auth-wrapper {
+            width: 100%;
+            border-radius: 18px;
+        }
+
+        .exact-auth-form-container {
+            padding: 1.55rem 1rem;
+        }
+
+        .exact-form-head h2 {
+            font-size: 1.55rem;
+        }
+
+        .exact-social-logins {
+            grid-template-columns: 1fr;
+        }
+
+        .exact-checkbox-row {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: .45rem;
+        }
+    }
+</style>
+
+<section class="exact-auth-container">
+    <div class="exact-auth-wrapper">
+        <div class="exact-auth-hero">
+            <div class="exact-printer-illustration" aria-hidden="true">
+                <svg viewBox="0 0 180 135" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M52 17H127C133.075 17 138 21.9249 138 28V65H41V28C41 21.9249 45.9249 17 52 17Z" fill="#EAF4FF" stroke="#172554" stroke-width="3"/>
+                    <path d="M61 7H129L142 19H52L61 7Z" fill="#F8FBFF" stroke="#172554" stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M46 62H144C153.941 62 162 70.0589 162 80V102C162 106.971 157.971 111 153 111H37C32.0294 111 28 106.971 28 102V80C28 70.0589 36.0589 62 46 62Z" fill="#B9DAFF" stroke="#172554" stroke-width="3"/>
+                    <path d="M53 82H119" stroke="#172554" stroke-width="5" stroke-linecap="round"/>
+                    <path d="M137 83H150" stroke="#2563EB" stroke-width="5" stroke-linecap="round"/>
+                    <path d="M50 96H137V127H50V96Z" fill="#F8FBFF" stroke="#172554" stroke-width="3"/>
+                    <path d="M64 108H122" stroke="#2563EB" stroke-width="5" stroke-linecap="round"/>
+                    <path d="M64 119H109" stroke="#172554" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M127 66H169V116H143" fill="#C7E3FF"/>
+                    <path d="M127 66H169V116H143" stroke="#172554" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M136 79H160" stroke="#2563EB" stroke-width="4" stroke-linecap="round"/>
+                    <path d="M14 36H50" stroke="#172554" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M23 26H69" stroke="#172554" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M34 16C43 23 53 23 62 16" stroke="#172554" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <h1>@branchName</h1>
+            <p>Trải nghiệm in ấn chuẩn công nghệ. Đặt in nhanh chóng, theo dõi đơn hàng dễ dàng và thanh toán siêu tốc mọi lúc, mọi nơi.</p>
+
+            <div class="exact-features">
+                <div class="exact-feature-item">
+                    <span class="exact-feature-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8 12 3 7 8"/><path d="M12 3v12"/></svg>
+                    </span>
+                    <span class="exact-feature-copy">
+                        <strong>Tải file nhanh</strong>
+                        <span>Gửi tài liệu nhanh chóng, hỗ trợ nhiều định dạng.</span>
+                    </span>
+                </div>
+
+                <div class="exact-feature-item">
+                    <span class="exact-feature-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+                    </span>
+                    <span class="exact-feature-copy">
+                        <strong>Theo dõi đơn</strong>
+                        <span>Cập nhật tiến trình tức thì, minh bạch.</span>
+                    </span>
+                </div>
+
+                <div class="exact-feature-item">
+                    <span class="exact-feature-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
+                    </span>
+                    <span class="exact-feature-copy">
+                        <strong>Thanh toán an toàn</strong>
+                        <span>Thanh toán 1 chạm tiện lợi, an toàn.</span>
+                    </span>
+                </div>
+            </div>
         </div>
 
-            <div class="d-flex gap-2 mb-3">
-                <form action="@externalLoginUrl" method="post" class="customer-google-form flex-grow-1">
+        <div class="exact-auth-form-container">
+            <div class="exact-auth-form-inner">
+                <div class="exact-form-head">
+                    <h2>Chào mừng trở lại</h2>
+                    <p>Đăng nhập vào tài khoản khách hàng</p>
+                </div>
+
+                <div class="exact-social-logins">
+                    <form action="@externalLoginUrl" method="post" class="exact-social-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="provider" value="Google" />
+                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                        <button class="exact-btn-social" type="submit">
+                            <span class="exact-social-icon exact-social-icon--google" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                                </svg>
+                            </span>
+                            <span>Đăng nhập với Google</span>
+                        </button>
+                    </form>
+
+                    <form action="@externalLoginUrl" method="post" class="exact-social-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="provider" value="Facebook" />
+                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                        <button class="exact-btn-social" type="submit">
+                            <span class="exact-social-icon exact-social-icon--facebook" aria-hidden="true">
+                                <svg viewBox="0 0 10 18" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6.45 18V9.8h2.76l.41-3.2H6.45V4.56c0-.93.26-1.56 1.59-1.56h1.7V.14C9.44.1 8.43 0 7.27 0 4.86 0 3.21 1.47 3.21 4.18V6.6H.48v3.2h2.73V18h3.24Z" />
+                                </svg>
+                            </span>
+                            <span>Đăng nhập với Facebook</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="exact-divider">hoặc đăng nhập bằng mật khẩu</div>
+
+                <form action="@formAction" method="post" novalidate>
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="provider" value="Google" />
-                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                    <button class="customer-google-button w-100" type="submit">
-                        <span class="customer-google-icon"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-google"></use></svg></span>
-                        Google
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-2 exact-validation"></div>
+
+                    <div class="exact-form-group">
+                        <label asp-for="Email" class="exact-label">Email / Gmail hoặc tên đăng nhập</label>
+                        <div class="exact-input-wrapper">
+                            <span class="exact-input-icon" aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                            </span>
+                            <input asp-for="Email" class="exact-input" autocomplete="username" />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small exact-validation"></span>
+                    </div>
+
+                    <div class="exact-form-group">
+                        <label asp-for="Password" class="exact-label">Mật khẩu</label>
+                        <div class="exact-input-wrapper">
+                            <span class="exact-input-icon" aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                            </span>
+                            <input asp-for="Password" type="password" class="exact-input" autocomplete="current-password" />
+                            <button type="button" class="exact-input-toggle" aria-label="Hiện mật khẩu" aria-pressed="false" data-password-toggle="Password">
+                                <span class="exact-toggle-icon exact-toggle-icon--show" aria-hidden="true">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </span>
+                                <span class="exact-toggle-icon exact-toggle-icon--hide" aria-hidden="true" hidden>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.5 5.3A8.9 8.9 0 0 1 12 5c5 0 9 7 9 7a15.8 15.8 0 0 1-2.1 2.8"/><path d="M6.6 6.6C4.3 8.1 3 12 3 12s4 7 9 7a8.8 8.8 0 0 0 4.1-1"/></svg>
+                                </span>
+                            </button>
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small exact-validation"></span>
+                    </div>
+
+                    <div class="exact-checkbox-row">
+                        <label class="exact-checkbox-wrapper">
+                            <input asp-for="RememberMe" />
+                            @Html.DisplayNameFor(x => x.RememberMe)
+                        </label>
+                        <a href="/@branchSlug/ForgotPassword" class="exact-forgot-link">Quên mật khẩu?</a>
+                    </div>
+
+                    <button class="exact-btn-submit" type="submit">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                        Đăng Nhập
                     </button>
                 </form>
-                
-                <form action="@externalLoginUrl" method="post" class="customer-google-form flex-grow-1">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="provider" value="Facebook" />
-                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                    <button class="customer-google-button w-100" type="submit" style="background-color: #1877f2; color: white; border: none;">
-                        Facebook
-                    </button>
-                </form>
+
+                <a class="exact-register-link" href="@registerUrl">
+                    Chưa có tài khoản? <span>Tạo tài khoản mới</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg>
+                </a>
             </div>
-
-            <div class="customer-auth-divider"><span>hoặc đăng nhập bằng mật khẩu</span></div>
-
-        <form action="@formAction" method="post" class="customer-auth-form" novalidate>
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="ReturnUrl" />
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-            <div>
-                <label asp-for="Email" class="form-label"></label>
-                <input asp-for="Email" class="form-control" autocomplete="username" placeholder="vd: sinhvien01 hoặc sinhvien@gmail.com" />
-                <span asp-validation-for="Email" class="text-danger small"></span>
-            </div>
-
-            <div>
-                <label asp-for="Password" class="form-label"></label>
-                <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" placeholder="Nhập mật khẩu" />
-                <span asp-validation-for="Password" class="text-danger small"></span>
-            </div>
-
-            <div class="customer-auth-row d-flex justify-content-between align-items-center mb-3">
-                <label class="form-check mb-0">
-                    <input asp-for="RememberMe" class="form-check-input" />
-                    <span class="form-check-label">@Html.DisplayNameFor(x => x.RememberMe)</span>
-                </label>
-                <a href="/@branchSlug/ForgotPassword" class="text-decoration-none">Quên mật khẩu?</a>
-            </div>
-
-            <button class="customer-primary-action w-100" type="submit"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-box-arrow-in-right"></use></svg>Đăng nhập khách hàng</button>
-        </form>
-
-        <a class="customer-auth-alt" href="@registerUrl">Chưa có tài khoản? Tạo tài khoản khách hàng</a>
+        </div>
     </div>
 </section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var toggle = document.querySelector("[data-password-toggle]");
+            if (!toggle) {
+                return;
+            }
+
+            toggle.addEventListener("click", function () {
+                var input = document.getElementById(toggle.dataset.passwordToggle || "");
+                if (!input) {
+                    return;
+                }
+
+                var isHidden = input.type === "password";
+                input.type = isHidden ? "text" : "password";
+                toggle.setAttribute("aria-pressed", isHidden ? "true" : "false");
+                toggle.setAttribute("aria-label", isHidden ? "Ẩn mật khẩu" : "Hiện mật khẩu");
+
+                var showIcon = toggle.querySelector(".exact-toggle-icon--show");
+                var hideIcon = toggle.querySelector(".exact-toggle-icon--hide");
+                if (showIcon) {
+                    showIcon.hidden = isHidden;
+                }
+                if (hideIcon) {
+                    hideIcon.hidden = !isHidden;
+                }
+            });
+        })();
+    </script>
 }

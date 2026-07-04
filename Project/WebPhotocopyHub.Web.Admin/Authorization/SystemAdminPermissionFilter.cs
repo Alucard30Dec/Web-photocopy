@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Application.Security;
+using WebPhotocopyHub.Domain.Constants;
 
 namespace WebPhotocopyHub.Web.Admin.Authorization;
 
@@ -45,7 +46,7 @@ public sealed class SystemAdminPermissionFilter : IAsyncAuthorizationFilter
         if (string.Equals(controller, "Branches", StringComparison.OrdinalIgnoreCase)
             && string.Equals(actionName, "ClearSelection", StringComparison.OrdinalIgnoreCase))
         {
-            if (!context.HttpContext.User.IsInRole("Admin"))
+            if (!context.HttpContext.User.IsInRole(RoleConstants.Admin))
             {
                 context.Result = new ForbidResult();
             }

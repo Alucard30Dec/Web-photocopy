@@ -7,7 +7,7 @@
 
 <section class="system-page-hero compact">
     <div>
-        <span class="system-eyebrow">Order governance</span>
+        <span class="system-eyebrow">Quản trị đơn hàng</span>
         <h1>Đơn văn phòng phẩm toàn hệ thống</h1>
         <p>Theo dõi khách hàng, sản phẩm, giá trị, giao nhận và cập nhật trạng thái xử lý có audit.</p>
         <div class="system-hero-meta">
@@ -25,7 +25,7 @@
 <section class="system-panel mt-3">
     <div class="system-panel-header">
         <div>
-            <span class="system-panel-kicker">Product orders</span>
+            <span class="system-panel-kicker">Đơn sản phẩm</span>
             <h2>Danh sách và điều phối trạng thái</h2>
         </div>
         <span class="system-panel-note">Cập nhật được ghi trong audit log</span>
@@ -94,6 +94,14 @@
                                     <input name="Note" class="form-control form-control-sm" maxlength="500" value="@item.ProcessNote" placeholder="Ghi chú xử lý" />
                                     <button class="btn btn-sm btn-primary" type="submit">Lưu</button>
                                 </form>
+                                @if (item.Status is not OrderStatus.Cancelled and not OrderStatus.Refunded)
+                                {
+                                    <form asp-action="Refund" method="post" class="system-inline-form mt-2">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input name="reason" class="form-control form-control-sm" maxlength="500" required placeholder="Lý do hoàn tiền" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Hoàn tiền</button>
+                                    </form>
+                                }
                             </td>
                         </tr>
                     }

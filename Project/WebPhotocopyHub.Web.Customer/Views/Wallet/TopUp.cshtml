@@ -1,5 +1,5 @@
 @{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+    Layout = "~/Views/Shared/_BranchCustomerModernLayout.cshtml";
 }
 
 @model TopUpPageViewModel
@@ -8,80 +8,80 @@
     var suggestedContent = $"{Model.TransferContentPrefix}-{User.Identity?.Name}";
 }
 
-<section class="cu-page">
-    <section class="cu-hero">
+<section class="flex-1 p-md md:p-lg overflow-y-auto max-w-container-max mx-auto w-full px-lg flex flex-col gap-lg">
+    <section class="bg-surface-container-low rounded-xl p-lg border border-surface-variant/20 shadow-sm relative overflow-hidden flex flex-col lg:flex-row justify-between items-start lg:items-center gap-md">
         <div>
-            <span class="cu-kicker">Top-up request</span>
-            <h1>Tạo yêu cầu nạp tiền</h1>
-            <p>Chuyển khoản theo thông tin bên dưới, nhập mã giao dịch và upload minh chứng nếu có để cơ sở duyệt nhanh hơn.</p>
-            <div class="cu-actions">
-                <a class="btn btn-outline-secondary" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Ví của tôi</a>
-                <a class="btn btn-outline-secondary" asp-action="TopUpHistory" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Lịch sử nạp tiền</a>
+            <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block">Top-up request</span>
+            <h1 class="text-2xl md:text-3xl font-bold text-on-surface mb-2">Tạo yêu cầu nạp tiền</h1>
+            <p class="text-sm text-on-surface-variant max-w-2xl">Chuyển khoản theo thông tin bên dưới, nhập mã giao dịch và upload minh chứng nếu có để cơ sở duyệt nhanh hơn.</p>
+            <div class="flex flex-wrap gap-3 mt-4">
+                <a class="px-5 py-2.5 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Ví của tôi</a>
+                <a class="px-5 py-2.5 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm" asp-action="TopUpHistory" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Lịch sử nạp tiền</a>
             </div>
         </div>
-        <aside class="cu-hero-card">
-            <span class="cu-card-label">Nội dung gợi ý</span>
-            <strong>@suggestedContent</strong>
-            <small>Điền nội dung này khi chuyển khoản để shop đối soát nhanh.</small>
+        <aside class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-5 shadow-sm min-w-[240px] flex flex-col gap-2 relative z-10">
+            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Nội dung gợi ý</span>
+            <strong class="text-lg font-bold text-on-surface">@suggestedContent</strong>
+            <small class="text-xs text-on-surface-variant">Điền nội dung này khi chuyển khoản để shop đối soát nhanh.</small>
         </aside>
     </section>
 
-    <section class="cu-grid cu-grid--detail">
-        <aside class="cu-card">
-            <div class="cu-section-head">
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+        <aside class="lg:col-span-5 bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md shadow-sm flex flex-col gap-4">
+            <div class="border-b border-outline-variant/20 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                    <span class="cu-kicker">Bank transfer</span>
-                    <h2>Thông tin chuyển khoản</h2>
+                    <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block">Bank transfer</span>
+                    <h2 class="text-lg font-bold text-on-surface">Thông tin chuyển khoản</h2>
                 </div>
             </div>
 
-            <div class="cu-detail-list">
-                <div><span>Ngân hàng</span><strong>@(string.IsNullOrWhiteSpace(Model.BankName) ? "Chưa cấu hình" : Model.BankName)</strong></div>
-                <div><span>Số tài khoản</span><strong>@(string.IsNullOrWhiteSpace(Model.AccountNumber) ? "Chưa cấu hình" : Model.AccountNumber)</strong></div>
-                <div><span>Chủ tài khoản</span><strong>@(string.IsNullOrWhiteSpace(Model.AccountName) ? "Chưa cấu hình" : Model.AccountName)</strong></div>
-                <div class="cu-detail-list__full"><span>Nội dung</span><strong>@suggestedContent</strong></div>
+            <div class="flex flex-col gap-2.5">
+                <div class="flex justify-between items-center border-b border-outline-variant/10 py-2.5"><span class="text-sm text-on-surface-variant">Ngân hàng</span><strong class="text-sm font-semibold text-on-surface">@(string.IsNullOrWhiteSpace(Model.BankName) ? "Chưa cấu hình" : Model.BankName)</strong></div>
+                <div class="flex justify-between items-center border-b border-outline-variant/10 py-2.5"><span class="text-sm text-on-surface-variant">Số tài khoản</span><strong class="text-sm font-semibold text-on-surface">@(string.IsNullOrWhiteSpace(Model.AccountNumber) ? "Chưa cấu hình" : Model.AccountNumber)</strong></div>
+                <div class="flex justify-between items-center border-b border-outline-variant/10 py-2.5"><span class="text-sm text-on-surface-variant">Chủ tài khoản</span><strong class="text-sm font-semibold text-on-surface">@(string.IsNullOrWhiteSpace(Model.AccountName) ? "Chưa cấu hình" : Model.AccountName)</strong></div>
+                <div class="flex flex-col gap-1 py-2.5"><span class="text-sm text-on-surface-variant">Nội dung</span><strong class="text-sm font-semibold text-on-surface">@suggestedContent</strong></div>
             </div>
         </aside>
 
-        <div class="cu-card">
-            <div class="cu-section-head">
+        <div class="lg:col-span-7 bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md shadow-sm flex flex-col gap-4">
+            <div class="border-b border-outline-variant/20 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                    <span class="cu-kicker">Form</span>
-                    <h2>Thông tin yêu cầu</h2>
+                    <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block">Form</span>
+                    <h2 class="text-lg font-bold text-on-surface">Thông tin yêu cầu</h2>
                 </div>
             </div>
 
-            <form asp-action="TopUp" method="post" enctype="multipart/form-data" class="cu-form" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">
+            <form asp-action="TopUp" method="post" enctype="multipart/form-data" class="flex flex-col gap-md" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">
                 <input asp-for="Form.IdempotencyKey" type="hidden" />
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div asp-validation-summary="ModelOnly" class="text-error text-xs mt-1 block font-medium"></div>
 
                 <div>
-                    <label asp-for="Form.Amount" class="form-label"></label>
-                    <input asp-for="Form.Amount" class="form-control" />
-                    <span asp-validation-for="Form.Amount" class="text-danger small"></span>
+                    <label asp-for="Form.Amount" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                    <input asp-for="Form.Amount" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" />
+                    <span asp-validation-for="Form.Amount" class="text-error text-xs mt-1 block font-medium"></span>
                 </div>
 
                 <div>
-                    <label asp-for="Form.TransferContent" class="form-label"></label>
-                    <input asp-for="Form.TransferContent" class="form-control" placeholder="@suggestedContent" />
-                    <span asp-validation-for="Form.TransferContent" class="text-danger small"></span>
+                    <label asp-for="Form.TransferContent" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                    <input asp-for="Form.TransferContent" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" placeholder="@suggestedContent" />
+                    <span asp-validation-for="Form.TransferContent" class="text-error text-xs mt-1 block font-medium"></span>
                 </div>
 
                 <div>
-                    <label asp-for="Form.TransactionReferenceCode" class="form-label"></label>
-                    <input asp-for="Form.TransactionReferenceCode" class="form-control" />
-                    <span asp-validation-for="Form.TransactionReferenceCode" class="text-danger small"></span>
+                    <label asp-for="Form.TransactionReferenceCode" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                    <input asp-for="Form.TransactionReferenceCode" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" />
+                    <span asp-validation-for="Form.TransactionReferenceCode" class="text-error text-xs mt-1 block font-medium"></span>
                 </div>
 
                 <div>
-                    <label asp-for="Form.ProofFile" class="form-label"></label>
-                    <input asp-for="Form.ProofFile" class="form-control" />
-                    <span asp-validation-for="Form.ProofFile" class="text-danger small"></span>
+                    <label asp-for="Form.ProofFile" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                    <input asp-for="Form.ProofFile" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" />
+                    <span asp-validation-for="Form.ProofFile" class="text-error text-xs mt-1 block font-medium"></span>
                 </div>
 
-                <div class="cu-actions">
-                    <button class="btn btn-primary" type="submit">Gửi yêu cầu nạp tiền</button>
-                    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Hủy</a>
+                <div class="flex flex-wrap gap-3 mt-4">
+                    <button class="px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm hover:shadow-md" type="submit">Gửi yêu cầu nạp tiền</button>
+                    <a class="px-5 py-2.5 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Hủy</a>
                 </div>
             </form>
         </div>

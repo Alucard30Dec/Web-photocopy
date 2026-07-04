@@ -1,5 +1,5 @@
 @{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+    Layout = "~/Views/Shared/_BranchCustomerModernLayout.cshtml";
 }
 
 @model CreatePrintJobViewModel
@@ -8,214 +8,227 @@
     var branchSlug = CustomerBranchContext.GetSlug(ViewContext);
 }
 
-<section class="cu-page print-create-page">
-    <section class="page-hero print-create-hero">
+<section class="flex-1 p-md md:p-lg overflow-y-auto max-w-container-max mx-auto w-full px-lg flex flex-col gap-lg print-create-page">
+    <section class="bg-surface-container-low rounded-xl p-lg border border-surface-variant/20 shadow-sm relative overflow-hidden flex flex-col lg:flex-row justify-between items-start lg:items-center gap-md print-create-hero">
         <div>
-            <span class="cu-kicker">Đặt in trực tuyến</span>
-            <h1>Tạo đơn in mới</h1>
-            <p>Chọn tối đa 5 tài liệu trong một lần. Mỗi tài liệu sẽ tạo thành một đơn riêng nhưng dùng chung cấu hình in và hình thức nhận hàng.</p>
-            <div class="info-chip-group">
-                <span class="info-chip"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-files"></use></svg>Nhiều file trong một lần gửi</span>
-                <span class="info-chip"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-filetype-pdf"></use></svg>PDF, ảnh và Office xem trước trực tiếp</span>
-                <span class="info-chip"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clipboard-check"></use></svg>Kiểm tra từng file trước khi tạo đơn</span>
+            <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block cu-kicker">Đặt in trực tuyến</span>
+            <h1 class="text-2xl md:text-3xl font-bold text-on-surface mb-2">Tạo đơn in mới</h1>
+            <p class="text-sm text-on-surface-variant max-w-2xl">Chọn tối đa 5 tài liệu trong một lần. Mỗi tài liệu sẽ tạo thành một đơn riêng nhưng dùng chung cấu hình in và hình thức nhận hàng.</p>
+            <div class="flex flex-wrap gap-2 mt-3">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-xs font-medium border border-outline-variant/10"><span class="material-symbols-outlined text-[16px]">description</span>Nhiều file trong một lần gửi</span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-xs font-medium border border-outline-variant/10"><span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>PDF, ảnh và Office xem trước trực tiếp</span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-xs font-medium border border-outline-variant/10"><span class="material-symbols-outlined text-[16px]">fact_check</span>Kiểm tra từng file trước khi tạo đơn</span>
             </div>
         </div>
-        <aside class="print-create-hero__note">
-            <strong>Định dạng hỗ trợ</strong>
-            <span>PDF, JPG, PNG, Word, Excel, PowerPoint</span>
-            <small>Tối đa 20 MB/file và 100 MB cho một lần gửi.</small>
+        <aside class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-5 shadow-sm min-w-[240px] flex flex-col gap-2 relative z-10 print-create-hero__note">
+            <strong class="text-sm font-bold text-on-surface">Định dạng hỗ trợ</strong>
+            <span class="text-xs text-on-surface-variant">PDF, JPG, PNG, Word, Excel, PowerPoint</span>
+            <small class="text-[10px] text-on-surface-variant/70">Tối đa 20 MB/file và 100 MB cho một lần gửi.</small>
         </aside>
     </section>
 
-    <div class="print-workspace print-workspace--create">
-        <div class="print-form-shell">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-lg print-workspace print-workspace--create">
+        <div class="lg:col-span-8 flex flex-col gap-lg print-form-shell">
             <form asp-route="shop-branch-customer" asp-route-branchSlug="@branchSlug" asp-route-controller="PrintJobs" asp-route-action="Create" method="post" enctype="multipart/form-data" id="printJobForm" data-page-count-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/ReadUploadPageCount")" data-office-preview-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/PreviewOfficeUpload")" data-calculate-price-url="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs/CalculatePrice")" novalidate>
                 <input asp-for="IdempotencyKey" type="hidden" />
-                <div asp-validation-summary="All" class="alert alert-danger print-validation-summary" role="alert"></div>
+                <div asp-validation-summary="All"
+                     role="alert"
+                     class="bg-error/10 border border-error/20 text-error rounded-xl p-4 text-sm mb-6 flex flex-col gap-2 print-validation-summary"></div>
 
-                <section class="form-step print-source-step">
-                    <div class="step-heading">
-                        <div class="step-label"><span class="step-dot" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-file-earmark-arrow-up"></use></svg></span><span>1. Chọn tài liệu</span></div>
-                        <span class="step-badge">Tối đa 5 file</span>
+                <section class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md md:p-lg shadow-sm flex flex-col gap-md form-step print-source-step">
+                    <div class="border-b border-outline-variant/20 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 step-heading">
+                        <div class="flex items-center gap-3 step-label"><span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center step-dot" aria-hidden="true"><span class="material-symbols-outlined text-[18px]">cloud_upload</span></span><span class="font-bold text-on-surface text-lg">1. Chọn tài liệu</span></div>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border leading-none shadow-xs bg-primary/10 text-primary border-primary/20 step-badge">Tối đa 5 file</span>
                     </div>
-                    <p class="step-description">Kéo thả hoặc chọn nhiều file mới từ thiết bị. Hệ thống đọc số trang ngay sau khi chọn file; sau đó bạn chọn phạm vi từ trang nào đến trang nào trước khi xem trước hoặc gửi đơn.</p>
+                    <p class="text-sm text-on-surface-variant step-description">Kéo thả hoặc chọn nhiều file mới từ thiết bị. Hệ thống đọc số trang ngay sau khi chọn file; sau đó bạn chọn phạm vi từ trang nào đến trang nào trước khi xem trước hoặc gửi đơn.</p>
 
                     <div class="document-source-grid document-source-grid--upload-only">
-                        <div class="document-source-main">
-                            <div class="upload-dropzone" id="uploadDropzone" tabindex="0" role="button" aria-controls="UploadFiles">
-                                <input asp-for="UploadFiles" class="print-file-input" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
-                                <span class="upload-dropzone__icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-file-earmark-arrow-up"></use></svg></span>
-                                <strong>Kéo thả tài liệu vào đây</strong>
-                                <span>hoặc bấm để chọn nhiều file từ máy tính</span>
-                                <small>PDF, ảnh, Word, Excel, PowerPoint • tối đa 20 MB/file</small>
+                        <div class="document-source-main flex flex-col gap-4">
+                            <div class="flex flex-col items-center justify-center border-2 border-dashed border-outline-variant/50 rounded-xl p-8 hover:border-primary/50 transition-colors cursor-pointer bg-surface-container-low relative focus-within:ring-2 focus-within:ring-primary/50 upload-dropzone" id="uploadDropzone" tabindex="0" role="button" aria-controls="UploadFiles">
+                                <input asp-for="UploadFiles" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer print-file-input" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                                <span class="text-primary mb-2 upload-dropzone__icon" aria-hidden="true"><span class="material-symbols-outlined text-[36px]">cloud_upload</span></span>
+                                <strong class="text-sm font-bold text-on-surface">Kéo thả tài liệu vào đây</strong>
+                                <span class="text-xs text-on-surface-variant">hoặc bấm để chọn nhiều file từ máy tính</span>
+                                <small class="text-[10px] text-on-surface-variant/60 mt-1">PDF, ảnh, Word, Excel, PowerPoint • tối đa 20 MB/file</small>
                             </div>
-                            <span asp-validation-for="UploadFiles" class="text-danger"></span>
-                            <div class="file-client-error" id="fileClientError" role="alert" hidden></div>
+                            <span asp-validation-for="UploadFiles" class="text-error text-xs mt-1 block font-medium"></span>
+                            <div id="fileClientError"
+                                 role="alert"
+                                 class="bg-error/10 border border-error/20 text-error rounded-xl p-4 text-sm mb-6 flex flex-col gap-2 file-client-error"
+                                 hidden></div>
 
-                            <div class="upload-queue" id="uploadQueue" aria-live="polite">
-                                <div class="upload-queue-empty" id="uploadQueueEmpty">
-                                    <strong>Chưa có file mới</strong>
-                                    <span>File bạn chọn sẽ xuất hiện tại đây để đọc số trang, chọn phạm vi in và xem trước.</span>
+                            <div class="flex flex-col gap-3 upload-queue" id="uploadQueue" aria-live="polite">
+                                <div class="flex flex-col items-center justify-center text-center p-6 border border-outline-variant/20 rounded-xl bg-surface-container-low upload-queue-empty" id="uploadQueueEmpty">
+                                    <strong class="text-sm font-bold text-on-surface-variant">Danh sách file sẽ hiển thị tại đây</strong>
+                                    <span class="text-xs text-on-surface-variant/70 mt-1">Sau khi chọn file, khu vực này sẽ được thay bằng danh sách tài liệu, số trang, phạm vi in và thao tác xem trước.</span>
                                 </div>
                             </div>
 
                         </div>
                     </div>
 
-                    <dialog class="document-preview-dialog" id="documentPreviewDialog" aria-labelledby="previewFileName">
-                        <div class="document-preview-dialog__surface">
-                            <div class="document-preview-panel__head">
+                    <dialog class="backdrop:bg-black/60 rounded-xl border border-outline-variant/30 bg-surface-container-lowest shadow-2xl p-0 overflow-hidden w-full max-w-4xl max-h-[85vh] flex flex-col document-preview-dialog" id="documentPreviewDialog" aria-labelledby="previewFileName">
+                        <div class="flex flex-col h-full document-preview-dialog__surface">
+                            <div class="flex justify-between items-center px-4 py-3 bg-surface-container border-b border-outline-variant/20 document-preview-panel__head">
                                 <div>
-                                    <span class="cu-kicker">Xem trước tài liệu</span>
-                                    <strong id="previewFileName">Tài liệu</strong>
+                                    <span class="text-primary font-bold text-[10px] uppercase tracking-wider block">Xem trước tài liệu</span>
+                                    <strong class="text-sm font-bold text-on-surface" id="previewFileName">Tài liệu</strong>
                                 </div>
-                                <div class="document-preview-dialog__actions">
-                                    <a class="btn btn-sm btn-outline-secondary" id="previewDownloadLink" href="#" target="_blank" rel="noopener" hidden>Tải file</a>
-                                    <button class="document-preview-dialog__close" id="closeDocumentPreviewButton" type="button" aria-label="Đóng bản xem trước">&times;</button>
+                                <div class="flex items-center gap-2 document-preview-dialog__actions">
+                                    <a class="px-3.5 py-2 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-medium rounded-lg text-xs transition-colors inline-flex items-center justify-center gap-1.5" id="previewDownloadLink" href="#" target="_blank" rel="noopener" hidden>Tải file</a>
+                                    <button class="text-2xl text-on-surface-variant hover:text-on-surface p-1 line-none leading-none focus:outline-none" id="closeDocumentPreviewButton" type="button" aria-label="Đóng bản xem trước">&times;</button>
                                 </div>
                             </div>
-                            <div class="document-preview-stage" id="documentPreviewStage" tabindex="0">
-                                <div class="document-preview-empty" id="previewEmptyState" hidden>
-                                    <svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-file-earmark-richtext"></use></svg>
-                                    <strong>Không thể hiển thị tài liệu</strong>
-                                    <span>Hãy đóng cửa sổ và chọn lại file cần xem trước.</span>
+                            <div class="relative flex-1 min-h-[400px] bg-neutral-900 flex items-center justify-center document-preview-stage" id="documentPreviewStage" tabindex="0">
+                                <div class="flex flex-col items-center justify-center text-center text-white/50 p-6 gap-2" id="previewEmptyState" hidden>
+                                    <span class="material-symbols-outlined text-[48px] text-white/40">description</span>
+                                    <strong class="text-sm font-bold text-white">Không thể hiển thị tài liệu</strong>
+                                    <span class="text-xs">Hãy đóng cửa sổ và chọn lại file cần xem trước.</span>
                                 </div>
-                                <iframe id="documentPreviewFrame" title="Xem trước tài liệu" loading="lazy" hidden></iframe>
-                                <img id="documentPreviewImage" alt="Xem trước hình ảnh" hidden />
-                                <div class="document-preview-fallback" id="documentPreviewFallback" hidden>
-                                    <span class="file-type-pill file-type-pill--large" id="previewFallbackType">FILE</span>
-                                    <strong id="previewFallbackName">Tài liệu</strong>
-                                    <span id="previewFallbackMeta"></span>
-                                    <p id="previewFallbackMessage">Đang chuẩn bị bản xem trước tài liệu.</p>
+                                <iframe id="documentPreviewFrame" class="w-full h-full border-0 absolute inset-0" title="Xem trước tài liệu" loading="lazy" hidden></iframe>
+                                <img id="documentPreviewImage" class="max-w-full max-h-full object-contain" alt="Xem trước hình ảnh" hidden />
+                                <div class="flex flex-col items-center justify-center text-center text-white/70 p-6 gap-3" id="documentPreviewFallback" hidden>
+                                    <span class="px-3 py-1 bg-primary/20 text-primary border border-primary/30 rounded-lg text-xs font-bold" id="previewFallbackType">FILE</span>
+                                    <strong class="text-sm font-bold text-white" id="previewFallbackName">Tài liệu</strong>
+                                    <span class="text-xs" id="previewFallbackMeta"></span>
+                                    <p class="text-xs text-white/50" id="previewFallbackMessage">Đang chuẩn bị bản xem trước tài liệu.</p>
                                 </div>
                             </div>
                         </div>
                     </dialog>
                 </section>
 
-                <section class="form-step">
-                    <div class="step-heading">
-                        <div class="step-label"><span class="step-dot" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-sliders"></use></svg></span><span>2. Cấu hình in</span></div>
-                        <span class="step-badge">Áp dụng cho tất cả file</span>
+                <section class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md md:p-lg shadow-sm flex flex-col gap-md form-step">
+                    <div class="border-b border-outline-variant/20 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 step-heading">
+                        <div class="flex items-center gap-3 step-label"><span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center step-dot" aria-hidden="true"><span class="material-symbols-outlined text-[18px]">tune</span></span><span class="font-bold text-on-surface text-lg">2. Cấu hình in</span></div>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border leading-none shadow-xs bg-primary/10 text-primary border-primary/20 step-badge">Áp dụng cho tất cả file</span>
                     </div>
-                    <p class="step-description">Chọn cấu hình nhanh rồi điều chỉnh chi tiết. Mỗi file được tạo thành một đơn riêng để tiệm kiểm tra và xử lý chính xác.</p>
+                    <p class="text-sm text-on-surface-variant step-description">Chọn cấu hình nhanh rồi điều chỉnh chi tiết. Mỗi file được tạo thành một đơn riêng để tiệm kiểm tra và xử lý chính xác.</p>
 
-                    <div class="quick-preset-grid" id="printPresetGrid">
-                        <button type="button" class="quick-preset" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.TwoSide)" data-color-mode="@((int)ColorMode.BlackWhite)" data-is-photo="false">
-                            <span class="preset-title">Tài liệu học tập</span>
-                            <span class="preset-meta">A4 • 2 mặt • Trắng đen</span>
+                    <div class="grid grid-cols-2 gap-md quick-preset-grid" id="printPresetGrid">
+                        <button type="button" class="w-full text-left bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-low rounded-xl p-4 transition-all flex flex-col gap-1 focus:outline-none group quick-preset" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.TwoSide)" data-color-mode="@((int)ColorMode.BlackWhite)" data-is-photo="false">
+                            <span class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors preset-title">Tài liệu học tập</span>
+                            <span class="text-xs text-on-surface-variant preset-meta">A4 • 2 mặt • Trắng đen</span>
                         </button>
-                        <button type="button" class="quick-preset" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.BlackWhite)" data-is-photo="false">
-                            <span class="preset-title">Báo cáo</span>
-                            <span class="preset-meta">A4 • 1 mặt • Trắng đen</span>
+                        <button type="button" class="w-full text-left bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-low rounded-xl p-4 transition-all flex flex-col gap-1 focus:outline-none group quick-preset" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.BlackWhite)" data-is-photo="false">
+                            <span class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors preset-title">Báo cáo</span>
+                            <span class="text-xs text-on-surface-variant preset-meta">A4 • 1 mặt • Trắng đen</span>
                         </button>
-                        <button type="button" class="quick-preset" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.Color)" data-is-photo="false">
-                            <span class="preset-title">Slide màu</span>
-                            <span class="preset-meta">A4 • 1 mặt • Màu</span>
+                        <button type="button" class="w-full text-left bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-low rounded-xl p-4 transition-all flex flex-col gap-1 focus:outline-none group quick-preset" data-paper-size="@((int)PaperSize.A4)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.Color)" data-is-photo="false">
+                            <span class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors preset-title">Slide màu</span>
+                            <span class="text-xs text-on-surface-variant preset-meta">A4 • 1 mặt • Màu</span>
                         </button>
-                        <button type="button" class="quick-preset" data-paper-size="@((int)PaperSize.A3)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.Color)" data-is-photo="true">
-                            <span class="preset-title">Poster / ảnh</span>
-                            <span class="preset-meta">A3 • 1 mặt • Màu ảnh</span>
+                        <button type="button" class="w-full text-left bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-low rounded-xl p-4 transition-all flex flex-col gap-1 focus:outline-none group quick-preset" data-paper-size="@((int)PaperSize.A3)" data-print-side="@((int)PrintSide.OneSide)" data-color-mode="@((int)ColorMode.Color)" data-is-photo="true">
+                            <span class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors preset-title">Poster / ảnh</span>
+                            <span class="text-xs text-on-surface-variant preset-meta">A3 • 1 mặt • Màu ảnh</span>
                         </button>
                     </div>
 
-                    <div class="print-config-grid">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-md print-config-grid">
                         <div>
-                            <label asp-for="PaperSize" class="form-label"></label>
-                            <select asp-for="PaperSize" class="form-select" asp-items="Html.GetEnumSelectList<PaperSize>()"></select>
+                            <label asp-for="PaperSize" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <select asp-for="PaperSize" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary/50 transition-colors" asp-items="Html.GetEnumSelectList<PaperSize>()"></select>
                         </div>
                         <div>
-                            <label asp-for="PrintSide" class="form-label"></label>
-                            <select asp-for="PrintSide" class="form-select" asp-items="Html.GetEnumSelectList<PrintSide>()"></select>
+                            <label asp-for="PrintSide" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <select asp-for="PrintSide" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary/50 transition-colors" asp-items="Html.GetEnumSelectList<PrintSide>()"></select>
                         </div>
                         <div>
-                            <label asp-for="ColorMode" class="form-label"></label>
-                            <select asp-for="ColorMode" class="form-select" asp-items="Html.GetEnumSelectList<ColorMode>()"></select>
+                            <label asp-for="ColorMode" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <select asp-for="ColorMode" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary/50 transition-colors" asp-items="Html.GetEnumSelectList<ColorMode>()"></select>
                         </div>
                         <div>
-                            <label asp-for="Copies" class="form-label"></label>
-                            <input asp-for="Copies" class="form-control" min="1" max="1000" inputmode="numeric" />
-                            <span asp-validation-for="Copies" class="text-danger"></span>
+                            <label asp-for="Copies" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <input asp-for="Copies" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" min="1" max="1000" inputmode="numeric" />
+                            <span asp-validation-for="Copies" class="text-error text-xs mt-1 block font-medium"></span>
                         </div>
-                        <label class="photo-print-toggle">
-                            <input asp-for="IsPhoto" class="form-check-input" />
-                            <span>
-                                <strong>In ảnh chất lượng cao</strong>
-                                <small>Dùng giấy ảnh hoặc yêu cầu màu chính xác.</small>
+                        <label class="flex items-start gap-3 p-4 bg-surface-container-low border border-outline-variant/20 rounded-xl cursor-pointer hover:border-primary/30 transition-all select-none col-span-1 md:col-span-2 photo-print-toggle">
+                            <input asp-for="IsPhoto" class="w-5 h-5 rounded border-outline-variant/50 text-primary focus:ring-primary focus:ring-offset-background mt-0.5" />
+                            <span class="flex flex-col">
+                                <strong class="text-sm font-bold text-on-surface">In ảnh chất lượng cao</strong>
+                                <small class="text-xs text-on-surface-variant mt-0.5">Dùng giấy ảnh hoặc yêu cầu màu chính xác.</small>
                             </span>
                         </label>
                     </div>
                 </section>
 
-                <section class="form-step">
-                    <div class="step-heading">
-                        <div class="step-label"><span class="step-dot" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-shop"></use></svg></span><span>3. Nhận hàng</span></div>
+                <section class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md md:p-lg shadow-sm flex flex-col gap-md form-step">
+                    <div class="border-b border-outline-variant/20 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 step-heading">
+                        <div class="flex items-center gap-3 step-label"><span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center step-dot" aria-hidden="true"><span class="material-symbols-outlined text-[18px]">store</span></span><span class="font-bold text-on-surface text-lg">3. Nhận hàng</span></div>
                     </div>
-                    <div class="delivery-grid">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-md delivery-grid">
                         <div>
-                            <label asp-for="DeliveryMethod" class="form-label"></label>
-                            <select asp-for="DeliveryMethod" class="form-select" asp-items="Html.GetEnumSelectList<DeliveryMethod>()"></select>
+                            <label asp-for="DeliveryMethod" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <input type="hidden" name="DeliveryMethod" value="@((int)DeliveryMethod.PickupAtStore)" />
+                            <select id="DeliveryMethod"
+                                    class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary/50 transition-colors delivery-method-select--locked"
+                                    aria-describedby="deliveryMethodHelp"
+                                    disabled>
+                                <option value="@((int)DeliveryMethod.PickupAtStore)" selected>Nhận tại tiệm</option>
+                                <option value="@((int)DeliveryMethod.Shipping)" disabled>Giao tận nơi (chưa phát triển)</option>
+                            </select>
+                            <small id="deliveryMethodHelp" class="block text-xs text-on-surface-variant/70 mt-2">Giao tận nơi đang được phát triển, hiện hệ thống chỉ nhận đơn lấy tại tiệm.</small>
                         </div>
                         <div class="delivery-address-wrap" id="deliveryAddressWrap">
-                            <label asp-for="DeliveryAddress" class="form-label"></label>
-                            <input asp-for="DeliveryAddress" class="form-control" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" />
-                            <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
+                            <label asp-for="DeliveryAddress" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <input asp-for="DeliveryAddress" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" />
+                            <span asp-validation-for="DeliveryAddress" class="text-error text-xs mt-1 block font-medium"></span>
                         </div>
                     </div>
                 </section>
 
-                <section class="form-step">
-                    <div class="step-heading">
-                        <div class="step-label"><span class="step-dot" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-chat-left-text"></use></svg></span><span>4. Ghi chú cho tiệm</span></div>
+                <section class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md md:p-lg shadow-sm flex flex-col gap-md form-step">
+                    <div class="border-b border-outline-variant/20 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 step-heading">
+                        <div class="flex items-center gap-3 step-label"><span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center step-dot" aria-hidden="true"><span class="material-symbols-outlined text-[18px]">sms</span></span><span class="font-bold text-on-surface text-lg">4. Ghi chú cho tiệm</span></div>
                     </div>
-                    <label asp-for="Notes" class="form-label"></label>
-                    <textarea asp-for="Notes" class="form-control" rows="4" placeholder="Ví dụ: Trang bìa in màu, các trang còn lại trắng đen; đóng gáy xoắn và bọc bìa trong."></textarea>
-                    <span asp-validation-for="Notes" class="text-danger"></span>
+                    <label asp-for="Notes" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                    <textarea asp-for="Notes" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" rows="4" placeholder="Ví dụ: Trang bìa in màu, các trang còn lại trắng đen; đóng gáy xoắn và bọc bìa trong."></textarea>
+                    <span asp-validation-for="Notes" class="text-error text-xs mt-1 block font-medium"></span>
                 </section>
 
-                <div class="print-submit-bar">
-                    <div>
-                        <strong>Kiểm tra file và phạm vi trang trước khi gửi</strong>
-                        <span>Tiệm xác nhận từng tài liệu trước khi trừ tiền ví.</span>
+                <div class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md print-submit-bar">
+                    <div class="flex flex-col">
+                        <strong class="text-sm font-bold text-on-surface">Kiểm tra file và phạm vi trang trước khi gửi</strong>
+                        <span class="text-xs text-on-surface-variant">Tiệm xác nhận từng tài liệu trước khi trừ tiền ví.</span>
                     </div>
-                    <div class="print-submit-actions">
-                        <a class="btn btn-outline-secondary" href="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs")"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-arrow-left-circle"></use></svg>Quay lại</a>
-                        <button class="btn btn-primary" type="submit" id="submitPrintJobButton"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-send-check"></use></svg><span>Gửi đơn in</span></button>
+                    <div class="flex flex-wrap gap-3 mt-4 sm:mt-0 print-submit-actions">
+                        <a class="px-5 py-2.5 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm" href="@CustomerBranchContext.ToPath(ViewContext, "PrintJobs")"><span class="material-symbols-outlined text-[20px]">arrow_back</span>Quay lại</a>
+                        <button class="px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm hover:shadow-md" type="submit" id="submitPrintJobButton"><span class="material-symbols-outlined text-[20px]">send</span><span>Gửi đơn in</span></button>
                     </div>
                 </div>
             </form>
         </div>
 
-        <aside class="print-summary-card print-summary-card--create">
+        <aside class="lg:col-span-4 lg:sticky lg:top-24 bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md shadow-sm flex flex-col gap-4 print-summary-card print-summary-card--create">
             <div class="print-summary-head">
-                <span class="cu-kicker">Tóm tắt</span>
-                <h2 class="print-summary-title">Đơn in của bạn</h2>
-                <p class="print-summary-subtitle">Thông tin được cập nhật theo file và cấu hình đang chọn.</p>
+                <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block">Tóm tắt</span>
+                <h2 class="text-lg font-bold text-on-surface print-summary-title">Đơn in của bạn</h2>
+                <p class="text-xs text-on-surface-variant print-summary-subtitle">Thông tin được cập nhật theo file và cấu hình đang chọn.</p>
             </div>
 
-            <div class="summary-highlight-grid">
-                <div>
-                    <span>Tài liệu</span>
-                    <strong id="summaryFileCount">0</strong>
+            <div class="grid grid-cols-2 gap-md bg-surface-container-low p-3 rounded-xl summary-highlight-grid">
+                <div class="flex flex-col">
+                    <span class="text-[10px] uppercase font-bold text-on-surface-variant/60">Tài liệu</span>
+                    <strong class="text-xl font-bold text-on-surface" id="summaryFileCount">0</strong>
                 </div>
-                <div>
-                    <span>Tổng dung lượng mới</span>
-                    <strong id="summaryUploadSize">0 MB</strong>
+                <div class="flex flex-col">
+                    <span class="text-[10px] uppercase font-bold text-on-surface-variant/60">Tổng dung lượng mới</span>
+                    <strong class="text-xl font-bold text-on-surface" id="summaryUploadSize">0 MB</strong>
                 </div>
             </div>
 
-            <div class="summary-line"><span>Khổ giấy</span><span class="summary-value" id="summaryPaperSize">-</span></div>
-            <div class="summary-line"><span>Kiểu in</span><span class="summary-value" id="summaryPrintSide">-</span></div>
-            <div class="summary-line"><span>Màu sắc</span><span class="summary-value" id="summaryColorMode">-</span></div>
-            <div class="summary-line"><span>Số bản mỗi file</span><span class="summary-value" id="summaryCopies">1</span></div>
-            <div class="summary-line"><span>Tổng trang đã biết</span><span class="summary-value" id="summaryPages">0</span></div>
-            <div class="summary-line"><span>Tổng lượt trang in</span><span class="summary-value" id="summaryVolume">0</span></div>
-            <div class="summary-line"><span>Nhận hàng</span><span class="summary-value" id="summaryDelivery">-</span></div>
-            <div class="summary-line mt-3 pt-3 border-top"><span>Ước tính giá mỗi đơn</span><strong class="summary-value text-primary" id="summaryTotalAmount">0 đ</strong></div>
+            <div class="flex justify-between items-center text-xs py-1 border-b border-outline-variant/10 summary-line"><span class="text-on-surface-variant">Khổ giấy</span><span class="font-bold text-on-surface summary-value" id="summaryPaperSize">-</span></div>
+            <div class="flex justify-between items-center text-xs py-1 border-b border-outline-variant/10 summary-line"><span class="text-on-surface-variant">Kiểu in</span><span class="font-bold text-on-surface summary-value" id="summaryPrintSide">-</span></div>
+            <div class="flex justify-between items-center text-xs py-1 border-b border-outline-variant/10 summary-line"><span class="text-on-surface-variant">Màu sắc</span><span class="font-bold text-on-surface summary-value" id="summaryColorMode">-</span></div>
+            <div class="flex justify-between items-center text-xs py-1 border-b border-outline-variant/10 summary-line"><span class="text-on-surface-variant">Số bản mỗi file</span><span class="font-bold text-on-surface summary-value" id="summaryCopies">1</span></div>
+            <div class="flex justify-between items-center text-xs py-1 border-b border-outline-variant/10 summary-line"><span class="text-on-surface-variant">Tổng trang đã biết</span><span class="font-bold text-on-surface summary-value" id="summaryPages">0</span></div>
+            <div class="flex justify-between items-center text-xs py-1 border-b border-outline-variant/10 summary-line"><span class="text-on-surface-variant">Tổng lượt trang in</span><span class="font-bold text-on-surface summary-value" id="summaryVolume">0</span></div>
+            <div class="flex justify-between items-center text-xs py-1 border-b border-outline-variant/10 summary-line"><span class="text-on-surface-variant">Nhận hàng</span><span class="font-bold text-on-surface summary-value" id="summaryDelivery">-</span></div>
+            <div class="flex justify-between items-center text-sm py-2 mt-2 border-t border-outline-variant/20 summary-line"><span class="text-on-surface font-semibold">Tổng giá đơn</span><strong class="text-primary text-base font-bold summary-value" id="summaryTotalAmount">0 đ</strong></div>
 
-            <div class="summary-note">
-                <strong>Lưu ý nghiệp vụ</strong>
-                <span>Số trang được đọc tự động ngay khi chọn file. Phạm vi mặc định là toàn bộ tài liệu; bạn có thể đổi “Từ trang” và “Đến trang”, nhưng không được vượt quá tổng số trang.</span>
+            <div class="bg-surface-container-low/50 p-3 rounded-xl text-xs flex flex-col gap-1 mt-2 summary-note">
+                <strong class="font-bold text-on-surface">Lưu ý nghiệp vụ</strong>
+                <span class="text-on-surface-variant">Số trang được đọc tự động ngay khi chọn file. Tổng tiền được cộng theo từng tài liệu và phạm vi trang đã chọn.</span>
             </div>
         </aside>
     </div>

@@ -1,5 +1,5 @@
 @{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+    Layout = "~/Views/Shared/_BranchCustomerModernLayout.cshtml";
 }
 
 @model List<TopUpRequest>
@@ -7,53 +7,71 @@
     ViewData["Title"] = "Lịch sử yêu cầu nạp tiền";
 }
 
-<section class="cu-page">
-    <section class="cu-hero">
+<section class="flex-1 p-md md:p-lg overflow-y-auto max-w-container-max mx-auto w-full px-lg flex flex-col gap-lg">
+    <section class="bg-surface-container-low rounded-xl p-lg border border-surface-variant/20 shadow-sm relative overflow-hidden flex flex-col lg:flex-row justify-between items-start lg:items-center gap-md">
         <div>
-            <span class="cu-kicker">Top-up history</span>
-            <h1>Lịch sử yêu cầu nạp tiền</h1>
-            <p>Theo dõi các yêu cầu đã gửi, trạng thái duyệt và ghi chú từ shop/admin.</p>
-            <div class="cu-actions">
-                <a class="btn btn-primary" asp-action="TopUp" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Tạo yêu cầu mới</a>
-                <a class="btn btn-outline-secondary" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Ví của tôi</a>
+            <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block">Top-up history</span>
+            <h1 class="text-2xl md:text-3xl font-bold text-on-surface mb-2">Lịch sử yêu cầu nạp tiền</h1>
+            <p class="text-sm text-on-surface-variant max-w-2xl">Theo dõi các yêu cầu đã gửi, trạng thái duyệt và ghi chú từ shop/admin.</p>
+            <div class="flex flex-wrap gap-3 mt-4">
+                <a class="px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm hover:shadow-md" asp-action="TopUp" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Tạo yêu cầu mới</a>
+                <a class="px-5 py-2.5 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">Ví của tôi</a>
             </div>
         </div>
-        <aside class="cu-hero-card">
-            <span class="cu-card-label">Tổng yêu cầu</span>
-            <strong>@Model.Count</strong>
-            <small>Nạp tiền qua chuyển khoản và đối soát thủ công.</small>
+        <aside class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-5 shadow-sm min-w-[240px] flex flex-col gap-2 relative z-10">
+            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Tổng yêu cầu</span>
+            <strong class="text-lg font-bold text-on-surface">@Model.Count</strong>
+            <small class="text-xs text-on-surface-variant">Nạp tiền qua chuyển khoản và đối soát thủ công.</small>
         </aside>
     </section>
 
-    <section class="cu-card">
-        <div class="cu-table-wrap">
-            <table class="table cu-table">
-                <thead>
+    <section class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md md:p-lg shadow-sm flex flex-col gap-md">
+        <div class="overflow-x-auto border border-outline-variant/20 rounded-xl w-full">
+            <table class="table-auto w-full text-left text-sm border-collapse">
+                <thead class="bg-surface-container/60 border-b border-outline-variant/20">
                     <tr>
-                        <th>Thời gian</th>
-                        <th class="text-end">Số tiền</th>
-                        <th>Nội dung</th>
-                        <th>Mã GD</th>
-                        <th>Trạng thái</th>
-                        <th>Ghi chú admin</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Thời gian</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-right">Số tiền</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Nội dung</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Mã GD</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Trạng thái</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Ghi chú admin</th>
                     </tr>
                 </thead>
                 <tbody>
                 @if (Model.Count == 0)
                 {
                     <tr>
-                        <td colspan="6"><div class="cu-empty"><strong>Chưa có yêu cầu nạp tiền.</strong><span>Tạo yêu cầu mới nếu bạn muốn nạp ví.</span></div></td>
+                        <td colspan="6" class="px-4 py-3.5 text-on-surface align-middle">
+                            <div class="flex flex-col items-center justify-center text-center p-lg gap-3">
+                                <span class="material-symbols-outlined text-[48px] text-on-surface-variant/40">receipt_long</span>
+                                <strong class="text-sm font-bold text-on-surface">Chưa có yêu cầu nạp tiền.</strong>
+                                <span class="text-xs text-on-surface-variant">Tạo yêu cầu mới nếu bạn muốn nạp ví.</span>
+                            </div>
+                        </td>
                     </tr>
                 }
                 @foreach (var item in Model)
                 {
-                    <tr>
-                        <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                        <td class="text-end fw-semibold">@item.Amount.ToString("N0") đ</td>
-                        <td>@item.TransferContent</td>
-                        <td>@item.TransactionReferenceCode</td>
-                        <td><span class="badge @item.Status.ToBadgeClass()">@item.Status.GetDisplayName()</span></td>
-                        <td>@item.ReviewNote</td>
+                    var statusThemeClass = item.Status.ToBadgeClass() switch
+                    {
+                        "bg-success" => "bg-green-100 text-green-800 border-green-600/20",
+                        "bg-danger" => "bg-error/10 text-error border-error/20",
+                        "bg-primary" => "bg-primary/10 text-primary border-primary/20",
+                        "bg-info text-dark" => "bg-primary/10 text-primary border-primary/20",
+                        "bg-warning text-dark" => "bg-amber-100 text-amber-800 border-amber-500/20",
+                        _ => "bg-surface-container-high text-on-surface-variant border-outline-variant/20"
+                    };
+
+                    <tr class="border-b border-outline-variant/10 hover:bg-surface-container-low transition-colors duration-150">
+                        <td class="px-4 py-3.5 text-on-surface align-middle">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="px-4 py-3.5 text-on-surface align-middle text-right font-semibold">@item.Amount.ToString("N0") đ</td>
+                        <td class="px-4 py-3.5 text-on-surface align-middle">@item.TransferContent</td>
+                        <td class="px-4 py-3.5 text-on-surface align-middle">@item.TransactionReferenceCode</td>
+                        <td class="px-4 py-3.5 text-on-surface align-middle">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border leading-none shadow-xs @statusThemeClass">@item.Status.GetDisplayName()</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-on-surface align-middle">@item.ReviewNote</td>
                     </tr>
                 }
                 </tbody>

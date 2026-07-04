@@ -1,73 +1,173 @@
 @{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+    Layout = "~/Views/Shared/_BranchCustomerModernLayout.cshtml";
 }
 
 @model ProductCatalogViewModel
 @{
     ViewData["Title"] = "Văn phòng phẩm";
+    var branchSlug = CustomerBranchContext.GetSlug(ViewContext);
+    var catalogItems = Model.Items;
+    var selectedRows = catalogItems.Where(x => x.Quantity > 0).ToList();
+    if (selectedRows.Count == 0)
+    {
+        selectedRows.Add(new ProductOrderItemInputViewModel { Quantity = 1 });
+    }
 }
 
-<section class="cu-page">
-    <section class="cu-hero">
+<section class="flex-1 p-md md:p-lg overflow-y-auto max-w-container-max mx-auto w-full px-lg flex flex-col gap-lg">
+    <section class="bg-surface-container-low rounded-xl p-lg border border-surface-variant/20 shadow-sm relative overflow-hidden flex flex-col lg:flex-row justify-between items-start lg:items-center gap-md">
         <div>
-            <span class="cu-kicker">Stationery</span>
-            <h1>Đặt mua văn phòng phẩm</h1>
-            <p>Chọn số lượng sản phẩm cần mua. Hệ thống kiểm tra tồn kho và tạo đơn để cơ sở chuẩn bị cùng tài liệu in của bạn.</p>
-            <div class="cu-actions">
-                <a class="btn btn-outline-secondary" asp-action="Orders" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clock-history"></use></svg>Lịch sử đơn hàng</a>
-                <a class="btn btn-outline-secondary" asp-controller="Dashboard" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-speedometer2"></use></svg>Tổng quan</a>
+            <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block">Văn phòng phẩm</span>
+            <h1 class="text-2xl md:text-3xl font-bold text-on-surface mb-2">Đặt mua văn phòng phẩm</h1>
+            <p class="text-sm text-on-surface-variant max-w-2xl">Chọn số lượng sản phẩm cần mua. Hệ thống kiểm tra tồn kho và tạo đơn để cơ sở chuẩn bị cùng tài liệu in của bạn.</p>
+            <div class="flex flex-wrap gap-3 mt-4">
+                <a class="px-5 py-2.5 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm" asp-action="Orders" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><span class="material-symbols-outlined text-[20px]">history</span>Lịch sử đơn hàng</a>
+                <a class="px-5 py-2.5 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm" asp-controller="Dashboard" asp-action="Index" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><span class="material-symbols-outlined text-[20px]">dashboard</span>Tổng quan</a>
             </div>
         </div>
-        <aside class="cu-hero-card">
-            <span class="cu-card-label">Sản phẩm đang bán</span>
-            <strong>@Model.Items.Count</strong>
-            <small>Giấy, bút, bìa, vật tư học tập và văn phòng.</small>
+        <aside class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-5 shadow-sm min-w-[240px] flex flex-col gap-2 relative z-10">
+            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Sản phẩm đang bán</span>
+            <strong class="text-lg font-bold text-on-surface">@Model.Items.Count</strong>
+            <small class="text-xs text-on-surface-variant">Giấy, bút, bìa, vật tư học tập và văn phòng.</small>
         </aside>
     </section>
 
-    <section class="cu-card">
-        <form asp-action="Index" method="post" class="cu-form" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">
+    <section class="bg-surface-container-lowest border border-surface-variant/20 rounded-xl p-md md:p-lg shadow-sm">
+        <form asp-action="Index" method="post" class="product-order-form" asp-route-branchSlug="@branchSlug" id="productOrderForm">
             <input asp-for="IdempotencyKey" type="hidden" />
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div asp-validation-summary="ModelOnly" class="text-error text-xs mt-1 block font-medium"></div>
 
-            <div class="cu-product-grid">
-                @for (var i = 0; i < Model.Items.Count; i++)
+            <select id="productOptionSource" hidden>
+                <option value="" data-price="0" data-stock="0">Chọn sản phẩm</option>
+                @foreach (var item in catalogItems)
                 {
-                    <article class="cu-product-card">
-                        <div>
-                            <span class="cu-product-icon" aria-hidden="true"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-heart"></use></svg></span>
-                            <h2>@Model.Items[i].Name</h2>
-                            <p>@Model.Items[i].Price.ToString("N0") đ · Tồn kho: @Model.Items[i].StockQuantity</p>
-                        </div>
-                        <input asp-for="Items[i].ProductId" type="hidden" />
-                        <input asp-for="Items[i].Name" type="hidden" />
-                        <input asp-for="Items[i].Price" type="hidden" />
-                        <input asp-for="Items[i].StockQuantity" type="hidden" />
-
-                        <label asp-for="Items[i].Quantity" class="form-label"></label>
-                        <input asp-for="Items[i].Quantity" class="form-control" min="0" />
-                    </article>
+                    <option value="@item.ProductId"
+                            data-price="@item.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                            data-stock="@item.StockQuantity">
+                        @item.Name - @item.Price.ToString("N0") đ - tồn @item.StockQuantity
+                    </option>
                 }
-            </div>
+            </select>
 
-            <div class="cu-form-grid mt-3">
-                <div>
-                    <label asp-for="DeliveryMethod" class="form-label"></label>
-                    <select asp-for="DeliveryMethod" class="form-select" asp-items="Html.GetEnumSelectList<DeliveryMethod>()"></select>
-                </div>
-                <div>
-                    <label asp-for="DeliveryAddress" class="form-label"></label>
-                    <input asp-for="DeliveryAddress" class="form-control" />
-                </div>
-                <div class="cu-form-grid__full">
-                    <label asp-for="Notes" class="form-label"></label>
-                    <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
-                </div>
-            </div>
+            <div class="product-order-layout">
+                <div class="product-order-builder">
+                    <div class="product-order-builder__head">
+                        <div>
+                            <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block">Danh sách mua</span>
+                            <h2 class="text-lg font-bold text-on-surface">Sản phẩm trong đơn</h2>
+                        </div>
+                        <button class="px-3.5 py-2 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-lg text-xs transition-colors inline-flex items-center justify-center gap-1.5"
+                                type="button"
+                                id="addProductRowButton">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
+                            Thêm dòng
+                        </button>
+                    </div>
 
-            <div class="cu-actions mt-3">
-                <button class="btn btn-primary" type="submit"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-bag-check"></use></svg>Tạo đơn sản phẩm</button>
-                <a class="btn btn-outline-secondary" asp-action="Orders" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)"><svg class="cu-svg-icon" aria-hidden="true" focusable="false"><use href="#cu-icon-clock-history"></use></svg>Lịch sử đơn hàng</a>
+                    <div class="product-order-lines" id="productOrderLines">
+                        @for (var i = 0; i < selectedRows.Count; i++)
+                        {
+                            var row = selectedRows[i];
+                            <article class="product-order-line" data-product-row>
+                                <input type="hidden" name="Items.Index" value="@i" />
+                                <div class="product-order-line__main">
+                                    <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Sản phẩm</label>
+                                    <select class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary/50 transition-colors"
+                                            name="Items[@i].ProductId"
+                                            data-product-select>
+                                        <option value="" data-price="0" data-stock="0">Chọn sản phẩm</option>
+                                        @foreach (var item in catalogItems)
+                                        {
+                                            if (item.ProductId == row.ProductId)
+                                            {
+                                                <option value="@item.ProductId" data-price="@item.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-stock="@item.StockQuantity" selected>@item.Name - @item.Price.ToString("N0") đ - tồn @item.StockQuantity</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@item.ProductId" data-price="@item.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-stock="@item.StockQuantity">@item.Name - @item.Price.ToString("N0") đ - tồn @item.StockQuantity</option>
+                                            }
+                                        }
+                                    </select>
+                                    <small class="product-order-line__meta" data-product-meta>Chọn sản phẩm để xem đơn giá và tồn kho.</small>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Số lượng</label>
+                                    <input class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors"
+                                           name="Items[@i].Quantity"
+                                           type="number"
+                                           min="1"
+                                           max="1000"
+                                           value="@(row.Quantity > 0 ? row.Quantity : 1)"
+                                           inputmode="numeric"
+                                           data-product-quantity />
+                                </div>
+
+                                <div class="product-order-line__total">
+                                    <span>Thành tiền</span>
+                                    <strong data-product-line-total>0 đ</strong>
+                                </div>
+
+                                <button class="product-order-line__remove"
+                                        type="button"
+                                        data-product-remove
+                                        aria-label="Xóa dòng sản phẩm">
+                                    <span class="material-symbols-outlined text-[20px]" aria-hidden="true">delete</span>
+                                </button>
+                            </article>
+                        }
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-md mt-4">
+                        <div>
+                            <label asp-for="DeliveryMethod" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <input type="hidden" name="DeliveryMethod" value="@((int)DeliveryMethod.PickupAtStore)" />
+                            <select class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary/50 transition-colors delivery-method-select--locked"
+                                    disabled>
+                                <option value="@((int)DeliveryMethod.PickupAtStore)" selected>Nhận tại tiệm</option>
+                                <option value="@((int)DeliveryMethod.Shipping)" disabled>Giao tận nơi (chưa phát triển)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label asp-for="DeliveryAddress" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <input asp-for="DeliveryAddress" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" disabled placeholder="Giao tận nơi chưa phát triển" />
+                        </div>
+                        <div class="col-span-1 md:col-span-2">
+                            <label asp-for="Notes" class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2"></label>
+                            <textarea asp-for="Notes" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" rows="3" placeholder="Ghi chú cho tiệm khi chuẩn bị sản phẩm."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="product-order-summary">
+                    <div>
+                        <span class="text-primary font-bold text-xs uppercase tracking-wider mb-1 block">Tổng tiền</span>
+                        <h2 class="text-lg font-bold text-on-surface">Đơn sản phẩm</h2>
+                    </div>
+                    <div class="product-order-summary__stats">
+                        <div><span>Dòng</span><strong id="productSummaryLines">0</strong></div>
+                        <div><span>Số lượng</span><strong id="productSummaryQuantity">0</strong></div>
+                    </div>
+                    <div class="product-order-summary__items" id="productSummaryItems">
+                        <span>Chưa chọn sản phẩm.</span>
+                    </div>
+                    <div class="product-order-summary__total">
+                        <span>Tổng cộng</span>
+                        <strong id="productSummaryTotal">0 đ</strong>
+                    </div>
+                    <button class="px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                            type="submit"
+                            id="submitProductOrderButton">
+                        <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+                        Tạo đơn sản phẩm
+                    </button>
+                    <a class="px-5 py-2.5 bg-surface-container border border-outline-variant/30 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface font-bold rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2 shadow-sm"
+                       asp-action="Orders"
+                       asp-route-branchSlug="@branchSlug">
+                        <span class="material-symbols-outlined text-[20px]">history</span>
+                        Lịch sử đơn hàng
+                    </a>
+                </aside>
             </div>
         </form>
     </section>
@@ -75,4 +175,189 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var form = document.getElementById("productOrderForm");
+            if (!form) {
+                return;
+            }
+
+            var rows = document.getElementById("productOrderLines");
+            var optionSource = document.getElementById("productOptionSource");
+            var addButton = document.getElementById("addProductRowButton");
+            var submitButton = document.getElementById("submitProductOrderButton");
+            var summaryLines = document.getElementById("productSummaryLines");
+            var summaryQuantity = document.getElementById("productSummaryQuantity");
+            var summaryItems = document.getElementById("productSummaryItems");
+            var summaryTotal = document.getElementById("productSummaryTotal");
+            var nextIndex = rows ? rows.querySelectorAll("[data-product-row]").length : 0;
+
+            function formatMoney(value) {
+                return value.toLocaleString("vi-VN") + " đ";
+            }
+
+            function selectedOption(select) {
+                return select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+            }
+
+            function rowTotal(row) {
+                var select = row.querySelector("[data-product-select]");
+                var quantityInput = row.querySelector("[data-product-quantity]");
+                var option = selectedOption(select);
+                var productId = select ? select.value : "";
+                var quantity = parseInt(quantityInput ? quantityInput.value : "0", 10);
+                var price = option ? parseFloat(option.dataset.price || "0") : 0;
+
+                if (!productId || Number.isNaN(quantity) || quantity <= 0 || Number.isNaN(price)) {
+                    return 0;
+                }
+
+                return price * quantity;
+            }
+
+            function updateRow(row) {
+                var select = row.querySelector("[data-product-select]");
+                var quantityInput = row.querySelector("[data-product-quantity]");
+                var meta = row.querySelector("[data-product-meta]");
+                var total = row.querySelector("[data-product-line-total]");
+                var option = selectedOption(select);
+                var stock = option ? parseInt(option.dataset.stock || "0", 10) : 0;
+                var price = option ? parseFloat(option.dataset.price || "0") : 0;
+                var quantity = parseInt(quantityInput ? quantityInput.value : "0", 10);
+
+                if (meta) {
+                    meta.textContent = select && select.value
+                        ? "Đơn giá " + formatMoney(price) + " · tồn kho " + stock
+                        : "Chọn sản phẩm để xem đơn giá và tồn kho.";
+                }
+
+                if (quantityInput) {
+                    quantityInput.max = stock > 0 ? stock.toString() : "1000";
+                    quantityInput.classList.toggle("is-invalid", Boolean(select && select.value && quantity > stock));
+                }
+
+                if (total) {
+                    total.textContent = formatMoney(rowTotal(row));
+                }
+            }
+
+            function updateSummary() {
+                var selectedRows = [];
+                var totalQuantity = 0;
+                var totalAmount = 0;
+
+                Array.prototype.slice.call(rows.querySelectorAll("[data-product-row]")).forEach(function (row) {
+                    updateRow(row);
+                    var select = row.querySelector("[data-product-select]");
+                    var quantityInput = row.querySelector("[data-product-quantity]");
+                    var option = selectedOption(select);
+                    var quantity = parseInt(quantityInput ? quantityInput.value : "0", 10);
+                    var lineTotal = rowTotal(row);
+
+                    if (select && select.value && quantity > 0) {
+                        selectedRows.push({
+                            name: option ? option.text.split(" - ")[0] : "Sản phẩm",
+                            quantity: quantity,
+                            lineTotal: lineTotal
+                        });
+                        totalQuantity += quantity;
+                        totalAmount += lineTotal;
+                    }
+                });
+
+                if (summaryLines) {
+                    summaryLines.textContent = selectedRows.length.toString();
+                }
+                if (summaryQuantity) {
+                    summaryQuantity.textContent = totalQuantity.toString();
+                }
+                if (summaryTotal) {
+                    summaryTotal.textContent = formatMoney(totalAmount);
+                }
+                if (summaryItems) {
+                    summaryItems.innerHTML = "";
+                    if (selectedRows.length === 0) {
+                        var empty = document.createElement("span");
+                        empty.textContent = "Chưa chọn sản phẩm.";
+                        summaryItems.appendChild(empty);
+                    } else {
+                        selectedRows.forEach(function (item) {
+                            var line = document.createElement("div");
+                            var label = document.createElement("span");
+                            var amount = document.createElement("strong");
+                            label.textContent = item.name + " x " + item.quantity;
+                            amount.textContent = formatMoney(item.lineTotal);
+                            line.appendChild(label);
+                            line.appendChild(amount);
+                            summaryItems.appendChild(line);
+                        });
+                    }
+                }
+                if (submitButton) {
+                    submitButton.disabled = selectedRows.length === 0;
+                }
+            }
+
+            function bindRow(row) {
+                var select = row.querySelector("[data-product-select]");
+                var quantityInput = row.querySelector("[data-product-quantity]");
+                var removeButton = row.querySelector("[data-product-remove]");
+
+                if (select) {
+                    select.addEventListener("change", updateSummary);
+                }
+                if (quantityInput) {
+                    quantityInput.addEventListener("input", updateSummary);
+                }
+                if (removeButton) {
+                    removeButton.addEventListener("click", function () {
+                        if (rows.querySelectorAll("[data-product-row]").length === 1) {
+                            if (select) {
+                                select.value = "";
+                            }
+                            if (quantityInput) {
+                                quantityInput.value = "1";
+                            }
+                        } else {
+                            row.remove();
+                        }
+                        updateSummary();
+                    });
+                }
+
+                updateRow(row);
+            }
+
+            function addRow() {
+                var index = nextIndex++;
+                var row = document.createElement("article");
+                row.className = "product-order-line";
+                row.dataset.productRow = "true";
+                row.innerHTML =
+                    '<input type="hidden" name="Items.Index" value="' + index + '" />' +
+                    '<div class="product-order-line__main">' +
+                    '<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Sản phẩm</label>' +
+                    '<select class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary/50 transition-colors" name="Items[' + index + '].ProductId" data-product-select>' +
+                    (optionSource ? optionSource.innerHTML : '<option value="">Chọn sản phẩm</option>') +
+                    '</select>' +
+                    '<small class="product-order-line__meta" data-product-meta>Chọn sản phẩm để xem đơn giá và tồn kho.</small>' +
+                    '</div>' +
+                    '<div>' +
+                    '<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Số lượng</label>' +
+                    '<input class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary/50 transition-colors" name="Items[' + index + '].Quantity" type="number" min="1" max="1000" value="1" inputmode="numeric" data-product-quantity />' +
+                    '</div>' +
+                    '<div class="product-order-line__total"><span>Thành tiền</span><strong data-product-line-total>0 đ</strong></div>' +
+                    '<button class="product-order-line__remove" type="button" data-product-remove aria-label="Xóa dòng sản phẩm"><span class="material-symbols-outlined text-[20px]" aria-hidden="true">delete</span></button>';
+                rows.appendChild(row);
+                bindRow(row);
+                updateSummary();
+            }
+
+            Array.prototype.slice.call(rows.querySelectorAll("[data-product-row]")).forEach(bindRow);
+            if (addButton) {
+                addButton.addEventListener("click", addRow);
+            }
+            updateSummary();
+        })();
+    </script>
 }

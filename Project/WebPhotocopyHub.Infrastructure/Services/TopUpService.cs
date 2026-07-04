@@ -160,6 +160,8 @@ public class TopUpService : ITopUpService
         return _dbContext.TopUpRequests
             .AsNoTracking()
             .Include(x => x.User)
+            .Include(x => x.ReviewedByAdmin)
+            .Include(x => x.SecondReviewedByAdmin)
             .OrderBy(x => x.Status)
             .ThenByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);

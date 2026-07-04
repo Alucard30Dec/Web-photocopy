@@ -1,5 +1,5 @@
 @{
-    Layout = "~/Views/Shared/_BranchCustomerLayout.cshtml";
+    Layout = "~/Views/Shared/_BranchCustomerModernLayout.cshtml";
 }
 
 @model ProfileViewModel
@@ -9,86 +9,135 @@
     var walletUrl = CustomerBranchContext.ToPath(ViewContext, "Wallet");
 }
 
-<section class="cu-page customer-profile-page">
-    <section class="cu-hero customer-profile-hero">
-        <div>
-            <span class="cu-kicker">Hồ sơ khách hàng</span>
-            <h1>@Model.FullName</h1>
-            <p>Quản lý tên hiển thị, tên đăng nhập, Gmail/email, số điện thoại và địa chỉ để cơ sở liên hệ nhanh khi xử lý đơn.</p>
-            <div class="cu-actions">
-                <a class="btn btn-primary" href="@dashboardUrl">Dashboard</a>
-                <a class="btn btn-outline-secondary" href="@walletUrl">Ví & giao dịch</a>
-                <a class="btn btn-outline-warning" href="@CustomerBranchContext.ToPath(ViewContext, "Profile/ChangePassword")">Đổi mật khẩu</a>
+<main class="flex-1 p-md md:p-lg overflow-y-auto max-w-container-max mx-auto w-full px-lg">
+    <!-- Hero Block -->
+    <div class="bg-surface-container-low rounded-xl p-lg shadow-sm border border-surface-variant relative overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-lg mb-lg items-center">
+        <!-- Decorative background circle -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary-container/20 to-secondary-container/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+        
+        <!-- Hero Details -->
+        <div class="lg:col-span-8 relative z-10 flex flex-col items-start">
+            <span class="text-primary font-medium text-xs uppercase tracking-wider mb-1 block">Hồ sơ khách hàng</span>
+            <h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface font-bold mb-2">@Model.FullName</h1>
+            <p class="font-body-md text-body-md text-on-surface-variant max-w-lg mb-4">
+                Quản lý tên hiển thị, tên đăng nhập, Gmail/email, số điện thoại và địa chỉ để cơ sở liên hệ nhanh khi xử lý đơn.
+            </p>
+            <div class="flex flex-wrap gap-md mt-4">
+                <a class="bg-primary hover:bg-primary-fixed-variant text-on-primary font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors shadow-sm" href="@dashboardUrl">
+                    <span class="material-symbols-outlined text-sm">dashboard</span>
+                    Tổng quan
+                </a>
+                <a class="bg-surface border border-outline-variant hover:bg-surface-container text-on-surface font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors" href="@walletUrl">
+                    <span class="material-symbols-outlined text-sm">account_balance_wallet</span>
+                    Ví & giao dịch
+                </a>
+                <a class="bg-surface border border-outline-variant hover:bg-surface-container text-on-surface font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors" href="@CustomerBranchContext.ToPath(ViewContext, "Profile/ChangePassword")">
+                    <span class="material-symbols-outlined text-sm">lock_reset</span>
+                    Đổi mật khẩu
+                </a>
             </div>
         </div>
-        <aside class="cu-hero-card customer-profile-summary">
-            <span class="cu-card-label">Tài khoản</span>
-            <strong>@Model.UserName</strong>
-            <small>Gmail: @Model.Email</small>
-            <small>Trạng thái: @(Model.IsActive ? "Đang hoạt động" : "Đã khóa")</small>
-        </aside>
-    </section>
 
-    <section class="cu-card cu-card--narrow customer-profile-card">
-        <div class="cu-section-head">
-            <div>
-                <span class="cu-kicker">Account data</span>
-                <h2>Dữ liệu khách hàng</h2>
-            </div>
+        <!-- Status Summary Card -->
+        <div class="lg:col-span-4 bg-surface-container-lowest rounded-xl p-md border border-surface-variant shadow-sm flex flex-col gap-2 relative z-10">
+            <span class="text-xs font-bold text-primary uppercase tracking-wider block">Tài khoản</span>
+            <strong class="text-on-surface text-lg font-bold block">@Model.UserName</strong>
+            <small class="text-xs text-on-surface-variant font-medium block">Gmail: @Model.Email</small>
+            <small class="text-xs text-on-surface-variant font-medium flex items-center gap-1.5 mt-1">
+                Trạng thái: 
+                @if (Model.IsActive)
+                {
+                    <span class="inline-flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        <span class="text-green-600 font-bold uppercase tracking-tight text-[10px]">Đang hoạt động</span>
+                    </span>
+                }
+                else
+                {
+                    <span class="inline-flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span class="text-red-600 font-bold uppercase tracking-tight text-[10px]">Đã khóa</span>
+                    </span>
+                }
+            </small>
+        </div>
+    </div>
+
+    <!-- Edit Profile Card -->
+    <section class="bg-surface-container-lowest rounded-xl p-md md:p-lg border border-surface-variant shadow-sm max-w-3xl mb-lg">
+        <div class="border-b border-outline-variant/30 pb-4 mb-6">
+            <span class="text-primary font-medium text-xs uppercase tracking-wider block mb-1">Account data</span>
+            <h2 class="font-headline-md text-lg font-bold text-on-surface mb-0">Dữ liệu khách hàng</h2>
         </div>
 
-        <form asp-action="Index" method="post" class="cu-form customer-profile-form" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <form asp-action="Index" method="post" class="flex flex-col gap-6" asp-route-branchSlug="@CustomerBranchContext.GetSlug(ViewContext)">
+            <div asp-validation-summary="ModelOnly" class="text-error text-sm font-medium mb-2"></div>
 
-            <div class="customer-profile-grid">
-                <div>
-                    <label asp-for="FullName" class="form-label"></label>
-                    <input asp-for="FullName" class="form-control" />
-                    <span asp-validation-for="FullName" class="text-danger small"></span>
+            <!-- Profile Info Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                <!-- FullName -->
+                <div class="flex flex-col gap-2">
+                    <label asp-for="FullName" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider"></label>
+                    <input asp-for="FullName" class="w-full bg-white border border-outline-variant/30 rounded-lg text-sm px-4 py-2 text-on-surface transition-all" />
+                    <span asp-validation-for="FullName" class="text-error text-xs font-medium"></span>
                 </div>
 
-                <div>
-                    <label asp-for="UserName" class="form-label"></label>
-                    <input asp-for="UserName" class="form-control" autocomplete="username" />
-                    <span asp-validation-for="UserName" class="text-danger small"></span>
+                <!-- UserName -->
+                <div class="flex flex-col gap-2">
+                    <label asp-for="UserName" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider"></label>
+                    <input asp-for="UserName" class="w-full bg-white border border-outline-variant/30 rounded-lg text-sm px-4 py-2 text-on-surface transition-all" autocomplete="username" />
+                    <span asp-validation-for="UserName" class="text-error text-xs font-medium"></span>
                 </div>
 
-                <div>
-                    <label asp-for="Email" class="form-label"></label>
-                    <input asp-for="Email" class="form-control" readonly />
-                    <small class="form-text text-muted">Gmail/email dùng cho đăng nhập nhanh và liên hệ. Không chỉnh trực tiếp tại đây.</small>
+                <!-- Email (Readonly) -->
+                <div class="flex flex-col gap-2">
+                    <label asp-for="Email" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider"></label>
+                    <input asp-for="Email" class="w-full bg-surface-container rounded-lg text-sm px-4 py-2 text-on-surface-variant border border-outline-variant/20 cursor-not-allowed" readonly />
+                    <small class="text-xs text-on-surface-variant mt-1">Gmail/email dùng cho đăng nhập nhanh và liên hệ. Không chỉnh trực tiếp tại đây.</small>
                 </div>
 
-                <div>
-                    <label asp-for="PhoneNumber" class="form-label"></label>
-                    <input asp-for="PhoneNumber" class="form-control" autocomplete="tel" />
-                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
-                </div>
-
-                <div class="customer-profile-grid-full">
-                    <label asp-for="Address" class="form-label"></label>
-                    <textarea asp-for="Address" class="form-control" rows="4"></textarea>
-                    <span asp-validation-for="Address" class="text-danger small"></span>
-                </div>
-
-                <div>
-                    <label asp-for="CreatedAt" class="form-label"></label>
-                    <input value="@Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")" class="form-control" readonly />
-                </div>
-
-                <div>
-                    <label asp-for="IsActive" class="form-label"></label>
-                    <input value="@(Model.IsActive ? "Đang hoạt động" : "Đã khóa")" class="form-control" readonly />
+                <!-- PhoneNumber -->
+                <div class="flex flex-col gap-2">
+                    <label asp-for="PhoneNumber" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider"></label>
+                    <input asp-for="PhoneNumber" class="w-full bg-white border border-outline-variant/30 rounded-lg text-sm px-4 py-2 text-on-surface transition-all" autocomplete="tel" />
+                    <span asp-validation-for="PhoneNumber" class="text-error text-xs font-medium"></span>
                 </div>
             </div>
 
-            <div class="cu-actions">
-                <button class="btn btn-primary" type="submit">Lưu hồ sơ</button>
-                <a class="btn btn-outline-secondary" href="@dashboardUrl">Hủy</a>
+            <!-- Address (Placed outside the grid wrapper to span full width naturally) -->
+            <div class="flex flex-col gap-2">
+                <label asp-for="Address" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider"></label>
+                <textarea asp-for="Address" class="w-full bg-white border border-outline-variant/30 rounded-lg text-sm px-4 py-2 text-on-surface transition-all" rows="4"></textarea>
+                <span asp-validation-for="Address" class="text-error text-xs font-medium"></span>
+            </div>
+
+            <!-- Readonly Status Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                <!-- CreatedAt (Readonly) -->
+                <div class="flex flex-col gap-2">
+                    <label asp-for="CreatedAt" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider"></label>
+                    <input value="@Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")" class="w-full bg-surface-container rounded-lg text-sm px-4 py-2 text-on-surface-variant border border-outline-variant/20 cursor-not-allowed" readonly />
+                </div>
+
+                <!-- IsActive (Readonly) -->
+                <div class="flex flex-col gap-2">
+                    <label asp-for="IsActive" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider"></label>
+                    <input value="@(Model.IsActive ? "Đang hoạt động" : "Đã khóa")" class="w-full bg-surface-container rounded-lg text-sm px-4 py-2 text-on-surface-variant border border-outline-variant/20 cursor-not-allowed" readonly />
+                </div>
+            </div>
+
+            <!-- Actions buttons -->
+            <div class="flex gap-md mt-6 pt-4 border-t border-outline-variant/30">
+                <button class="bg-primary hover:bg-primary-fixed-variant text-on-primary font-bold py-2 px-6 rounded-lg transition-colors shadow-sm" type="submit">
+                    Lưu hồ sơ
+                </button>
+                <a class="bg-surface border border-outline-variant hover:bg-surface-container text-on-surface font-medium py-2 px-6 rounded-lg transition-colors text-center" href="@dashboardUrl">
+                    Hủy
+                </a>
             </div>
         </form>
     </section>
-</section>
+</main>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

@@ -89,10 +89,12 @@ public static class CorrelationIdContext
             return true;
         }
 
+        // Codex 2026-07-04: Guard nullable Accept header values so diagnostics builds cleanly without changing response behavior.
         return context.Request.Headers.Accept.Any(value =>
-            value.Contains("application/json", StringComparison.OrdinalIgnoreCase) ||
-            value.Contains("application/problem+json", StringComparison.OrdinalIgnoreCase) ||
-            value.Contains("text/json", StringComparison.OrdinalIgnoreCase));
+            !string.IsNullOrWhiteSpace(value) &&
+            (value.Contains("application/json", StringComparison.OrdinalIgnoreCase) ||
+             value.Contains("application/problem+json", StringComparison.OrdinalIgnoreCase) ||
+             value.Contains("text/json", StringComparison.OrdinalIgnoreCase)));
     }
 
     private static string CreateNew()

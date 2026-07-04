@@ -4,6 +4,7 @@ using WebPhotocopyHub.Application.Common;
 using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Application.DTOs;
 using WebPhotocopyHub.Domain.Entities;
+using WebPhotocopyHub.Domain.Enums;
 using WebPhotocopyHub.Web;
 using WebPhotocopyHub.Web.Extensions;
 using WebPhotocopyHub.Web.Shop.Models;
@@ -40,6 +41,12 @@ public class ProductOrdersController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        if (model.Status == OrderStatus.Refunded)
+        {
+            await RefundInternalAsync(model.OrderId, model.Note, cancellationToken);
+            return RedirectToAction(nameof(Index));
+        }
+
         try
         {
             await _productOrderService.UpdateOrderStatusAsync(
@@ -67,5 +74,41 @@ public class ProductOrdersController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Refund(Guid id, string reason, CancellationToken cancellationToken)
+    {
+        await RefundInternalAsync(id, reason, cancellationToken);
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task RefundInternalAsync(Guid orderId, string? reason, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _productOrderService.RefundAsync(
+                orderId,
+                User.GetUserId(),
+                reason ?? string.Empty,
+                cancellationToken);
+
+            await _auditLogService.WriteAsync(new AuditLogEntryDto
+            {
+                ActorUserId = User.GetUserId(),
+                Action = "ShopRefundProductOrder",
+                EntityName = nameof(ProductOrder),
+                EntityId = orderId.ToString(),
+                Details = reason,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            }, cancellationToken);
+
+            TempData["Success"] = "Đã hoàn tiền đơn văn phòng phẩm.";
+        }
+        catch (BusinessException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
     }
 }

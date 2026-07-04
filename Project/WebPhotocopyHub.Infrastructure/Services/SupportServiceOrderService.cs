@@ -185,8 +185,24 @@ public class SupportServiceOrderService : ISupportServiceOrderService
         string? note,
         CancellationToken cancellationToken = default)
     {
+        if (status == OrderStatus.Refunded)
+        {
+            throw new BusinessException("Vui lòng dùng chức năng hoàn tiền để chuyển sang trạng thái đã hoàn tiền.");
+        }
+
+        if (status == OrderStatus.Cancelled)
+        {
+            await CancelByOperatorAsync(orderId, actorUserId, note ?? "Hủy đơn và hoàn tiền", cancellationToken);
+            return;
+        }
+
         var order = await _dbContext.SupportServiceOrders.FirstOrDefaultAsync(x => x.Id == orderId, cancellationToken)
             ?? throw new BusinessException("Không tìm thấy đơn dịch vụ.");
+
+        if (order.Status is OrderStatus.Cancelled or OrderStatus.Refunded)
+        {
+            throw new BusinessException("Không thể cập nhật đơn đã hủy hoặc đã hoàn tiền.");
+        }
 
         order.Status = status;
         order.ProcessedByOperatorId = actorUserId;
@@ -195,8 +211,62 @@ public class SupportServiceOrderService : ISupportServiceOrderService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RefundAsync(Guid orderId, string actorUserId, string reason, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new BusinessException("Vui lòng nhập lý do hoàn tiền.");
+        }
+
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        var order = await _dbContext.SupportServiceOrders.FirstOrDefaultAsync(x => x.Id == orderId, cancellationToken)
+            ?? throw new BusinessException("Không tìm thấy đơn dịch vụ.");
+
+        if (order.Status == OrderStatus.Refunded)
+        {
+            throw new BusinessException("Đơn dịch vụ đã được hoàn tiền trước đó.");
+        }
+
+        if (order.Status == OrderStatus.Cancelled)
+        {
+            throw new BusinessException("Đơn dịch vụ đã hủy không thể hoàn tiền thêm.");
+        }
+
+        await _walletService.CreditAsync(new WalletOperationRequestDto
+        {
+            UserId = order.UserId,
+            Amount = order.TotalAmount,
+            TransactionType = WalletTransactionType.Refund,
+            ReferenceType = nameof(SupportServiceOrder),
+            ReferenceId = order.Id,
+            Note = reason.Trim(),
+            IdempotencyKey = $"supportorder-refund-{order.Id:N}",
+            PerformedByAdminId = actorUserId
+        }, cancellationToken);
+
+        order.Status = OrderStatus.Refunded;
+        order.ProcessedByOperatorId = actorUserId;
+        order.ProcessedAt = DateTime.UtcNow;
+        order.ProcessNote = reason.Trim();
+
+        _dbContext.AuditLogs.Add(new AuditLog
+        {
+            ActorUserId = actorUserId,
+            Action = "RefundSupportServiceOrder",
+            EntityName = nameof(SupportServiceOrder),
+            EntityId = order.Id.ToString(),
+            Details = reason.Trim()
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+    }
+
     public async Task CancelOrderAsync(Guid id, string userId, CancellationToken cancellationToken = default)
     {
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
         var order = await _dbContext.SupportServiceOrders.FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new BusinessException("Không tìm thấy đơn dịch vụ.");
 
@@ -210,12 +280,9 @@ public class SupportServiceOrderService : ISupportServiceOrderService
             throw new BusinessException("Chỉ có thể huỷ đơn khi đơn chưa được xử lý.");
         }
 
-        await using var tx = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-
         order.Status = OrderStatus.Cancelled;
         order.ProcessNote = "Khách hàng tự huỷ";
 
-        // Refund to wallet
         await _walletService.CreditAsync(new WalletOperationRequestDto
         {
             UserId = order.UserId,
@@ -227,6 +294,62 @@ public class SupportServiceOrderService : ISupportServiceOrderService
             IdempotencyKey = $"supportorder-cancel-refund-{order.Id:N}",
             PerformedByAdminId = userId
         }, cancellationToken);
+
+        _dbContext.AuditLogs.Add(new AuditLog
+        {
+            ActorUserId = userId,
+            Action = "CancelSupportServiceOrder",
+            EntityName = nameof(SupportServiceOrder),
+            EntityId = order.Id.ToString(),
+            Details = "Khách hàng hủy đơn và hệ thống hoàn tiền."
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+    }
+
+    private async Task CancelByOperatorAsync(Guid orderId, string actorUserId, string reason, CancellationToken cancellationToken)
+    {
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        var order = await _dbContext.SupportServiceOrders.FirstOrDefaultAsync(x => x.Id == orderId, cancellationToken)
+            ?? throw new BusinessException("Không tìm thấy đơn dịch vụ.");
+
+        if (order.Status is OrderStatus.Cancelled or OrderStatus.Refunded)
+        {
+            throw new BusinessException("Đơn dịch vụ đã hủy hoặc đã hoàn tiền.");
+        }
+
+        if (order.Status == OrderStatus.Completed)
+        {
+            throw new BusinessException("Đơn đã hoàn tất cần dùng chức năng hoàn tiền.");
+        }
+
+        await _walletService.CreditAsync(new WalletOperationRequestDto
+        {
+            UserId = order.UserId,
+            Amount = order.TotalAmount,
+            TransactionType = WalletTransactionType.Refund,
+            ReferenceType = nameof(SupportServiceOrder),
+            ReferenceId = order.Id,
+            Note = reason,
+            IdempotencyKey = $"supportorder-cancel-refund-{order.Id:N}",
+            PerformedByAdminId = actorUserId
+        }, cancellationToken);
+
+        order.Status = OrderStatus.Cancelled;
+        order.ProcessedByOperatorId = actorUserId;
+        order.ProcessedAt = DateTime.UtcNow;
+        order.ProcessNote = reason;
+
+        _dbContext.AuditLogs.Add(new AuditLog
+        {
+            ActorUserId = actorUserId,
+            Action = "CancelSupportServiceOrderByOperator",
+            EntityName = nameof(SupportServiceOrder),
+            EntityId = order.Id.ToString(),
+            Details = reason
+        });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);

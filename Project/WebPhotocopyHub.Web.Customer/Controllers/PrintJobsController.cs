@@ -37,17 +37,20 @@ public class PrintJobsController : Controller
     private readonly IPrintJobService _printJobService;
     private readonly IFileStorageService _fileStorageService;
     private readonly IOfficePreviewService _officePreviewService;
+    private readonly IPricingService _pricingService;
     private readonly ILogger<PrintJobsController> _logger;
 
     public PrintJobsController(
         IPrintJobService printJobService,
         IFileStorageService fileStorageService,
         IOfficePreviewService officePreviewService,
+        IPricingService pricingService,
         ILogger<PrintJobsController> logger)
     {
         _printJobService = printJobService;
         _fileStorageService = fileStorageService;
         _officePreviewService = officePreviewService;
+        _pricingService = pricingService;
         _logger = logger;
     }
 
@@ -102,9 +105,10 @@ public class PrintJobsController : Controller
             ModelState.AddModelError(string.Empty, $"Mỗi lần chỉ được gửi tối đa {MaxFilesPerBatch} tài liệu.");
         }
 
-        if (model.DeliveryMethod == DeliveryMethod.Shipping && string.IsNullOrWhiteSpace(model.DeliveryAddress))
+        // Codex 2026-07-04: Shipping UI is locked until delivery workflow is developed; scope limited to customer print order create.
+        if (model.DeliveryMethod == DeliveryMethod.Shipping)
         {
-            ModelState.AddModelError(nameof(model.DeliveryAddress), "Vui lòng nhập địa chỉ giao hàng.");
+            ModelState.AddModelError(nameof(model.DeliveryMethod), "Giao tận nơi chưa được phát triển. Vui lòng nhận đơn tại tiệm.");
         }
 
         var ownedFilesById = model.ExistingFiles.ToDictionary(x => x.Id);
@@ -482,6 +486,39 @@ public class PrintJobsController : Controller
             {
                 message = $"Không thể tạo bản xem trước file Office. Mã theo dõi: {correlationId}."
             });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CalculatePrice(
+        [FromBody] PricingCalculationRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        if (request.Copies <= 0)
+        {
+            ModelState.AddModelError(nameof(request.Copies), "Số bản in phải lớn hơn 0.");
+        }
+
+        if (request.TotalPages <= 0)
+        {
+            ModelState.AddModelError(nameof(request.TotalPages), "Tổng số trang phải lớn hơn 0.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        try
+        {
+            // Codex 2026-07-04: Customer create screen needs exact per-file pricing instead of a front-end estimate.
+            var result = await _pricingService.CalculatePrintPriceAsync(request, cancellationToken);
+            return Json(result);
+        }
+        catch (BusinessException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 

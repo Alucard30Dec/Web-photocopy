@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
+using WebPhotocopyHub.Application.Contracts;
 using WebPhotocopyHub.Domain.Constants;
 using WebPhotocopyHub.Domain.Entities;
 using WebPhotocopyHub.Web.Models;
@@ -15,15 +16,18 @@ public class AccountController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IBranchManagementService _branchManagementService;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
+        IBranchManagementService branchManagementService,
         ILogger<AccountController> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _branchManagementService = branchManagementService;
         _logger = logger;
     }
 
@@ -62,6 +66,7 @@ public class AccountController : Controller
         return await LoginForRolesAsync(
             model,
             new[] { RoleConstants.ShopOperator, RoleConstants.Admin },
+            branch.Slug,
             $"/{branch.Slug}/Admin",
             "Chủ shop");
     }
@@ -69,6 +74,7 @@ public class AccountController : Controller
     private async Task<IActionResult> LoginForRolesAsync(
         LoginViewModel model,
         IReadOnlyCollection<string> allowedRoles,
+        string branchSlug,
         string defaultRedirectUrl,
         string loginScope)
     {
@@ -116,11 +122,39 @@ public class AccountController : Controller
             return View("Login", model);
         }
 
+        if (!await CanLoginToBranchAsync(user, branchSlug))
+        {
+            await _signInManager.SignOutAsync();
+            _logger.LogWarning("User {Email} attempted to login to branch {BranchSlug} without membership.", email, branchSlug);
+            ModelState.AddModelError(string.Empty, "Tài khoản này chưa được phân quyền tại cơ sở đang đăng nhập.");
+            return View("Login", model);
+        }
+
         if (!string.IsNullOrWhiteSpace(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
         {
             return Redirect(model.ReturnUrl);
         }
 
         return LocalRedirect(defaultRedirectUrl);
+    }
+
+    private async Task<bool> CanLoginToBranchAsync(ApplicationUser user, string branchSlug)
+    {
+        if (await _userManager.IsInRoleAsync(user, RoleConstants.Admin))
+        {
+            return true;
+        }
+
+        var branch = await _branchManagementService.GetBySlugAsync(branchSlug, HttpContext.RequestAborted);
+        if (branch is null)
+        {
+            return false;
+        }
+
+        var memberships = await _branchManagementService.GetMembershipsAsync(branch.Id, HttpContext.RequestAborted);
+        return memberships.Any(x =>
+            x.UserId == user.Id &&
+            x.IsActive &&
+            x.BranchRole?.IsActive == true);
     }
 }

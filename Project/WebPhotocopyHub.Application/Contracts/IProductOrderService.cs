@@ -17,5 +17,6 @@ public interface IProductOrderService
     Task<PagedResult<ProductOrder>> GetAllOrdersAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
     Task<ProductOrder?> GetOrderByIdAsync(Guid orderId, CancellationToken cancellationToken = default);
     Task UpdateOrderStatusAsync(Guid orderId, OrderStatus status, string actorUserId, string? note, CancellationToken cancellationToken = default);
+    Task RefundAsync(Guid orderId, string actorUserId, string reason, CancellationToken cancellationToken = default);
     Task CancelOrderAsync(Guid id, string userId, CancellationToken cancellationToken = default);
 }

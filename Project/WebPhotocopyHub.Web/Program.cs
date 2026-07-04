@@ -123,9 +123,14 @@ if (apiCorsOrigins.Length > 0)
 }
 
 builder.Services.AddRazorPages();
-if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("BrowserLaunch:Enabled"))
+if (builder.Environment.IsDevelopment())
 {
-    builder.Services.AddHostedService<DevelopmentBrowserLaunchService>();
+    builder.Services.AddHostedService<DevelopmentConsoleLifetimeService>();
+
+    if (builder.Configuration.GetValue<bool>("BrowserLaunch:Enabled"))
+    {
+        builder.Services.AddHostedService<DevelopmentBrowserLaunchService>();
+    }
 }
 
 builder.Services.AddRateLimiter(options =>
@@ -521,6 +526,12 @@ app.MapControllerRoute(
     pattern: "Home/{action=Index}/{id?}",
     defaults: new { controller = "Home" });
 app.MapRazorPages();
+
+// Codex 2026-07-04: In Development, clean up stale debug hosts that still own the configured port.
+if (app.Environment.IsDevelopment())
+{
+    DevelopmentPortCleanup.StopStaleConfiguredPortOwners(app);
+}
 
 app.Run();
 
